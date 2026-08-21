@@ -1,7 +1,7 @@
 
 const CFG=window.FIT4US_CONFIG||{};
 const configured=CFG.supabaseUrl && !CFG.supabaseUrl.startsWith('DEINE_') && CFG.supabaseKey && !CFG.supabaseKey.startsWith('DEIN_');
-let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
+let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
 let realtimeChannels=[];
 
 const ACTIVITIES={
@@ -226,7 +226,7 @@ async function checkApproval(){
  else toast('Noch nicht freigeschaltet.');
 }
 async function loadData(){
- let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dc,ach,cc]=await Promise.all([
+ let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dc,ach,cc,audit]=await Promise.all([
   sb.from('profiles').select('*').order('created_at'),
   sb.from('entries').select('*').order('entry_date',{ascending:false}).order('created_at',{ascending:false}),
   sb.from('reactions').select('*'),sb.from('weekly_challenges').select('*'),sb.from('reward_choices').select('*'),
@@ -235,19 +235,19 @@ async function loadData(){
   sb.from('challenge_proposal_votes').select('*'),sb.from('challenge_ratings').select('*'),
   sb.from('group_challenge_assignments').select('*'),sb.from('daily_challenge_assignments').select('*'),
   sb.from('daily_challenge_completions').select('*').order('created_at',{ascending:false}),
-  sb.from('achievements').select('*').order('achieved_on',{ascending:false}),sb.from('challenge_completions').select('*').order('created_at',{ascending:false})
+  sb.from('achievements').select('*').order('achieved_on',{ascending:false}),sb.from('challenge_completions').select('*').order('created_at',{ascending:false}),sb.from('admin_audit_log').select('*').order('created_at',{ascending:false}).limit(200)
  ]);
  if(p.error)throw p.error;
  profiles=(p.data||[]).filter(x=>x.approved || x.id===session.user.id || me?.is_admin);
  me=profiles.find(x=>x.id===session.user.id)||me;
  entries=e.data||[];reactions=r.data||[];window.weekSelections=w.data||[];rewardChoices=reward.data||[];
  challengePool=cp.data||[];proposals=pr.data||[];proposalVotes=pv.data||[];ratings=cr.data||[];groupAssignments=ga.data||[];
- dailyAssignments=da.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];
+ dailyAssignments=da.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];adminAudit=audit.data||[];
  await ensureAssignments();await syncAchievements();
 }
 function startRealtime(){
  stopRealtime();
- ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions'].forEach(table=>{
+ ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log'].forEach(table=>{
   let ch=sb.channel('fit4us-'+table).on('postgres_changes',{event:'*',schema:'public',table},async()=>{await loadData();await render()}).subscribe();
   realtimeChannels.push(ch)
  })
@@ -411,7 +411,24 @@ async function voteProposal(id,vote){let old=proposalVotes.find(x=>x.proposal_id
 function openDailyComplete(){let c=dailyChallengeFor();if(!c)return;$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} Tageschallenge erledigt</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(c.description)}</p><form class="form" onsubmit="completeDaily(event)"><div class="field"><label>Was hast du gemacht?</label><textarea id="dailyText" rows="5" required minlength="3" style="width:100%;border:1px solid #dbe4eb;border-radius:13px;padding:12px"></textarea></div><button class="cta">Erledigt · +1 P</button></form></div></div>`}
 async function completeDaily(e){e.preventDefault();let c=dailyChallengeFor(),text=$('#dailyText').value.trim(),{error}=await sb.from('daily_challenge_completions').insert({challenge_date:fmtDate(),challenge_pool_id:c.id,user_id:me.id,completion_text:text,points:1});if(error)return toast(error.message);closeModal();await loadData();let poolc=dailyChallengeFor();await recordChallengeCompletion('daily',c.id,c.name,c.emoji,1,fmtDate());await render();toast('Tageschallenge geschafft +1 P 🎉')}
 async function groupHTML(){return `<h1>Gruppe</h1>${await pinnedProposalsHTML()}<div class="grid grid2"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries())}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries())}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
-async function feedHTML(limit=99){let items=[...entries.filter(e=>e.kind==='activity'||(e.kind==='food'&&e.photo_path)).map(e=>({type:'entry',date:e.created_at||e.entry_date,obj:e})),...dailyCompletions.map(d=>({type:'daily',date:d.created_at,obj:d})),...challengeCompletions.filter(x=>x.challenge_kind!=='daily').map(c=>({type:'challenge',date:c.created_at,obj:c}))].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,limit);if(!items.length)return `<div class="card pad muted">Noch keine Feed-Einträge.</div>`;let out='';for(let item of items){if(item.type==='challenge'){let c=item.obj,p=profileById(c.user_id),av=await avatarHTML(p);out+=`<article class="card feedItem"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">Challenge geschafft · ${new Date(c.created_at).toLocaleDateString('de-DE')}</div></div><span class="points" style="margin-left:auto">+${c.points} P</span></div><div class="feedText"><b>${escapeHtml(c.emoji||'🎯')} ${escapeHtml(c.title)}</b><div class="small muted">${c.challenge_kind==='group'?'Gemeinsame Monatschallenge erfüllt 🎉':'Persönliche Wochenchallenge erfüllt 🎉'}</div></div></article>`;continue}if(item.type==='daily'){let d=item.obj,p=profileById(d.user_id),av=await avatarHTML(p),c=challengePool.find(x=>x.id===d.challenge_pool_id);out+=`<article class="card feedItem"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">${new Date(d.challenge_date+'T12:00').toLocaleDateString('de-DE')} · Tageschallenge</div></div><span class="points" style="margin-left:auto">+1 P</span></div><div class="feedText"><b>${escapeHtml(c?.emoji||'☀️')} ${escapeHtml(c?.name||'Tageschallenge')}</b><div class="muted small">${escapeHtml(c?.description||'')}</div><blockquote style="margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--teal);background:#f7fbfb;border-radius:0 10px 10px 0">„${escapeHtml(d.completion_text)}“</blockquote></div></article>`;continue}let e=item.obj,p=profileById(e.user_id),av=await avatarHTML(p),photo=e.photo_path?await signed('proofs',e.photo_path):null,react={};reactions.filter(r=>r.entry_id===e.id).forEach(r=>{react[r.emoji]=(react[r.emoji]||[]).concat(r.user_id)});let content=e.kind==='food'?`🥗 <b>Ernährungs-Check-in</b> · ${(e.food_items||[]).length}/7 Ziele`:`${ACTIVITIES[e.activity]?.icon||'⚡'} <b>${ACTIVITIES[e.activity]?.name||'Aktivität'}</b> · ${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}`;out+=`<article class="card feedItem"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">${new Date(e.entry_date+'T12:00').toLocaleDateString('de-DE')} · ${escapeHtml(e.witness||'Ehrenkodex')}</div></div><span class="points" style="margin-left:auto">+${e.points} P</span></div><div class="feedText">${content}</div>${photo?`<img class="feedPhoto" src="${photo}">`:''}<div class="reactions">${['👏','🔥','💪'].map(x=>`<button class="react ${react[x]?.includes(me.id)?'active':''}" onclick="toggleReaction('${e.id}','${x}')">${x} ${react[x]?.length||0}</button>`).join('')}</div></article>`}return out}
+
+function canEditEntryAnywhere(e){return !!e && e.user_id===me.id && e.entry_date.startsWith(monthKey())}
+function entryEditControls(e){
+ if(!canEditEntryAnywhere(e))return '';
+ return `<div class="entryActions"><button class="react" onclick="event.stopPropagation();editEntry('${e.id}')">✏️ Bearbeiten</button><button class="react danger" onclick="event.stopPropagation();deleteEntry('${e.id}')">🗑 Löschen</button></div>`
+}
+async function undoDailyCompletion(id){
+ let d=dailyCompletions.find(x=>x.id===id);
+ if(!d||d.user_id!==me.id)return toast('Dieser Eintrag gehört nicht dir.');
+ if(!d.challenge_date.startsWith(monthKey()))return toast('Vergangene Monate können nicht geändert werden.');
+ if(!confirm('Tageschallenge wirklich zurücknehmen? Der +1 Punkt und der Feed-Eintrag werden entfernt.'))return;
+ let cc=challengeCompletions.filter(x=>x.user_id===me.id&&x.challenge_kind==='daily'&&x.period_key===d.challenge_date);
+ if(cc.length)await sb.from('challenge_completions').delete().in('id',cc.map(x=>x.id));
+ let {error}=await sb.from('daily_challenge_completions').delete().eq('id',id);
+ if(error)return toast(error.message);
+ await loadData();await render();toast('Tageschallenge zurückgenommen');
+}
+async function feedHTML(limit=99){let items=[...entries.filter(e=>e.kind==='activity'||(e.kind==='food'&&e.photo_path)).map(e=>({type:'entry',date:e.created_at||e.entry_date,obj:e})),...dailyCompletions.map(d=>({type:'daily',date:d.created_at,obj:d})),...challengeCompletions.filter(x=>x.challenge_kind!=='daily').map(c=>({type:'challenge',date:c.created_at,obj:c}))].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,limit);if(!items.length)return `<div class="card pad muted">Noch keine Feed-Einträge.</div>`;let out='';for(let item of items){if(item.type==='challenge'){let c=item.obj,p=profileById(c.user_id),av=await avatarHTML(p);out+=`<article class="card feedItem"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">Challenge geschafft · ${new Date(c.created_at).toLocaleDateString('de-DE')}</div></div><span class="points" style="margin-left:auto">+${c.points} P</span></div><div class="feedText"><b>${escapeHtml(c.emoji||'🎯')} ${escapeHtml(c.title)}</b><div class="small muted">${c.challenge_kind==='group'?'Gemeinsame Monatschallenge erfüllt 🎉':'Persönliche Wochenchallenge erfüllt 🎉'}</div></div></article>`;continue}if(item.type==='daily'){let d=item.obj,p=profileById(d.user_id),av=await avatarHTML(p),c=challengePool.find(x=>x.id===d.challenge_pool_id);out+=`<article class="card feedItem"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">${new Date(d.challenge_date+'T12:00').toLocaleDateString('de-DE')} · Tageschallenge</div></div><span class="points" style="margin-left:auto">+1 P</span></div><div class="feedText"><b>${escapeHtml(c?.emoji||'☀️')} ${escapeHtml(c?.name||'Tageschallenge')}</b><div class="muted small">${escapeHtml(c?.description||'')}</div><blockquote style="margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--teal);background:#f7fbfb;border-radius:0 10px 10px 0">„${escapeHtml(d.completion_text)}“</blockquote>${d.user_id===me.id&&d.challenge_date.startsWith(monthKey())?`<div class="entryActions"><button class="react danger" onclick="undoDailyCompletion('${d.id}')">↩ Zurücknehmen</button></div>`:''}</div></article>`;continue}let e=item.obj,p=profileById(e.user_id),av=await avatarHTML(p),photo=e.photo_path?await signed('proofs',e.photo_path):null,react={};reactions.filter(r=>r.entry_id===e.id).forEach(r=>{react[r.emoji]=(react[r.emoji]||[]).concat(r.user_id)});let content=e.kind==='food'?`🥗 <b>Ernährungs-Check-in</b> · ${(e.food_items||[]).length}/7 Ziele`:`${ACTIVITIES[e.activity]?.icon||'⚡'} <b>${ACTIVITIES[e.activity]?.name||'Aktivität'}</b> · ${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}`;out+=`<article class="card feedItem"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">${new Date(e.entry_date+'T12:00').toLocaleDateString('de-DE')} · ${escapeHtml(e.witness||'Ehrenkodex')}</div></div><span class="points" style="margin-left:auto">+${e.points} P</span></div><div class="feedText">${content}</div>${photo?`<img class="feedPhoto" src="${photo}">`:''}${entryEditControls(e)}<div class="reactions">${['👏','🔥','💪'].map(x=>`<button class="react ${react[x]?.includes(me.id)?'active':''}" onclick="toggleReaction('${e.id}','${x}')">${x} ${react[x]?.length||0}</button>`).join('')}</div></article>`}return out}
 async function toggleReaction(entryId,emoji){
  let mine=reactions.find(r=>r.entry_id===entryId&&r.user_id===me.id&&r.emoji===emoji);
  if(mine)await sb.from('reactions').delete().eq('id',mine.id);else await sb.from('reactions').insert({entry_id:entryId,user_id:me.id,emoji});
@@ -441,9 +458,9 @@ function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=rating
 async function rateChallenge(id,rating){let old=ratings.find(x=>x.challenge_pool_id===id&&x.user_id===me.id&&x.week_key===weekKey()),payload={challenge_pool_id:id,user_id:me.id,week_key:weekKey(),rating},q=old?sb.from('challenge_ratings').update({rating}).eq('id',old.id):sb.from('challenge_ratings').insert(payload),{error}=await q;if(error)return toast(error.message);closeModal();await loadData();await render();toast('Bewertung gespeichert')}
 function openProposal(){$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>Neue Challenge vorschlagen</h2><button class="x" onclick="closeModal()">×</button></div><form class="form section" onsubmit="submitProposal(event)"><div class="field"><label>Typ</label><select id="prType"><option value="weekly">Wochenchallenge</option><option value="group">Gruppen-Challenge</option><option value="daily">Tageschallenge</option></select></div><div class="field"><label>Name</label><input id="prName" required maxlength="60"></div><div class="field"><label>Emoji</label><input id="prEmoji" required maxlength="8" value="🎯"></div><div class="field"><label>Beschreibung</label><textarea id="prDesc" rows="4" required maxlength="400" style="width:100%;border:1px solid #dbe4eb;border-radius:13px;padding:12px"></textarea></div><div class="field"><label>Punkte</label><input id="prPoints" type="number" min="1" max="50" value="10" required></div><button class="cta">Vorschlag zur Abstimmung stellen</button></form></div></div>`}
 async function submitProposal(e){e.preventDefault();let payload={proposer_id:me.id,challenge_type:$('#prType').value,name:$('#prName').value.trim(),emoji:$('#prEmoji').value.trim(),description:$('#prDesc').value.trim(),points:+$('#prPoints').value},{data,error}=await sb.from('challenge_proposals').insert(payload).select().single();if(error)return toast(error.message);await sb.from('challenge_proposal_votes').insert({proposal_id:data.id,user_id:me.id,vote:true});closeModal();await loadData();await render();toast('Vorschlag ist jetzt im Feed angepinnt 📌')}
-async function adminSuspendChallenge(id){let opt=prompt('Sperrdauer in Tagen eingeben. Leer lassen = unbegrenzt bis zur Entsperrung.');if(opt===null)return;let permanent=opt.trim()==='',until=permanent?null:new Date(Date.now()+(Math.max(1,+opt)||1)*86400000).toISOString(),{error}=await sb.rpc('admin_set_challenge_disabled',{target_challenge:id,disabled_state:true,until_time:until,permanent_state:permanent});if(error)return toast(error.message);closeModal();await loadData();await render();toast(permanent?'Challenge unbegrenzt gesperrt':'Challenge temporär gesperrt')}
-async function adminUnsuspendChallenge(id){let {error}=await sb.rpc('admin_set_challenge_disabled',{target_challenge:id,disabled_state:false,until_time:null,permanent_state:false});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Challenge entsperrt')}
-async function adminDeleteChallenge(id){if(!confirm('Challenge wirklich entfernen? Historisch verwendete Challenges können nur gesperrt werden.'))return;let {error}=await sb.rpc('admin_delete_challenge',{target_challenge:id});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Challenge entfernt')}
+async function adminSuspendChallenge(id){let opt=prompt('Sperrdauer in Tagen eingeben. Leer lassen = unbegrenzt bis zur Entsperrung.');if(opt===null)return;let permanent=opt.trim()==='',until=permanent?null:new Date(Date.now()+(Math.max(1,+opt)||1)*86400000).toISOString(),{error}=await sb.rpc('admin_set_challenge_disabled',{target_challenge:id,disabled_state:true,until_time:until,permanent_state:permanent});if(error)return toast(error.message);await logAdmin('challenge_suspended',{challenge_id:id,permanent,until});closeModal();await loadData();await render();toast(permanent?'Challenge unbegrenzt gesperrt':'Challenge temporär gesperrt')}
+async function adminUnsuspendChallenge(id){let {error}=await sb.rpc('admin_set_challenge_disabled',{target_challenge:id,disabled_state:false,until_time:null,permanent_state:false});if(error)return toast(error.message);await logAdmin('challenge_unsuspended',{challenge_id:id});closeModal();await loadData();await render();toast('Challenge entsperrt')}
+async function adminDeleteChallenge(id){if(!confirm('Challenge wirklich entfernen? Historisch verwendete Challenges können nur gesperrt werden.'))return;let {error}=await sb.rpc('admin_delete_challenge',{target_challenge:id});if(error)return toast(error.message);await logAdmin('challenge_deleted',{challenge_id:id});closeModal();await loadData();await render();toast('Challenge entfernt')}
 async function chooseChallenge(id){let champ=prevChampion();if(!me.is_admin&&champ?.id!==me.id)return toast('Nur der Vorwochen-Champion darf wählen.');let {error}=await sb.from('weekly_challenges').insert({week_key:weekKey(),challenge_id:id,selected_by:me.id});if(error)return toast(error.message);await loadData();await render();toast('Challenge gewählt ✓')}
 
 function statsFor(userId,from,to){
@@ -468,7 +485,12 @@ function compareRow(label,a,b){let diff=a-b,sign=diff>0?'↑':diff<0?'↓':'→'
 function rewardMilestoneHTML(m){let got=rewardChoices.find(r=>r.user_id===me.id&&r.month_key===monthKey()&&r.milestone===m);return `<div class="reward" style="border-top:1px solid #edf1f4"><b>${m} P</b> ${got?`· ${escapeHtml(REWARDS.find(x=>x.key===got.reward_key)?.name||got.reward_key)} ${got.redeemed_at?'✓ eingelöst':`<button class="react" onclick="redeemReward('${got.id}')">Einlösen</button>`}`:`<button class="react" onclick="openReward(${m})">Belohnung wählen</button>`}</div>`}
 async function redeemReward(id){await sb.from('reward_choices').update({redeemed_at:new Date().toISOString()}).eq('id',id);await loadData();await render()}
 async function ownEntriesHTML(){
- let list=currentMonthEntries().filter(own);if(!list.length)return '<div class="card pad muted">Noch keine Einträge in diesem Monat.</div>';return list.map(e=>`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px"><div><b>${entryLabel(e)}</b><div class="tiny muted">${new Date(e.entry_date+'T12:00').toLocaleDateString('de-DE')} · +${e.points} P</div></div><div><button class="react" onclick="editEntry('${e.id}')">Bearbeiten</button> <button class="react danger" onclick="deleteEntry('${e.id}')">Löschen</button></div></div></div>`).join('')
+ let list=currentMonthEntries().filter(own);
+ let daily=dailyCompletions.filter(d=>d.user_id===me.id&&d.challenge_date.startsWith(monthKey()));
+ if(!list.length&&!daily.length)return '<div class="card pad muted">Noch keine Einträge in diesem Monat.</div>';
+ let rows=list.map(e=>`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px"><div><b>${entryLabel(e)}</b><div class="tiny muted">${new Date(e.entry_date+'T12:00').toLocaleDateString('de-DE')} · +${e.points} P</div></div>${entryEditControls(e)}</div></div>`);
+ rows.push(...daily.map(d=>{let c=challengePool.find(x=>x.id===d.challenge_pool_id);return `<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px"><div><b>${escapeHtml(c?.emoji||'☀️')} ${escapeHtml(c?.name||'Tageschallenge')}</b><div class="tiny muted">${new Date(d.challenge_date+'T12:00').toLocaleDateString('de-DE')} · +1 P · „${escapeHtml(d.completion_text)}“</div></div><button class="react danger" onclick="undoDailyCompletion('${d.id}')">↩ Zurücknehmen</button></div></div>`}));
+ return rows.join('')
 }
 function entryLabel(e){if(e.kind==='steps')return `👟 ${(+e.steps).toLocaleString('de-DE')} Schritte`;if(e.kind==='food')return `🥗 Ernährung ${(e.food_items||[]).length}/7`;if(e.kind==='activity')return `${ACTIVITIES[e.activity]?.icon||'⚡'} ${ACTIVITIES[e.activity]?.name||'Aktivität'} · ${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}`;return 'Bonus'}
 function canEdit(e){return own(e)&&e.entry_date.startsWith(monthKey())}
@@ -479,22 +501,93 @@ function rulesHTML(){return `<h1>Punkte & Regeln</h1><div class="card pad rulesI
 function historyHTML(){
  let months=[...new Set(entries.map(e=>e.entry_date.slice(0,7)))].sort().reverse();return `<h1>Historie</h1>${months.length?months.map(m=>`<div class="card pad section"><h3>${new Date(m+'-01T12:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</h3>${profiles.map(p=>{let pts=pointsOf(p.id,entries.filter(e=>e.entry_date.startsWith(m)));return `<div class="rankRow"><span></span><b>${escapeHtml(firstName(p))}</b><b>${pts} P</b></div>`}).join('')}</div>`).join(''):'<div class="card pad muted">Noch keine abgeschlossenen Monate.</div>'}`
 }
-async function adminHTML(){if(!me.is_admin)return '<div class="error">Kein Admin-Zugriff.</div>';let pending=profiles.filter(p=>!p.approved),active=profiles.filter(p=>p.approved),pendingHtml=pending.length?pending.map(p=>`<div class="card pad" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:center"><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><button class="cta" onclick="setApproval('${p.id}',true)">✓ Freischalten</button></div></div>`).join(''):'<div class="muted">Keine offenen Registrierungen.</div>',activeHtml=active.map(p=>`<div class="rankRow"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><div>${p.is_admin?'<b>Admin</b>':`<button class="react danger" onclick="setApproval('${p.id}',false)">Zugriff sperren</button>`}</div></div>`).join(''),prop=proposals.filter(p=>p.status==='voting').map(p=>{let v=proposalVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Challenge-Vorschläge.</div>';return `<h1>Admin</h1><div class="notice"><b>🔐 Private Fit4Us-Gruppe</b></div><div class="section"><h2>Offene Registrierungen ${pending.length?`(${pending.length})`:''}</h2>${pendingHtml}</div><div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div><div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div><div class="card pad section"><h3>Datenbank</h3><div>Profile: ${active.length}</div><div>Einträge: ${entries.length}</div><div>Challenges im Pool: ${challengePool.length}</div><div>Offene Vorschläge: ${proposals.filter(p=>p.status==='voting').length}</div><button class="cta" style="margin-top:12px" onclick="exportBackup()">💾 Komplett-Backup herunterladen</button><div class="tiny muted" style="margin-top:7px">Sichert alle Fit4Us-Datenbanktabellen als JSON.</div></div>`}
-
-async function exportBackup(){
- if(!me.is_admin)return;
- let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions'],backup={format:'Fit4Us Backup V1.5',created_at:new Date().toISOString(),tables:{}};
- for(let t of tables){let {data,error}=await sb.from(t).select('*');if(error)return toast('Backup-Fehler bei '+t+': '+error.message);backup.tables[t]=data||[]}
- let blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Fit4Us_Backup_${fmtDate()}.json`;a.click();URL.revokeObjectURL(a.href);toast('Backup erstellt ✓')
+async function adminHTML(){
+ if(!me.is_admin)return '<div class="error">Kein Admin-Zugriff.</div>';
+ let pending=profiles.filter(p=>!p.approved),active=profiles.filter(p=>p.approved);
+ let pendingHtml=pending.length?pending.map(p=>`<div class="card pad" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:center"><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><button class="cta" onclick="setApproval('${p.id}',true)">✓ Freischalten</button></div></div>`).join(''):'<div class="muted">Keine offenen Registrierungen.</div>';
+ let activeHtml=active.map(p=>`<div class="rankRow"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><div>${p.is_admin?'<b>Admin</b>':`<button class="react danger" onclick="setApproval('${p.id}',false)">Zugriff sperren</button>`}</div></div>`).join('');
+ let prop=proposals.filter(p=>p.status==='voting').map(p=>{let v=proposalVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Challenge-Vorschläge.</div>';
+ let auditHtml=adminAudit.length?adminAudit.slice(0,50).map(a=>{let p=profileById(a.admin_user_id);return `<div class="rankRow"><span>🧾</span><div><b>${escapeHtml(a.action)}</b><div class="tiny muted">${new Date(a.created_at).toLocaleString('de-DE')} · ${escapeHtml(firstName(p))}</div></div><button class="react" onclick='alert(${JSON.stringify(JSON.stringify(a.details||{},null,2))})'>Details</button></div>`}).join(''):'<div class="muted">Noch keine Admin-Aktionen protokolliert.</div>';
+ return `<h1>Admin</h1>
+ <div class="notice"><b>🔐 Private Fit4Us-Gruppe</b></div>
+ <div class="section"><h2>Offene Registrierungen ${pending.length?`(${pending.length})`:''}</h2>${pendingHtml}</div>
+ <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div>
+ <div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div>
+ <div class="card pad section"><h3>💾 Backup & Restore</h3><div class="uploadBtns"><button class="cta" onclick="exportBackup()">Komplett-Backup herunterladen</button><button class="secondary" onclick="openRestoreDialog()">Backup wiederherstellen</button></div><div class="tiny muted" style="margin-top:8px">Backup enthält alle zentralen Fit4Us-Datenbanktabellen. Bilder in Supabase Storage werden derzeit nicht in die JSON-Datei eingebettet.</div></div>
+ <div class="card pad section" style="border-color:#ffd4d4;background:#fffafa"><h3>⚠️ Daten zurücksetzen</h3><p class="small muted">Jeder Reset erstellt zuerst automatisch ein Komplett-Backup und verlangt eine eindeutige Bestätigung.</p><div class="grid"><button class="secondary" onclick="openResetDialog('test')">🧪 Testdaten zurücksetzen</button><button class="secondary" onclick="openResetDialog('season')">🏁 Saison-/Wettbewerbsdaten zurücksetzen</button><button class="secondary danger" onclick="openResetDialog('full')">☢ Kompletter Datenreset</button></div></div>
+ <div class="card pad section"><h3>Datenbank</h3><div>Profile: ${active.length}</div><div>Einträge: ${entries.length}</div><div>Challenges im Pool: ${challengePool.length}</div><div>Offene Vorschläge: ${proposals.filter(p=>p.status==='voting').length}</div></div>
+ <div class="card pad section"><h3>🧾 Admin-Auditlog</h3>${auditHtml}</div>`
 }
-async function decideProposal(id,approve){let note=prompt(approve?'Optionale Admin-Notiz zur Genehmigung:':'Optionale Begründung zur Ablehnung:')||null,{error}=await sb.rpc('admin_decide_proposal',{target_proposal:id,approve_it:approve,note_text:note});if(error)return toast(error.message);await loadData();await render();toast(approve?'Challenge genehmigt und dem Pool hinzugefügt':'Challenge abgelehnt')}
+async function buildBackup(){
+ let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log'],backup={format:'Fit4Us Backup',version:'1.6',created_at:new Date().toISOString(),tables:{}};
+ for(let t of tables){let {data,error}=await sb.from(t).select('*');if(error)throw new Error('Backup-Fehler bei '+t+': '+error.message);backup.tables[t]=data||[]}
+ return backup
+}
+function downloadBackupObject(backup,label='manual'){
+ let blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=`Fit4Us_Backup_${label}_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+}
+async function exportBackup(){
+ try{let backup=await buildBackup();downloadBackupObject(backup,'manual');await logAdmin('backup_exported',{tables:Object.keys(backup.tables)});toast('Backup erstellt ✓')}catch(err){toast(err.message)}
+}
+function openRestoreDialog(){
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>📥 Backup wiederherstellen</h2><button class="x" onclick="closeModal()">×</button></div><div class="error small"><b>Achtung:</b> Restore verändert Daten in der zentralen Datenbank. Vorher wird automatisch ein aktuelles Backup heruntergeladen.</div><div class="field section"><label>Fit4Us-Backup (.json)</label><input id="restoreFile" type="file" accept=".json,application/json"></div><button class="cta" onclick="restoreBackup()">Backup prüfen & wiederherstellen</button></div></div>`
+}
+async function restoreBackup(){
+ let f=$('#restoreFile')?.files?.[0];if(!f)return toast('Bitte Backup-Datei auswählen.');
+ let data;try{data=JSON.parse(await f.text())}catch{return toast('Ungültige JSON-Datei.')}
+ if(!data?.tables||!data?.format?.startsWith('Fit4Us Backup'))return toast('Kein gültiges Fit4Us-Backup.');
+ let confirmText=prompt('Zur Wiederherstellung RESTORE eingeben:');if(confirmText!=='RESTORE')return toast('Wiederherstellung abgebrochen.');
+ try{
+  let current=await buildBackup();downloadBackupObject(current,'pre-restore');
+  await logAdmin('restore_started',{source_version:data.version||'unknown'});
+  let order=['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','achievements','challenge_proposals','challenge_pool'];
+  for(let t of order){if(data.tables[t]){await sb.from(t).delete().neq('id','00000000-0000-0000-0000-000000000000'); if(data.tables[t].length){let {error}=await sb.from(t).insert(data.tables[t]);if(error)throw new Error(t+': '+error.message)}}}
+  await logAdmin('restore_completed',{source_version:data.version||'unknown'});
+  closeModal();await loadData();await render();toast('Restore abgeschlossen ✓')
+ }catch(err){toast('Restore-Fehler: '+err.message)}
+}
+function openResetDialog(mode){
+ const defs={
+  test:{title:'Testdaten zurücksetzen',desc:'Löscht Aktivitäten, Schritte, Ernährung, Reaktionen, Challenge-Abschlüsse, Achievements, Belohnungen und Bewertungen. Accounts, Freischaltungen und Challenge-Pool bleiben erhalten.',word:'TESTRESET'},
+  season:{title:'Saison-/Wettbewerbsdaten zurücksetzen',desc:'Löscht Nutzungs- und Wettbewerbsdaten inklusive laufender Challenge-Zuweisungen, behält Benutzerkonten und Challenge-Pool.',word:'SAISONRESET'},
+  full:{title:'Kompletter Fit4Us-Datenreset',desc:'Löscht nahezu alle Fit4Us-Inhalte außer Benutzerkonten, Admin-/Freischaltungsstatus und der technischen Grundstruktur. Challenge-Pool wird auf Systemdaten reduziert.',word:'FULLRESET'}
+ };
+ let d=defs[mode];
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>⚠️ ${d.title}</h2><button class="x" onclick="closeModal()">×</button></div><div class="error">${d.desc}<br><br><b>Vor dem Reset wird automatisch ein Komplett-Backup heruntergeladen.</b></div><div class="field section"><label>Zur Bestätigung exakt <b>${d.word}</b> eingeben</label><input id="resetConfirm"></div><button class="cta danger" onclick="executeReset('${mode}','${d.word}')">Backup erstellen & Reset ausführen</button></div></div>`
+}
+async function deleteAll(table,column='id'){
+ let {error}=await sb.from(table).delete().neq(column,'00000000-0000-0000-0000-000000000000');
+ if(error)throw new Error(table+': '+error.message)
+}
+async function executeReset(mode,word){
+ if($('#resetConfirm').value!==word)return toast('Bestätigung stimmt nicht.');
+ try{
+  let backup=await buildBackup();downloadBackupObject(backup,'pre-reset-'+mode);
+  await logAdmin('reset_started',{mode});
+  if(mode==='test'){
+   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements'])await deleteAll(t);
+  }
+  if(mode==='season'){
+   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements','daily_challenge_assignments','group_challenge_assignments','weekly_challenges'])await deleteAll(t,t==='weekly_challenges'?'week_key':'id');
+  }
+  if(mode==='full'){
+   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','challenge_proposals'])await deleteAll(t,t==='weekly_challenges'?'week_key':'id');
+   let {error}=await sb.from('challenge_pool').delete().eq('is_system',false);if(error)throw new Error('challenge_pool: '+error.message);
+  }
+  await logAdmin('reset_completed',{mode});
+  closeModal();await loadData();await render();toast('Reset abgeschlossen ✓')
+ }catch(err){toast('Reset-Fehler: '+err.message)}
+}
+
+async function decideProposal(id,approve){let note=prompt(approve?'Optionale Admin-Notiz zur Genehmigung:':'Optionale Begründung zur Ablehnung:')||null,{error}=await sb.rpc('admin_decide_proposal',{target_proposal:id,approve_it:approve,note_text:note});if(error)return toast(error.message);await logAdmin(approve?'challenge_proposal_approved':'challenge_proposal_rejected',{proposal_id:id});await loadData();await render();toast(approve?'Challenge genehmigt und dem Pool hinzugefügt':'Challenge abgelehnt')}
 async function setApproval(userId,allow){
  if(!me.is_admin)return;
  let p=profiles.find(x=>x.id===userId);
  if(!confirm(allow?`${p?.first_name||'Benutzer'} wirklich freischalten?`:`Zugriff für ${p?.first_name||'Benutzer'} wirklich sperren?`))return;
  let {error}=await sb.rpc('admin_set_user_approval',{target_user:userId,allow_access:allow});
  if(error)return toast(error.message);
- await loadData();await render();toast(allow?'Benutzer freigeschaltet ✓':'Zugriff gesperrt');
+ await logAdmin(allow?'user_approved':'user_blocked',{target_user:userId});await loadData();await render();toast(allow?'Benutzer freigeschaltet ✓':'Zugriff gesperrt');
 }
 
 function openEntry(kind='activity',edit=null){
