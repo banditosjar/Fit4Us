@@ -73,3 +73,5 @@ h3{font-weight:900}
 @media(min-width:1450px){
   .main{width:min(calc(100% - 70px),1240px)}
 }
+
+details summary{list-style:none}details summary::-webkit-details-marker{display:none}details summary:before{content:"▸";display:inline-block;margin-right:8px;transition:.18s transform}details[open] summary:before{transform:rotate(90deg)}.choice.disabled{opacity:.55;background:#f4f5f6}textarea{font-family:inherit;font-size:inherit}blockquote{font-style:normal}
