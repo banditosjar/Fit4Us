@@ -1,0 +1,13 @@
+Fit4Us V1.7.7
+================
+Keine Supabase-Migration nötig.
+
+Geändert:
+- Im gemeinsamen Feed wird das Datum jetzt zusätzlich um die Uhrzeit ergänzt.
+- Format: TT.MM.JJJJ · HH:MM
+- Die Uhrzeit stammt aus created_at des jeweiligen Feed-Eintrags.
+
+Update:
+1. UPDATE-Dateien in GitHub ersetzen.
+2. config.js nicht überschreiben.
+3. Commit.
