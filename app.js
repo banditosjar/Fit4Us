@@ -836,64 +836,82 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.7.3';
+const FIT4US_VERSION='1.7.6';
 let fit4usReloading=false;
 
-async function setupAppUpdates(){
- if(!('serviceWorker' in navigator))return;
-
- // A versioned SW URL + updateViaCache:'none' forces the browser to check GitHub,
- // instead of reusing a cached sw.js.
- const reg=await navigator.serviceWorker.register(`./sw.js?v=${FIT4US_VERSION}`,{updateViaCache:'none'});
-
- // Explicit check on every app start.
- try{await reg.update()}catch(err){console.warn('Update check:',err)}
-
- // If a new worker is waiting, activate it immediately.
- if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
-
- reg.addEventListener('updatefound',()=>{
-   const worker=reg.installing;
-   if(!worker)return;
-   worker.addEventListener('statechange',()=>{
-     if(worker.state==='installed'&&navigator.serviceWorker.controller){
-       worker.postMessage({type:'SKIP_WAITING'});
-     }
-   });
- });
-
- // Reload exactly once when the new SW takes control.
- navigator.serviceWorker.addEventListener('controllerchange',()=>{
-   if(fit4usReloading)return;
-   fit4usReloading=true;
-   const key='fit4us-controller-reload-'+FIT4US_VERSION;
-   if(!sessionStorage.getItem(key)){
-     sessionStorage.setItem(key,'1');
-     location.reload();
-   }
- });
-
- // Also compare the published build version. This catches iOS/PWA edge cases.
- await checkPublishedVersion();
-
- // While app remains open, check periodically.
- setInterval(()=>{reg.update().catch(()=>{});checkPublishedVersion().catch(()=>{})},15*60*1000);
+function cleanFit4UsUrl(){
+  // Remove old ?v=... or other cache-busting parameters from previous builds
+  // without reloading the page.
+  const clean=location.pathname + (location.hash||'');
+  if(location.search)history.replaceState(null,'',clean);
 }
 
-async function checkPublishedVersion(){
- try{
-   const res=await fetch(`./version.json?ts=${Date.now()}`,{cache:'no-store'});
-   if(!res.ok)return;
-   const info=await res.json();
-   if(info.version&&info.version!==FIT4US_VERSION){
-     const key='fit4us-version-reload-'+info.version;
-     if(sessionStorage.getItem(key))return;
-     sessionStorage.setItem(key,'1');
-     // Fetch the current page itself bypassing cache, then reload.
-     await fetch(`./?v=${info.version}&ts=${Date.now()}`,{cache:'no-store'}).catch(()=>{});
-     location.replace(`./?v=${info.version}`);
-   }
- }catch(err){console.warn('Version check:',err)}
+async function setupAppUpdates(){
+  cleanFit4UsUrl();
+  if(!('serviceWorker' in navigator))return;
+
+  // Always register the same stable URL. updateViaCache:'none' forces the browser
+  // to revalidate the service worker itself instead of trusting HTTP cache.
+  const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
+
+  try{await reg.update()}catch(err){console.warn('Update check:',err)}
+
+  if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+
+  reg.addEventListener('updatefound',()=>{
+    const worker=reg.installing;
+    if(!worker)return;
+    worker.addEventListener('statechange',()=>{
+      if(worker.state==='installed'&&navigator.serviceWorker.controller){
+        worker.postMessage({type:'SKIP_WAITING'});
+      }
+    });
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(fit4usReloading)return;
+    fit4usReloading=true;
+    sessionStorage.setItem('fit4us-last-reload-version',FIT4US_VERSION);
+    // Reload the SAME clean URL. No ?v=... is added.
+    location.reload();
+  });
+
+  await checkPublishedVersion(reg);
+
+  // If the app stays open for a long time, re-check periodically.
+  setInterval(()=>{
+    reg.update().catch(()=>{});
+    checkPublishedVersion(reg).catch(()=>{});
+  },15*60*1000);
+}
+
+async function checkPublishedVersion(reg){
+  try{
+    const res=await fetch('./version.json',{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+    if(!res.ok)return;
+    const info=await res.json();
+
+    if(info.version&&info.version!==FIT4US_VERSION){
+      // A newer index/app build exists on GitHub. Ask the browser to update the
+      // stable service worker, then let controllerchange perform one clean reload.
+      try{await reg.update()}catch{}
+
+      if(reg.waiting){
+        reg.waiting.postMessage({type:'SKIP_WAITING'});
+        return;
+      }
+
+      // Fallback for iOS edge cases: reload the normal URL once, still without
+      // exposing a version parameter to the user.
+      const marker='fit4us-published-version-'+info.version;
+      if(!sessionStorage.getItem(marker)){
+        sessionStorage.setItem(marker,'1');
+        location.reload();
+      }
+    }
+  }catch(err){
+    console.warn('Version check:',err);
+  }
 }
 
 document.addEventListener('DOMContentLoaded',async()=>{await setupAppUpdates().catch(err=>console.warn('App update:',err));init()});

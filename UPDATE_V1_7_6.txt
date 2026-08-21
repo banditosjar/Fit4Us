@@ -1,0 +1,30 @@
+Fit4Us V1.7.6 – saubere Auto-Updates
+=======================================
+
+Keine Supabase-Migration nötig.
+
+Behoben:
+- Fit4Us leitet NICHT mehr auf URLs wie ?v=1.7.4 oder ?v=1.7.5 um.
+- Die sichtbare Adresse bleibt immer:
+  https://banditosjar.github.io/Fit4Us/
+- Alte ?v=... Parameter werden beim Start automatisch aus der Adresszeile entfernt.
+- Service Worker wird immer unter der stabilen URL sw.js registriert.
+- updateViaCache:'none' erzwingt eine echte Update-Prüfung des Service Workers.
+- index.html, app.js, style.css, config.js, version.json und Manifest werden
+  Network-First mit cache:'no-store' geladen.
+- Alte Fit4Us-Service-Worker-Caches werden nach einem Update automatisch gelöscht.
+- Bei einer neuen Version erfolgt höchstens ein automatischer Reload auf derselben,
+  sauberen URL.
+- PWA start_url ist wieder "./" und enthält keine Versionsnummer.
+
+UPDATE:
+1. Dateien aus diesem UPDATE-ZIP in GitHub hochladen und ersetzen.
+2. config.js NICHT überschreiben.
+3. Commit erstellen.
+4. Danach die normale URL verwenden:
+   https://banditosjar.github.io/Fit4Us/
+
+WICHTIG:
+Beim einmaligen Wechsel von der bisherigen fehlerhaften ?v=-Logik auf V1.7.6
+kann ein bereits geöffneter alter Tab noch einmal einen Reload benötigen.
+Ab V1.7.6 ist kein manuelles Löschen von Browserdaten als normaler Update-Schritt vorgesehen.
