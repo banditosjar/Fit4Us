@@ -257,17 +257,29 @@ function renderShell(){
  $('#boot').innerHTML=`<div class="shell">
  <aside class="side"><img src="assets/fit4us-logo.png"><div class="sideNav" id="sideNav"></div><div class="sideBottom" id="sideUser"></div></aside>
  <main class="main"><header class="top"><img class="brandMini" src="assets/fit4us-icon.png"><div class="topUser" id="topUser"></div></header><div id="content"></div></main>
- <nav class="bottom" id="bottomNav"></nav></div><div id="modalRoot"></div>`;
+ <nav class="bottom" id="bottomNav"></nav><div id="mobileMenuRoot"></div></div><div id="modalRoot"></div>`;
  navs()
 }
 async function navs(){
- let nav=[['home','🏠','Home'],['group','👥','Gruppe'],['add','＋',''],['challenges','🎯','Challenges'],['me','👤','Mein Profil']];
- $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'?`<button class="plus" onclick="openEntry()">＋</button>`:`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
+ let nav=[['home','🏠','Home'],['group','👥','Gruppe'],['add','＋',''],['challenges','🎯','Challenges'],['more','☰','Mehr']];
+ $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">＋</button>`:id==='more'?`<button class="navBtn ${['me','rules','history','admin'].includes(currentView)?'active':''}" onclick="openMobileMenu()"><span>${ic}</span>${t}</button>`:`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
  $('#sideNav').innerHTML=[['home','🏠 Home'],['group','👥 Gruppe'],['challenges','🎯 Challenges'],['me','📊 Mein Profil'],['rules','📖 Punkte & Regeln'],['history','🗓️ Historie'],...(me?.is_admin?[['admin','🛡️ Admin']]:[])].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
  let av=await avatarHTML(me,42);$('#topUser').innerHTML=`${av}<div><b>${escapeHtml(firstName(me))}</b><div class="tiny muted">@${escapeHtml(me.username)}</div></div>`;
  $('#sideUser').innerHTML=`<button class="secondary" style="width:100%" onclick="logout()">Abmelden</button>`
 }
-async function go(v){currentView=v;navs();await render()}
+function openMobileMenu(){
+ let root=$('#mobileMenuRoot');if(!root)return;
+ root.innerHTML=`<div class="mobileMenuBackdrop" onclick="closeMobileMenu(event)"><div class="mobileMenuSheet" onclick="event.stopPropagation()"><div class="mobileMenuHandle"></div><div class="mobileMenuHead"><div><b>Fit4Us Menü</b><div class="tiny muted">Alle Funktionen</div></div><button class="x" onclick="closeMobileMenu()">×</button></div><div class="mobileMenuGrid">
+ <button onclick="mobileGo('me')"><span>👤</span><b>Mein Profil</b></button>
+ <button onclick="mobileGo('rules')"><span>📖</span><b>Punkte & Regeln</b></button>
+ <button onclick="mobileGo('history')"><span>🗓️</span><b>Historie</b></button>
+ ${me?.is_admin?`<button class="adminMobile" onclick="mobileGo('admin')"><span>🛡️</span><b>Admin</b></button>`:''}
+ </div><button class="secondary mobileLogout" onclick="logout()">Abmelden</button></div></div>`
+}
+function closeMobileMenu(e){if(e&&e.target!==e.currentTarget)return;let r=$('#mobileMenuRoot');if(r)r.innerHTML=''}
+async function mobileGo(v){closeMobileMenu();await go(v)}
+
+async function go(v){if(v==='admin'&&!me?.is_admin){toast('Kein Admin-Zugriff.');v='home'}currentView=v;navs();await render()}
 async function logout(){await sb.auth.signOut()}
 async function render(){
  let c=$('#content'); if(!c)return;
@@ -523,7 +535,7 @@ function rewardName(key){return rewardPool.find(x=>x.id===key||x.reward_key===ke
 function rewardsOverviewHTML(){
  let pts=monthPoints(),next=MILESTONES.find(m=>m>pts),open=openRewardChoices();
  if(!next){
-  return `<div class="rewardOverview"><div class="rewardNextHead"><div><div class="tiny muted">🎁 Belohnungen</div><b>Alle Punkteziele dieses Monats erreicht!</b></div><span class="rewardBig">🎉</span></div>${open.length?`<div class="notice small" style="margin-top:10px"><b>${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben erhalten, bis du sie einlöst.</div>`:''}<button class="react" style="margin-top:10px" onclick="go('me')">Alle Belohnungen ansehen</button></div>`
+  return `<div class="rewardOverview"><div class="rewardNextHead"><div><div class="tiny muted">🎁 Belohnungen</div><b>Alle Punkteziele dieses Monats erreicht!</b></div><span class="rewardBig">🎉</span></div>${open.length?`<div class="notice small" style="margin-top:10px"><b>${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben erhalten, bis du sie einlöst.</div>`:''}<button class="react" style="margin-top:10px" onclick="go('rules')">Alle Belohnungen ansehen</button></div>`
  }
  let opts=rewardOptions(next),remaining=Math.max(0,next-pts);
  return `<div class="rewardOverview">
@@ -531,7 +543,7 @@ function rewardsOverviewHTML(){
    <div class="rewardChoicePreview">${opts.map(r=>`<div class="rewardPreviewItem"><b>${escapeHtml(r.name)}</b><div class="tiny muted">${escapeHtml(r.desc)}</div></div>`).join('')}</div>
    <div class="tiny muted" style="margin-top:8px">Beim Erreichen von ${next} P wählst du eine dieser drei Belohnungen.</div>
    ${open.length?`<div class="notice small" style="margin-top:10px"><b>${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben monatsübergreifend erhalten.</div>`:''}
-   <button class="react" style="margin-top:10px" onclick="go('me')">Alle Belohnungen ansehen</button>
+   <button class="react" style="margin-top:10px" onclick="go('rules')">Alle Belohnungen ansehen</button>
  </div>`
 }
 function allRewardMilestonesHTML(){

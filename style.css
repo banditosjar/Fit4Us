@@ -95,3 +95,17 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 .rewardMilestoneCard{box-shadow:none}
 .rewardMilestoneCard.rewardUnlocked{border-color:#bdebdc;background:linear-gradient(145deg,#fff,#f1fcf8)}
 @media(min-width:760px){.rewardChoicePreview{grid-template-columns:repeat(3,1fr)}}
+
+/* V1.7.1 mobile navigation: feature parity with desktop */
+.mobileMenuBackdrop{position:fixed;z-index:90;inset:0;background:rgba(5,22,36,.42);display:flex;align-items:flex-end;backdrop-filter:blur(3px)}
+.mobileMenuSheet{width:100%;background:#fff;border-radius:24px 24px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -18px 50px rgba(5,22,36,.18);max-height:80vh;overflow:auto}
+.mobileMenuHandle{width:42px;height:5px;border-radius:99px;background:#d7e0e6;margin:0 auto 12px}
+.mobileMenuHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.mobileMenuHead b{font-size:20px}
+.mobileMenuGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mobileMenuGrid button{min-height:86px;border:1px solid var(--line);background:#f8fbfc;border-radius:16px;padding:13px;text-align:left;color:var(--navy)}
+.mobileMenuGrid button span{display:block;font-size:25px;margin-bottom:7px}
+.mobileMenuGrid button b{font-size:13px}
+.mobileMenuGrid .adminMobile{background:#f5f1ff;border-color:#ded2f5}
+.mobileLogout{width:100%;margin-top:12px}
+@media(min-width:1100px){#mobileMenuRoot{display:none!important}}
