@@ -32,6 +32,17 @@ const WEEKLY=[
  {id:'walk5',icon:'🚶',title:'Draußenzeit',desc:'5 Spaziergänge oder Wanderungen in dieser Woche',points:10},
  {id:'mix3',icon:'⚡',title:'Abwechslung',desc:'3 unterschiedliche Aktivitätsarten in dieser Woche',points:10}
 ];
+
+const GROUP_CHALLENGES=[
+ {id:'steps250',icon:'👟',title:'Gemeinsam unterwegs',desc:'Sammelt gemeinsam 250.000 Schritte.',target:250000,unit:'Schritte',kind:'steps'},
+ {id:'minutes600',icon:'⏱️',title:'Aktive Crew',desc:'Sammelt gemeinsam 600 aktive Minuten.',target:600,unit:'Minuten',kind:'minutes'},
+ {id:'outdoor12',icon:'🌤️',title:'Raus mit euch!',desc:'Schafft gemeinsam 12 Spaziergänge oder Wanderungen.',target:12,unit:'Draußen-Sessions',kind:'outdoor'},
+ {id:'distance60',icon:'🗺️',title:'Kilometerjäger',desc:'Sammelt gemeinsam 60 Kilometer bei Aktivitäten mit Distanz.',target:60,unit:'km',kind:'distance'},
+ {id:'healthy16',icon:'🥗',title:'Gemeinsam bewusst',desc:'Sammelt 16 Ernährungstage mit mindestens 5 erfüllten Zielen.',target:16,unit:'Ernährungstage',kind:'healthy'},
+ {id:'sports14',icon:'💪',title:'Team in Bewegung',desc:'Sammelt gemeinsam 14 echte Sport-/Aktivitätseinheiten.',target:14,unit:'Aktivitäten',kind:'activities'}
+];
+const STREAK_MARKS=[[3,2],[5,3],[7,5],[14,10],[21,15],[30,25]];
+
 const REWARDS=[
  {key:'game',name:'🎮 Game Master',desc:'Du bestimmst das nächste Online-Spiel.'},
  {key:'snack',name:'🍿 Snack-Joker',desc:'Dein Partner organisiert deinen Lieblingssnack.'},
@@ -61,7 +72,68 @@ function firstName(p){return p?.first_name||'User'}
 function own(e){return e.user_id===me?.id}
 function currentMonthEntries(){let mk=monthKey();return entries.filter(e=>e.entry_date.startsWith(mk))}
 function currentWeekEntries(){let a=fmtDate(startOfWeek()),b=fmtDate(endOfWeek());return entries.filter(e=>e.entry_date>=a&&e.entry_date<=b)}
-function pointsOf(userId, list){return list.filter(e=>e.user_id===userId).reduce((s,e)=>s+(+e.points||0),0)}
+function basePointsOf(userId,list){return list.filter(e=>e.user_id===userId).reduce((s,e)=>s+(+e.points||0),0)}
+function rangeOf(list){
+ if(!list?.length)return null;
+ let ds=list.map(e=>e.entry_date).sort();
+ return [ds[0],ds.at(-1)]
+}
+function entriesForWeek(wk){let s=new Date(wk+'T12:00'),e=new Date(s);e.setDate(e.getDate()+6);let a=fmtDate(s),b=fmtDate(e);return entries.filter(x=>x.entry_date>=a&&x.entry_date<=b)}
+function groupChallengeForWeek(wk){
+ let seed=[...wk].reduce((s,c)=>((s*31)+c.charCodeAt(0))>>>0,17);
+ return GROUP_CHALLENGES[seed%GROUP_CHALLENGES.length]
+}
+function groupChallengeValue(wk){
+ let ch=groupChallengeForWeek(wk),es=entriesForWeek(wk);
+ if(ch.kind==='steps')return es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0);
+ if(ch.kind==='minutes')return es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0);
+ if(ch.kind==='outdoor')return es.filter(e=>e.kind==='activity'&&['walk','hike'].includes(e.activity)).length;
+ if(ch.kind==='distance')return es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.distance||0),0);
+ if(ch.kind==='healthy')return es.filter(e=>e.kind==='food'&&(e.food_items||[]).length>=5).length;
+ if(ch.kind==='activities')return es.filter(e=>e.kind==='activity').length;
+ return 0
+}
+function groupChallengeComplete(wk){let ch=groupChallengeForWeek(wk);return groupChallengeValue(wk)>=ch.target}
+function selectionForWeek(wk){return (window.weekSelections||[]).find(x=>x.week_key===wk)}
+function challengeProgressForWeek(ch,userId,wk){
+ let es=entriesForWeek(wk).filter(e=>e.user_id===userId);
+ if(!ch)return [0,1];
+ if(ch.id==='move3'){let ds=[...new Set(es.filter(e=>e.kind==='activity'&&e.minutes>=30).map(e=>e.entry_date))];return [ds.length,3]}
+ if(ch.id==='steps4')return [es.filter(e=>e.kind==='steps'&&e.steps>=10000).length,4];
+ if(ch.id==='healthy5')return [es.filter(e=>e.kind==='food'&&(e.food_items||[]).length>=5).length,5];
+ if(ch.id==='sport180')return [es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),180];
+ if(ch.id==='walk5')return [es.filter(e=>e.kind==='activity'&&['walk','hike'].includes(e.activity)).length,5];
+ if(ch.id==='mix3')return [new Set(es.filter(e=>e.kind==='activity').map(e=>e.activity)).size,3];
+ return [0,1]
+}
+function streakBonusEvents(userId){
+ let dates=[...new Set(entries.filter(e=>e.user_id===userId).map(e=>e.entry_date))].sort();
+ if(!dates.length)return [];
+ let min=new Date(dates[0]+'T12:00'),max=new Date(dates.at(-1)+'T12:00'),events=[],run=0;
+ for(let d=new Date(min);d<=max;d.setDate(d.getDate()+1)){
+   let ds=fmtDate(d);
+   if(activeDay(ds,userId)){
+     run++;
+     let mark=STREAK_MARKS.find(x=>x[0]===run);
+     if(mark)events.push({date:ds,points:mark[1],days:mark[0]});
+   }else run=0;
+ }
+ return events
+}
+function bonusPointsOf(userId,list){
+ let range=rangeOf(list);if(!range)return 0;
+ let [from,to]=range,bonus=0;
+ for(let sel of (window.weekSelections||[])){
+   let wk=sel.week_key,end=new Date(wk+'T12:00');end.setDate(end.getDate()+6);
+   if(fmtDate(end)<from||wk>to)continue;
+   let ch=WEEKLY.find(x=>x.id===sel.challenge_id),[a,b]=challengeProgressForWeek(ch,userId,wk);
+   if(a>=b)bonus+=(ch?.points||0);
+   if(groupChallengeComplete(wk))bonus+=5;
+ }
+ bonus+=streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+x.points,0);
+ return bonus
+}
+function pointsOf(userId,list){return basePointsOf(userId,list)+bonusPointsOf(userId,list)}
 function profileById(id){return profiles.find(p=>p.id===id)}
 
 async function signed(bucket,path,expires=3600){
@@ -222,16 +294,57 @@ function streak(userId=me.id){
  while(activeDay(fmtDate(d),userId)){n++;d.setDate(d.getDate()-1)}
  return n
 }
-function streakNext(s){let marks=[[3,2],[5,3],[7,5],[14,10],[21,15],[30,25]];return marks.find(x=>x[0]>s)||[30,25]}
+function streakNext(s){return STREAK_MARKS.find(x=>x[0]>s)||[30,25]}
+
+function currentChallenge(){
+ let sel=currentSelection();
+ return sel?WEEKLY.find(x=>x.id===sel.challenge_id):null
+}
+function todaySuggestions(){
+ let st=todayEntry('steps')?.steps||0,min=todayActivityMinutes(),food=todayEntry('food'),items=[];
+ let thresholds=[5000,7500,10000,12500,15000];
+ let next=thresholds.find(x=>x>st);
+ if(next)items.push({icon:'👟',title:`Noch ${(next-st).toLocaleString('de-DE')} Schritte`,desc:`Dann erreichst du die nächste Schritt-Punktestufe (${next.toLocaleString('de-DE')}).`});
+ else {let nextX=20000+Math.max(0,Math.floor((st-15000)/5000))*5000;if(nextX>st)items.push({icon:'👟',title:`Noch ${(nextX-st).toLocaleString('de-DE')} Schritte`,desc:'Damit gibt es einen weiteren Schrittpunkt.'})}
+ if(min<30)items.push({icon:'🔥',title:`Noch ${30-min} aktive Minuten`,desc:'Damit zählt heute als aktiver Tag für deinen Streak.'});
+ if(!food)items.push({icon:'🥗',title:'Ernährung noch nicht eingetragen',desc:'Tages-Check-in öffnen und bis zu 7 positive Ziele abhaken.'});
+ let ch=currentChallenge();
+ if(ch){let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());if(a<b)items.push({icon:ch.icon,title:`Wochenchallenge: ${a}/${b}`,desc:ch.desc})}
+ return items.slice(0,3)
+}
+function bonusSummary(userId,list){
+ let base=basePointsOf(userId,list),bonus=bonusPointsOf(userId,list);
+ return `<div class="bonusBreakdown"><span class="bonusPill">Aktivitäten & Alltag: ${base} P</span>${bonus?`<span class="bonusPill">Bonuspunkte: +${bonus} P</span>`:''}</div>`
+}
+function compactChallengeHTML(){
+ let ch=currentChallenge();
+ if(!ch)return `<div class="card challengeHome personal"><div class="challengeTop"><span class="pill">🎯 Wochenchallenge</span></div><div class="challengeTitle">Noch keine Challenge gewählt</div><div class="muted small">Der Vorwochen-Champion entscheidet.</div></div>`;
+ let [a,b]=challengeProgressForWeek(ch,me.id,weekKey()),pct=Math.min(100,a/b*100);
+ return `<div class="card challengeHome personal"><div class="challengeTop"><span class="pill">🎯 Wochenchallenge</span><span class="points">+${ch.points} P</span></div><div class="challengeIcon">${ch.icon}</div><div class="challengeTitle">${ch.title}</div><div class="muted small">${ch.desc}</div><div class="progress" style="margin-top:12px"><i style="width:${pct}%"></i></div><div class="challengeFooter"><b>${a} / ${b}</b><span>${a>=b?'Geschafft! 🎉':`Noch ${Math.max(0,b-a)} bis zum Ziel`}</span></div></div>`
+}
+function compactGroupChallengeHTML(){
+ let ch=groupChallengeForWeek(weekKey()),v=groupChallengeValue(weekKey()),pct=Math.min(100,v/ch.target*100);
+ let value=ch.kind==='steps'?Math.round(v).toLocaleString('de-DE'):Number(v.toFixed?.(1)??v).toLocaleString('de-DE');
+ return `<div class="card challengeHome group"><div class="challengeTop"><span class="pill">👥 Gruppen-Challenge</span><span class="points">+5 P alle</span></div><div class="challengeIcon">${ch.icon}</div><div class="challengeTitle">${ch.title}</div><div class="muted small">${ch.desc}</div><div class="progress" style="margin-top:12px"><i style="width:${pct}%"></i></div><div class="challengeFooter"><b>${value} / ${ch.target.toLocaleString('de-DE')} ${ch.unit}</b><span>${v>=ch.target?'Gemeinsam geschafft! 🎉':`${Math.round(pct)} %`}</span></div></div>`
+}
 async function homeHTML(){
- let st=todayEntry('steps')?.steps||0,food=(todayEntry('food')?.food_items||[]).length,min=todayActivityMinutes(),pts=monthPoints(),next=nextMilestone(pts),sk=streak(),sn=streakNext(sk);
- return `<h1>Hallo ${escapeHtml(firstName(me))}! 👋</h1><div class="grid desktopGrid">
- <div><div class="card hero"><div class="heroRow"><div><div class="muted small">Deine Punkte im ${new Date().toLocaleDateString('de-DE',{month:'long'})}</div><div class="big">${pts} P</div></div><span class="chip">🔥 ${sk} Tage</span></div><div class="progress" style="margin-top:14px"><i style="width:${Math.min(100,pts/next*100)}%"></i></div><div class="tiny muted" style="margin-top:6px">${pts} / ${next} P bis zur nächsten Belohnung</div></div>
- <div class="grid kpis section"><div class="card kpi"><div>👟</div><b>${st.toLocaleString('de-DE')}</b><div class="tiny muted">Schritte</div></div><div class="card kpi"><div>⏱️</div><b>${min}</b><div class="tiny muted">aktive Min.</div></div><div class="card kpi"><div>🥗</div><b>${food}/7</b><div class="tiny muted">Ernährung</div></div></div>
- <div class="card pad section"><b>🔥 Streak-Motivation</b><div style="margin-top:8px">${sk} aktive Tage in Folge</div><div class="muted small">Nächstes Ziel: ${sn[0]} Tage → <b>+${sn[1]} Bonuspunkte</b></div></div>
- <button class="cta section" style="width:100%" onclick="openEntry()">＋ Aktivität / Tageswert eintragen</button></div>
- <div><div class="card pad"><div style="display:flex;justify-content:space-between"><b>Diese Woche</b><button class="react" onclick="go('group')">Alle</button></div>${await rankingHTML(currentWeekEntries())}</div>
- <div class="section"><h2>Aktuelles von euch</h2>${await feedHTML(3)}</div></div></div>`
+ let st=todayEntry('steps')?.steps||0,food=(todayEntry('food')?.food_items||[]).length,min=todayActivityMinutes(),pts=monthPoints(),next=nextMilestone(pts),sk=streak(),sn=streakNext(sk),suggestions=todaySuggestions();
+ return `<h1>Hallo ${escapeHtml(firstName(me))}! 👋</h1>
+ <div class="grid desktopGrid">
+  <div>
+   <div class="card hero"><div class="heroRow"><div><div class="muted small">Deine Punkte im ${new Date().toLocaleDateString('de-DE',{month:'long'})}</div><div class="big">${pts} P</div></div><span class="chip">🔥 ${sk} Tage</span></div><div class="progress" style="margin-top:14px"><i style="width:${Math.min(100,pts/next*100)}%"></i></div><div class="tiny muted" style="margin-top:6px">${pts} / ${next} P bis zur nächsten Belohnung</div>${bonusSummary(me.id,currentMonthEntries())}</div>
+   <div class="grid kpis section"><div class="card kpi"><div>👟</div><b>${st.toLocaleString('de-DE')}</b><div class="tiny muted">Schritte heute</div></div><div class="card kpi"><div>⏱️</div><b>${min}</b><div class="tiny muted">aktive Min.</div></div><div class="card kpi"><div>🥗</div><b>${food}/7</b><div class="tiny muted">Ernährungsziele</div></div></div>
+   <div class="sectionTitle"><h2>Deine Challenges</h2><button class="react" onclick="go('challenges')">Details</button></div>
+   <div class="grid challengeGrid">${compactChallengeHTML()}${compactGroupChallengeHTML()}</div>
+   <div class="card pad suggestionCard section"><b>💡 Was kannst du heute noch machen?</b>${suggestions.length?suggestions.map(x=>`<div class="suggestion"><div class="suggestionIcon">${x.icon}</div><div><b>${x.title}</b><div class="small muted">${x.desc}</div></div></div>`).join(''):'<div class="notice" style="margin-top:10px">Für heute sieht es richtig gut aus – dranbleiben! 🎉</div>'}</div>
+   <div class="card pad section"><b>🔥 Streak-Motivation</b><div style="margin-top:8px">${sk} aktive Tage in Folge</div><div class="muted small">Nächstes Ziel: ${sn[0]} Tage → <b>+${sn[1]} Bonuspunkte</b></div></div>
+   <button class="cta section" style="width:100%" onclick="openEntry()">＋ Aktivität / Tageswert eintragen</button>
+  </div>
+  <div>
+   <div class="card pad"><div style="display:flex;justify-content:space-between"><b>🏆 Diese Woche</b><button class="react" onclick="go('group')">Alle</button></div>${await rankingHTML(currentWeekEntries())}</div>
+   <div class="sectionTitle"><h2>Aktuelles von euch</h2><button class="react" onclick="go('group')">Feed öffnen</button></div>${await feedHTML(3)}
+  </div>
+ </div>`
 }
 async function groupHTML(){return `<h1>Gruppe</h1><div class="grid grid2"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries())}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries())}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
 async function feedHTML(limit=99){
@@ -253,29 +366,19 @@ async function toggleReaction(entryId,emoji){
 
 function lastWeek(){let s=startOfWeek();s.setDate(s.getDate()-7);let e=new Date(s);e.setDate(e.getDate()+6);return entries.filter(x=>x.entry_date>=fmtDate(s)&&x.entry_date<=fmtDate(e))}
 function weeklyOptions(key=weekKey()){let seed=[...key].reduce((s,c)=>s+c.charCodeAt(0),0);return [0,1,2].map(i=>WEEKLY[(seed+i*2)%WEEKLY.length])}
-function currentSelection(){return (window.weekSelections||[]).find(x=>x.week_key===weekKey())}
+function currentSelection(){return selectionForWeek(weekKey())}
 function prevChampion(){let r=ranking(lastWeek());if(!r.length||r[0].pts===0)return null;return r[0].p}
-function challengeProgress(ch,userId=me.id){
- let es=currentWeekEntries().filter(e=>e.user_id===userId);
- if(!ch)return [0,1];
- if(ch.id==='move3'){let ds=[...new Set(es.filter(e=>e.kind==='activity'&&e.minutes>=30).map(e=>e.entry_date))];return [ds.length,3]}
- if(ch.id==='steps4'){return [es.filter(e=>e.kind==='steps'&&e.steps>=10000).length,4]}
- if(ch.id==='healthy5'){return [es.filter(e=>e.kind==='food'&&(e.food_items||[]).length>=5).length,5]}
- if(ch.id==='sport180'){return [es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),180]}
- if(ch.id==='walk5'){return [es.filter(e=>e.kind==='activity'&&['walk','hike'].includes(e.activity)).length,5]}
- if(ch.id==='mix3'){return [new Set(es.filter(e=>e.kind==='activity').map(e=>e.activity)).size,3]}
- return [0,1]
-}
+function challengeProgress(ch,userId=me.id){return challengeProgressForWeek(ch,userId,weekKey())}
 async function challengesHTML(){
- let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,champ=prevChampion(),choose=(!sel && champ?.id===me.id)||me.is_admin;
- let main=ch?(()=>{let [a,b]=challengeProgress(ch);return `<div class="card challenge"><span class="chip">Wochenchallenge</span><h3>${ch.icon} ${ch.title}</h3><p class="muted">${ch.desc}</p><div class="progress"><i style="width:${Math.min(100,a/b*100)}%"></i></div><div class="small" style="margin-top:7px"><b>${a} / ${b}</b> · bei Erfolg +${ch.points} P</div></div>`})():`<div class="card pad muted">Für diese Woche wurde noch keine Challenge gewählt.</div>`;
+ let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,champ=prevChampion(),choose=(!sel && champ?.id===me.id)||(!sel&&me.is_admin);
+ let main=ch?(()=>{let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());return `<div class="card challenge challengeHome personal"><div class="challengeTop"><span class="pill">🎯 Persönliche Wochenchallenge</span><span class="points">+${ch.points} P</span></div><h2>${ch.icon} ${ch.title}</h2><p class="muted">${ch.desc}</p><div class="progress"><i style="width:${Math.min(100,a/b*100)}%"></i></div><div class="challengeFooter"><b>${a} / ${b}</b><span>${a>=b?'Geschafft! 🎉':'Weiter dranbleiben'}</span></div></div>`})():`<div class="card pad muted">Für diese Woche wurde noch keine Challenge gewählt.</div>`;
  let pick='';
- if(choose){pick=`<h2 class="section">Du darfst wählen 🎉</h2><div class="grid choiceGrid">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${c.title}</b><div class="tiny muted">${c.desc}</div></button>`).join('')}</div>`}
- else if(!sel&&champ)pick=`<div class="notice section">${escapeHtml(firstName(champ))} ist Wochenchampion der Vorwoche und darf aus drei Challenges wählen.</div>`;
- else if(!sel&&!champ)pick=`<div class="notice section">Noch kein Vorwochen-Champion vorhanden. Ein Admin kann die erste Challenge wählen.</div>`;
- return `<h1>Challenges</h1>${main}${pick}<h2 class="section">Gruppen-Challenge</h2><div class="card challenge"><h3>👟 Gemeinsam 250.000 Schritte</h3><p class="muted">Alle Schritte dieser Woche zählen zusammen.</p>${groupChallengeHTML()}</div>`
+ if(choose){pick=`<div class="sectionTitle"><h2>Du darfst die nächste Challenge wählen 🎉</h2></div><div class="grid choiceGrid">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${c.title}</b><div class="tiny muted">${c.desc}</div></button>`).join('')}</div>`}
+ else if(!sel&&champ)pick=`<div class="notice section"><b>${escapeHtml(firstName(champ))}</b> ist Wochenchampion der Vorwoche und darf aus drei Challenges wählen.</div>`;
+ let gc=groupChallengeForWeek(weekKey()),gv=groupChallengeValue(weekKey()),gp=Math.min(100,gv/gc.target*100),gval=gc.kind==='steps'?Math.round(gv).toLocaleString('de-DE'):Number(gv.toFixed?.(1)??gv).toLocaleString('de-DE');
+ return `<h1>Challenges</h1>${main}${pick}<div class="sectionTitle"><h2>Gemeinsame Wochenmission</h2><span class="pill">🎲 wöchentlich zufällig</span></div><div class="card challenge challengeHome group"><div class="challengeTop"><span class="pill">👥 Gruppen-Challenge</span><span class="points">+5 P für alle</span></div><h2>${gc.icon} ${gc.title}</h2><p class="muted">${gc.desc}</p><div class="progress"><i style="width:${gp}%"></i></div><div class="challengeFooter"><b>${gval} / ${gc.target.toLocaleString('de-DE')} ${gc.unit}</b><span>${gv>=gc.target?'Gemeinsam geschafft! 🎉':`${Math.round(gp)} % erreicht`}</span></div></div>`
 }
-function groupChallengeHTML(){let total=currentWeekEntries().filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0);return `<div class="progress"><i style="width:${Math.min(100,total/250000*100)}%"></i></div><div class="small" style="margin-top:7px"><b>${total.toLocaleString('de-DE')} / 250.000</b>${total>=250000?' · geschafft! +5 P für alle':''}</div>`}
+function groupChallengeHTML(){let ch=groupChallengeForWeek(weekKey()),v=groupChallengeValue(weekKey());return `<div class="progress"><i style="width:${Math.min(100,v/ch.target*100)}%"></i></div>`}
 async function chooseChallenge(id){let champ=prevChampion();if(!me.is_admin&&champ?.id!==me.id)return toast('Nur der Vorwochen-Champion darf wählen.');let {error}=await sb.from('weekly_challenges').insert({week_key:weekKey(),challenge_id:id,selected_by:me.id});if(error)return toast(error.message);await loadData();await render();toast('Challenge gewählt ✓')}
 
 function statsFor(userId,from,to){
@@ -286,7 +389,7 @@ async function meHTML(){
  let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);
  let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=monthPoints();
  let rewards=MILESTONES.filter(m=>pts>=m);
- return `<h1>Ich</h1><div class="grid grid2"><div><div class="card statBig">${av}<h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h2><div class="muted">@${escapeHtml(me.username)}</div><strong>${pts} P</strong><div class="muted">diesen Monat</div><button class="secondary section" onclick="openProfile()">Profil bearbeiten</button></div>
+ return `<h1>Ich</h1><div class="grid grid2"><div><div class="card statBig">${av}<h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h2><div class="muted">@${escapeHtml(me.username)}</div><strong>${pts} P</strong><div class="muted">diesen Monat</div>${bonusSummary(me.id,currentMonthEntries())}<button class="secondary section" onclick="openProfile()">Profil bearbeiten</button></div>
  <div class="card pad section"><h3>Diese Woche vs. Vorwoche</h3>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></div>
  <div><div class="card pad"><h3>🔥 Dein Streak</h3><div class="big">${streak()} Tage</div><div class="muted">${(()=>{let n=streakNext(streak());return `Noch ${Math.max(0,n[0]-streak())} aktive Tage bis +${n[1]} Bonuspunkte`;})()}</div></div>
  <div class="card pad section"><h3>🎁 Freigeschaltete Belohnungen</h3>${rewards.length?rewards.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Erste Belohnung bei 50 Punkten.</div>'}</div></div></div>
@@ -304,7 +407,7 @@ async function deleteEntry(id){let e=entries.find(x=>x.id===id);if(!e||!canEdit(
 function editEntry(id){let e=entries.find(x=>x.id===id);if(!e||!canEdit(e))return toast('Dieser Eintrag kann nicht mehr geändert werden.');openEntry(e.kind,e)}
 
 function rulesHTML(){
- return `<h1>Punkte & Regeln</h1><div class="grid grid2"><div class="card pad"><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p><p class="muted small">Eingaben werden auf volle 100 Schritte abgerundet.</p></div><div class="card pad"><h3>🥗 Ernährung</h3>${FOOD.map(f=>`<p><b>${f.icon} ${f.title}</b><br><span class="muted small">${f.desc}</span> · +1 P</p>`).join('')}</div></div><h2 class="section">Aktivitäten</h2><div class="grid grid2">${Object.entries(ACTIVITIES).map(([k,a])=>`<div class="card pad"><b>${a.icon} ${a.name}</b><div class="muted small">${a.mode==='distance'?`${a.step} km = ${a.points} P`:`${a.step} Minuten = ${a.points} P`}${a.distance?' · Distanz kann erfasst werden':''}</div></div>`).join('')}</div><h2 class="section">🔥 Streak-Boni</h2><div class="card pad">3 Tage +2 P · 5 Tage +3 P · 7 Tage +5 P · 14 Tage +10 P · 21 Tage +15 P · 30 Tage +25 P</div>`
+ return `<h1>Punkte & Regeln</h1><div class="card pad rulesIntro"><b>Transparentes Punktesystem</b><div class="small muted">Rankings enthalten deine normalen Aktivitäts-/Ernährungspunkte sowie automatisch erreichte Challenge- und Streak-Boni. Punkte werden nie ausgegeben.</div></div><div class="grid grid2 section"><div class="card pad"><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p><p class="muted small">Eingaben werden auf volle 100 Schritte abgerundet.</p></div><div class="card pad"><h3>🥗 Ernährung</h3>${FOOD.map(f=>`<p><b>${f.icon} ${f.title}</b><br><span class="muted small">${f.desc}</span> · +1 P</p>`).join('')}</div></div><h2 class="section">Aktivitäten</h2><div class="grid grid2">${Object.entries(ACTIVITIES).map(([k,a])=>`<div class="card pad"><b>${a.icon} ${a.name}</b><div class="muted small">${a.mode==='distance'?`${a.step} km = ${a.points} P`:`${a.step} Minuten = ${a.points} P`}${a.distance?' · Distanz kann erfasst werden':''}</div></div>`).join('')}</div><h2 class="section">🔥 Streak-Boni</h2><div class="card pad">3 Tage +2 P · 5 Tage +3 P · 7 Tage +5 P · 14 Tage +10 P · 21 Tage +15 P · 30 Tage +25 P</div>`
 }
 function historyHTML(){
  let months=[...new Set(entries.map(e=>e.entry_date.slice(0,7)))].sort().reverse();return `<h1>Historie</h1>${months.length?months.map(m=>`<div class="card pad section"><h3>${new Date(m+'-01T12:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</h3>${profiles.map(p=>{let pts=pointsOf(p.id,entries.filter(e=>e.entry_date.startsWith(m)));return `<div class="rankRow"><span></span><b>${escapeHtml(firstName(p))}</b><b>${pts} P</b></div>`}).join('')}</div>`).join(''):'<div class="card pad muted">Noch keine abgeschlossenen Monate.</div>'}`

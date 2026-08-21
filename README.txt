@@ -1,25 +1,11 @@
-FIT4US V1.2 PRIVATE
-====================
-Erste private Multiuser-Version mit Admin-Freischaltung.
+Fit4Us V1.3
+============
+Private Multiuser-PWA für GitHub Pages + Supabase.
 
-Wichtig:
-- KEINE Demo-Daten.
-- Neue Registrierungen sind standardmäßig gesperrt.
-- Nur Admin kann Zugriff freischalten.
-- Ohne Freigabe sind Feed, Rankings, Fotos und andere Nutzerdaten nicht sichtbar.
-- GitHub Pages = Frontend.
-- Supabase = Auth, Datenbank, Storage, Realtime, RLS.
+Für BESTEHENDE Installation:
+Bitte Fit4Us_v1_3_UPDATE.zip verwenden und UPDATE_ANLEITUNG.txt lesen.
+config.js NICHT überschreiben.
+In Supabase ausschließlich MIGRATION_V1_3.sql ausführen.
 
-Bitte zuerst "ANLEITUNG_ONLINE.txt" lesen.
-
-Dateien:
-- index.html
-- style.css
-- app.js
-- config.js
-- supabase-setup.sql
-- manifest.webmanifest
-- sw.js
-- .nojekyll
-- ANLEITUNG_ONLINE.txt
-- assets/
+Für komplette Neuinstallation:
+FULL-Paket + supabase-setup.sql verwenden.

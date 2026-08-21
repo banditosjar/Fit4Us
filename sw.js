@@ -1,4 +1,4 @@
-const CACHE='fit4us-v1.2.0';
+const CACHE='fit4us-v1.3.0';
 const ASSETS=['./','./index.html','./config.js','./manifest.webmanifest','./assets/fit4us-logo.png','./assets/fit4us-icon.png','./assets/fit4us-icon-192.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
