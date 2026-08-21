@@ -1,7 +1,7 @@
 
 const CFG=window.FIT4US_CONFIG||{};
 const configured=CFG.supabaseUrl && !CFG.supabaseUrl.startsWith('DEINE_') && CFG.supabaseKey && !CFG.supabaseKey.startsWith('DEIN_');
-let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
+let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
 let realtimeChannels=[];
 
 const ACTIVITIES={
@@ -226,7 +226,7 @@ async function checkApproval(){
  else toast('Noch nicht freigeschaltet.');
 }
 async function loadData(){
- let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dc,ach,cc,audit]=await Promise.all([
+ let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dc,ach,cc,audit,rpool,rprop,rvotes]=await Promise.all([
   sb.from('profiles').select('*').order('created_at'),
   sb.from('entries').select('*').order('entry_date',{ascending:false}).order('created_at',{ascending:false}),
   sb.from('reactions').select('*'),sb.from('weekly_challenges').select('*'),sb.from('reward_choices').select('*'),
@@ -235,19 +235,19 @@ async function loadData(){
   sb.from('challenge_proposal_votes').select('*'),sb.from('challenge_ratings').select('*'),
   sb.from('group_challenge_assignments').select('*'),sb.from('daily_challenge_assignments').select('*'),
   sb.from('daily_challenge_completions').select('*').order('created_at',{ascending:false}),
-  sb.from('achievements').select('*').order('achieved_on',{ascending:false}),sb.from('challenge_completions').select('*').order('created_at',{ascending:false}),sb.from('admin_audit_log').select('*').order('created_at',{ascending:false}).limit(200)
+  sb.from('achievements').select('*').order('achieved_on',{ascending:false}),sb.from('challenge_completions').select('*').order('created_at',{ascending:false}),sb.from('admin_audit_log').select('*').order('created_at',{ascending:false}).limit(200),sb.from('reward_pool').select('*').order('points_required'),sb.from('reward_proposals').select('*').order('created_at',{ascending:false}),sb.from('reward_proposal_votes').select('*')
  ]);
  if(p.error)throw p.error;
  profiles=(p.data||[]).filter(x=>x.approved || x.id===session.user.id || me?.is_admin);
  me=profiles.find(x=>x.id===session.user.id)||me;
  entries=e.data||[];reactions=r.data||[];window.weekSelections=w.data||[];rewardChoices=reward.data||[];
  challengePool=cp.data||[];proposals=pr.data||[];proposalVotes=pv.data||[];ratings=cr.data||[];groupAssignments=ga.data||[];
- dailyAssignments=da.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];adminAudit=audit.data||[];
+ dailyAssignments=da.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];adminAudit=audit.data||[];rewardPool=rpool.data||[];rewardProposals=rprop.data||[];rewardProposalVotes=rvotes.data||[];
  await ensureAssignments();await syncAchievements();
 }
 function startRealtime(){
  stopRealtime();
- ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log'].forEach(table=>{
+ ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes'].forEach(table=>{
   let ch=sb.channel('fit4us-'+table).on('postgres_changes',{event:'*',schema:'public',table},async()=>{await loadData();await render()}).subscribe();
   realtimeChannels.push(ch)
  })
@@ -438,7 +438,7 @@ function dailyPinnedHTML(){let c=dailyChallengeFor(),done=dailyCompletedBy(me.id
 async function voteProposal(id,vote){let old=proposalVotes.find(x=>x.proposal_id===id&&x.user_id===me.id),q=old?sb.from('challenge_proposal_votes').update({vote}).eq('proposal_id',id).eq('user_id',me.id):sb.from('challenge_proposal_votes').insert({proposal_id:id,user_id:me.id,vote});let {error}=await q;if(error)return toast(error.message);await loadData();await render()}
 function openDailyComplete(){let c=dailyChallengeFor();if(!c)return;$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} Tageschallenge erledigt</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(c.description)}</p><form class="form" onsubmit="completeDaily(event)"><div class="field"><label>Was hast du gemacht?</label><textarea id="dailyText" rows="5" required minlength="3" style="width:100%;border:1px solid #dbe4eb;border-radius:13px;padding:12px"></textarea></div><button class="cta">Erledigt · +1 P</button></form></div></div>`}
 async function completeDaily(e){e.preventDefault();let c=dailyChallengeFor(),text=$('#dailyText').value.trim(),{error}=await sb.from('daily_challenge_completions').insert({challenge_date:fmtDate(),challenge_pool_id:c.id,user_id:me.id,completion_text:text,points:1});if(error)return toast(error.message);closeModal();await loadData();let poolc=dailyChallengeFor();await recordChallengeCompletion('daily',c.id,c.name,c.emoji,1,fmtDate());await render();toast('Tageschallenge geschafft +1 P 🎉')}
-async function groupHTML(){return `<h1>Gruppe</h1>${await pinnedProposalsHTML()}<div class="grid grid2"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries())}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries())}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
+async function groupHTML(){return `<h1>Gruppe</h1>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="grid grid2"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries())}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries())}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
 
 function canEditEntryAnywhere(e){return !!e && e.user_id===me.id && e.entry_date.startsWith(monthKey())}
 function entryEditControls(e){
@@ -503,8 +503,7 @@ async function meHTML(){
  <div class="card pad section"><h3>Diese Woche vs. Vorwoche</h3>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></div>
  <div><div class="card pad"><h3>🔥 Dein Streak</h3><div class="big">${streak()} Tage</div><div class="muted">${(()=>{let n=streakNext(streak());return `Noch ${Math.max(0,n[0]-streak())} aktive Tage bis +${n[1]} Bonuspunkte`;})()}</div></div>
  <div class="card pad section"><h3>🎁 Meine offenen Belohnungen</h3>${rewards.length?rewards.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Deine erste Belohnung wartet bei 50 Punkten.</div>'}${openRewardsInventoryHTML()}</div>
- <div class="sectionTitle"><h2>Alle Belohnungen</h2><span class="pill">Was gibt es bei wie vielen Punkten?</span></div>
- ${allRewardMilestonesHTML()}</div></div>
+</div></div>
  <h2 class="section">Achievements</h2><div class="card pad">${achievementHTML()}</div><h2 class="section">Monatsrückblick</h2>${monthlyReviewHTML()}<h2 class="section">Hall of Fame</h2>${hallOfFameHTML()}<h2 class="section">Meine Einträge – aktueller Monat</h2><div class="grid">${await ownEntriesHTML()}</div>`
 }
 
@@ -520,7 +519,7 @@ function compareRow(label,a,b){let diff=a-b,sign=diff>0?'↑':diff<0?'↓':'→'
 function openRewardChoices(){
  return rewardChoices.filter(r=>r.user_id===me.id&&!r.redeemed_at).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||'')))
 }
-function rewardName(key){return REWARDS.find(x=>x.key===key)?.name||key}
+function rewardName(key){return rewardPool.find(x=>x.id===key||x.reward_key===key)?.name||REWARDS.find(x=>x.key===key)?.name||key}
 function rewardsOverviewHTML(){
  let pts=monthPoints(),next=MILESTONES.find(m=>m>pts),open=openRewardChoices();
  if(!next){
@@ -565,7 +564,67 @@ function canEdit(e){return own(e)&&e.entry_date.startsWith(monthKey())}
 async function deleteEntry(id){let e=entries.find(x=>x.id===id);if(!e||!canEdit(e))return toast('Dieser Eintrag kann nicht mehr geändert werden.');if(!confirm('Eintrag wirklich löschen?'))return;await sb.from('entries').delete().eq('id',id);await loadData();await render()}
 function editEntry(id){let e=entries.find(x=>x.id===id);if(!e||!canEdit(e))return toast('Dieser Eintrag kann nicht mehr geändert werden.');openEntry(e.kind,e)}
 
-function rulesHTML(){return `<h1>Punkte & Regeln</h1><div class="card pad rulesIntro"><b>Transparentes Punktesystem</b><div class="small muted">Rankings enthalten Aktivitäts-, Schritt- und Ernährungspunkte sowie Challenge-, Gruppen-, Tageschallenge- und Streak-Boni. Punkte werden nie ausgegeben.</div></div><div class="grid grid2 section"><div class="card pad"><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p></div><div class="card pad"><h3>🥗 Ernährung</h3>${FOOD.map(f=>`<p><b>${f.icon} ${f.title}</b><br><span class="muted small">${f.desc}</span> · +1 P</p>`).join('')}</div></div><h2 class="section">Aktivitäten</h2><div class="grid grid2">${Object.entries(ACTIVITIES).map(([k,a])=>`<div class="card pad"><b>${a.icon} ${a.name}</b><div class="muted small">${a.mode==='distance'?`${a.step} km = ${a.points} P`:`${a.step} Minuten = ${a.points} P`}${a.distance?' · Distanz kann erfasst werden':''}${['garden','house'].includes(k)?' · Haus-/Gartenarbeit zusammen max. 4 P pro Tag':''}</div></div>`).join('')}</div><h2 class="section">🔥 Streak-Boni</h2><div class="card pad">3 Tage +2 P · 5 Tage +3 P · 7 Tage +5 P · 14 Tage +10 P · 21 Tage +15 P · 30 Tage +25 P</div><h2 class="section">🎯 Challenge-Regeln</h2><div class="card pad"><p><b>Wochenchallenge:</b> Gewinner der Vorwoche wählt aus drei Vorschlägen. Aktive Challenges werden durch Updates nie verändert.</p><p><b>Gruppen-Challenge:</b> Eine gemeinsame Mission pro Monat, zufällig aus dem Pool gewählt und fest in der Datenbank gespeichert. Zielwerte basieren immer auf 28 Tagen. Erfolg standardmäßig +5 P für alle.</p><p><b>Tageschallenge:</b> Jeden Tag dieselbe zwischenmenschliche Challenge für alle. Freiwillig, +1 Sonderpunkt. Abschluss nur mit Freitext, der im Feed erscheint.</p><p><b>Eigene Vorschläge:</b> Jeder darf Challenges vorschlagen. Alle stimmen 👍/👎 ab, Admin entscheidet final.</p><p><b>Sperren:</b> Admin kann Challenges zeitweise oder unbegrenzt sperren/entsperren.</p><p><b>Bewertungen:</b> 👍 Gerne wieder, 😐 War okay oder 👎 Nicht nochmal. Ergebnis steht in der Pool-Übersicht.</p></div>`}
+
+function rewardVoteCounts(id){
+ let v=rewardProposalVotes.filter(x=>x.proposal_id===id);
+ return {yes:v.filter(x=>x.vote===true).length,no:v.filter(x=>x.vote===false).length,total:v.length}
+}
+function rewardsRulesHTML(){
+ let byPoints=[...new Set([...MILESTONES,...rewardPool.map(r=>+r.points_required)])].sort((a,b)=>a-b);
+ let cards=byPoints.map(points=>{
+  let list=rewardPool.filter(r=>+r.points_required===points);
+  if(!list.length)list=REWARDS.slice(0,3).map((r,i)=>({...r,id:'legacy-'+points+'-'+i,active:true}));
+  return `<div class="card pad"><div class="challengeTop"><h3>🎁 ${points} Punkte</h3><span class="pill">${list.filter(x=>x.active!==false).length} aktiv</span></div>
+   <div class="grid">${list.map(r=>`<button class="choice ${r.active===false?'disabled':''}" ${String(r.id).startsWith('legacy-')?'':`onclick="openRewardDetail('${r.id}')"`}><b>${escapeHtml(r.name)}</b>${r.active===false?' 🔒':''}<div class="tiny muted">${escapeHtml(r.description||r.desc||'')}</div></button>`).join('')}</div></div>`
+ }).join('');
+ return `<div class="sectionTitle"><h2>🎁 Alle Belohnungen</h2><button class="react" onclick="openRewardProposal()">＋ Belohnung vorschlagen</button></div>
+ <div class="notice small">Jeder darf neue Belohnungen vorschlagen. Die Gruppe stimmt 👍/👎 ab; erst nach Admin-Freigabe landet eine Belohnung im Pool.</div>
+ <div class="grid section">${cards}</div>`
+}
+function openRewardDetail(id){
+ let r=rewardPool.find(x=>x.id===id);if(!r)return;
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎁 ${escapeHtml(r.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(r.description||'')}</p><div class="notice"><b>Punkte:</b> ${r.points_required}<br><b>Status:</b> ${r.active?'Aktiv':'Deaktiviert'}</div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="toggleReward('${r.id}',${!r.active})">${r.active?'⏸ Deaktivieren':'▶ Aktivieren'}</button><button class="secondary danger" onclick="deleteReward('${r.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`
+}
+function openRewardProposal(){
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎁 Neue Belohnung vorschlagen</h2><button class="x" onclick="closeModal()">×</button></div><form class="form section" onsubmit="submitRewardProposal(event)"><div class="field"><label>Name</label><input id="rpName" required maxlength="80"></div><div class="field"><label>Beschreibung</label><textarea id="rpDesc" rows="4" required maxlength="400"></textarea></div><div class="field"><label>Punkte-Ziel</label><select id="rpPoints">${MILESTONES.map(m=>`<option value="${m}">${m} Punkte</option>`).join('')}</select></div><button class="cta">Zur Abstimmung stellen</button></form></div></div>`
+}
+async function submitRewardProposal(e){
+ e.preventDefault();
+ let payload={proposer_id:me.id,name:$('#rpName').value.trim(),description:$('#rpDesc').value.trim(),points_required:+$('#rpPoints').value};
+ let {data,error}=await sb.from('reward_proposals').insert(payload).select().single();if(error)return toast(error.message);
+ await sb.from('reward_proposal_votes').insert({proposal_id:data.id,user_id:me.id,vote:true});
+ closeModal();await loadData();await render();toast('Belohnungsvorschlag zur Abstimmung gestellt 📌')
+}
+async function voteRewardProposal(id,vote){
+ let old=rewardProposalVotes.find(x=>x.proposal_id===id&&x.user_id===me.id);
+ let q=old?sb.from('reward_proposal_votes').update({vote}).eq('proposal_id',id).eq('user_id',me.id):sb.from('reward_proposal_votes').insert({proposal_id:id,user_id:me.id,vote});
+ let {error}=await q;if(error)return toast(error.message);await loadData();await render()
+}
+async function decideRewardProposal(id,approve){
+ let p=rewardProposals.find(x=>x.id===id);if(!p||!me.is_admin)return;
+ if(approve){
+  let {error}=await sb.from('reward_pool').insert({name:p.name,description:p.description,points_required:p.points_required,created_by:p.proposer_id,active:true});
+  if(error)return toast(error.message)
+ }
+ await sb.from('reward_proposals').update({status:approve?'approved':'rejected',decided_by:me.id,decided_at:new Date().toISOString()}).eq('id',id);
+ await logAdmin(approve?'reward_proposal_approved':'reward_proposal_rejected',{proposal_id:id});
+ await loadData();await render();toast(approve?'Belohnung genehmigt ✓':'Belohnung abgelehnt')
+}
+async function toggleReward(id,active){
+ if(!me.is_admin)return;
+ let {error}=await sb.from('reward_pool').update({active}).eq('id',id);if(error)return toast(error.message);
+ await logAdmin(active?'reward_enabled':'reward_disabled',{reward_id:id});closeModal();await loadData();await render()
+}
+async function deleteReward(id){
+ if(!me.is_admin||!confirm('Belohnung wirklich aus dem Pool entfernen? Bereits gewählte Belohnungen bleiben historisch erhalten.'))return;
+ let {error}=await sb.from('reward_pool').delete().eq('id',id);if(error)return toast(error.message);
+ await logAdmin('reward_deleted',{reward_id:id});closeModal();await loadData();await render()
+}
+function rewardProposalFeedHTML(){
+ let list=rewardProposals.filter(p=>p.status==='voting');if(!list.length)return '';
+ return `<div class="sectionTitle"><h2>📌 Belohnungsvorschläge</h2><span class="pill">Abstimmung</span></div>${list.map(p=>{let v=rewardVoteCounts(p.id),mine=rewardProposalVotes.find(x=>x.proposal_id===p.id&&x.user_id===me.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>🎁 ${escapeHtml(p.name)}</h3><p class="small muted">${escapeHtml(p.description)}</p><div class="tiny muted">${p.points_required} P · vorgeschlagen von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no}</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteRewardProposal('${p.id}',true)">👍 Dafür</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteRewardProposal('${p.id}',false)">👎 Dagegen</button></div></div>`}).join('')}`
+}
+function rulesHTML(){return `<h1>Punkte & Regeln</h1><div class="card pad rulesIntro"><b>Transparentes Punktesystem</b><div class="small muted">Rankings enthalten Aktivitäts-, Schritt- und Ernährungspunkte sowie Challenge-, Gruppen-, Tageschallenge- und Streak-Boni. Punkte werden nie ausgegeben.</div></div><div class="grid grid2 section"><div class="card pad"><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p></div><div class="card pad"><h3>🥗 Ernährung</h3>${FOOD.map(f=>`<p><b>${f.icon} ${f.title}</b><br><span class="muted small">${f.desc}</span> · +1 P</p>`).join('')}</div></div><h2 class="section">Aktivitäten</h2><div class="grid grid2">${Object.entries(ACTIVITIES).map(([k,a])=>`<div class="card pad"><b>${a.icon} ${a.name}</b><div class="muted small">${a.mode==='distance'?`${a.step} km = ${a.points} P`:`${a.step} Minuten = ${a.points} P`}${a.distance?' · Distanz kann erfasst werden':''}${['garden','house'].includes(k)?' · Haus-/Gartenarbeit zusammen max. 4 P pro Tag':''}</div></div>`).join('')}</div><h2 class="section">🔥 Streak-Boni</h2><div class="card pad">3 Tage +2 P · 5 Tage +3 P · 7 Tage +5 P · 14 Tage +10 P · 21 Tage +15 P · 30 Tage +25 P</div><h2 class="section">🎯 Challenge-Regeln</h2><div class="card pad"><p><b>Wochenchallenge:</b> Gewinner der Vorwoche wählt aus drei Vorschlägen. Aktive Challenges werden durch Updates nie verändert.</p><p><b>Gruppen-Challenge:</b> Eine gemeinsame Mission pro Monat, zufällig aus dem Pool gewählt und fest in der Datenbank gespeichert. Zielwerte basieren immer auf 28 Tagen. Erfolg standardmäßig +5 P für alle.</p><p><b>Tageschallenge:</b> Jeden Tag dieselbe zwischenmenschliche Challenge für alle. Freiwillig, +1 Sonderpunkt. Abschluss nur mit Freitext, der im Feed erscheint.</p><p><b>Eigene Vorschläge:</b> Jeder darf Challenges vorschlagen. Alle stimmen 👍/👎 ab, Admin entscheidet final.</p><p><b>Sperren:</b> Admin kann Challenges zeitweise oder unbegrenzt sperren/entsperren.</p><p><b>Bewertungen:</b> 👍 Gerne wieder, 😐 War okay oder 👎 Nicht nochmal. Ergebnis steht in der Pool-Übersicht.</p></div>${rewardsRulesHTML()}`}
 function historyHTML(){
  let months=[...new Set(entries.map(e=>e.entry_date.slice(0,7)))].sort().reverse();return `<h1>Historie</h1>${months.length?months.map(m=>`<div class="card pad section"><h3>${new Date(m+'-01T12:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</h3>${profiles.map(p=>{let pts=pointsOf(p.id,entries.filter(e=>e.entry_date.startsWith(m)));return `<div class="rankRow"><span></span><b>${escapeHtml(firstName(p))}</b><b>${pts} P</b></div>`}).join('')}</div>`).join(''):'<div class="card pad muted">Noch keine abgeschlossenen Monate.</div>'}`
 }
@@ -575,11 +634,12 @@ async function adminHTML(){
  let pendingHtml=pending.length?pending.map(p=>`<div class="card pad" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:center"><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><button class="cta" onclick="setApproval('${p.id}',true)">✓ Freischalten</button></div></div>`).join(''):'<div class="muted">Keine offenen Registrierungen.</div>';
  let activeHtml=active.map(p=>`<div class="rankRow"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><div>${p.is_admin?'<b>Admin</b>':`<button class="react danger" onclick="setApproval('${p.id}',false)">Zugriff sperren</button>`}</div></div>`).join('');
  let prop=proposals.filter(p=>p.status==='voting').map(p=>{let v=proposalVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Challenge-Vorschläge.</div>';
+ let rewardProp=rewardProposals.filter(p=>p.status==='voting').map(p=>{let v=rewardVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>🎁 ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">${p.points_required} P · von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideRewardProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideRewardProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Belohnungsvorschläge.</div>';
  let auditHtml=adminAudit.length?adminAudit.slice(0,50).map(a=>{let p=profileById(a.admin_user_id);return `<div class="rankRow"><span>🧾</span><div><b>${escapeHtml(a.action)}</b><div class="tiny muted">${new Date(a.created_at).toLocaleString('de-DE')} · ${escapeHtml(firstName(p))}</div></div><button class="react" onclick='alert(${JSON.stringify(JSON.stringify(a.details||{},null,2))})'>Details</button></div>`}).join(''):'<div class="muted">Noch keine Admin-Aktionen protokolliert.</div>';
  return `<h1>Admin</h1>
  <div class="notice"><b>🔐 Private Fit4Us-Gruppe</b></div>
  <div class="section"><h2>Offene Registrierungen ${pending.length?`(${pending.length})`:''}</h2>${pendingHtml}</div>
- <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div>
+ <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div><div class="section"><h2>Belohnungsvorschläge</h2>${rewardProp}</div>
  <div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div>
  <div class="card pad section"><h3>💾 Backup & Restore</h3><div class="uploadBtns"><button class="cta" onclick="exportBackup()">Komplett-Backup herunterladen</button><button class="secondary" onclick="openRestoreDialog()">Backup wiederherstellen</button></div><div class="tiny muted" style="margin-top:8px">Backup enthält alle zentralen Fit4Us-Datenbanktabellen. Bilder in Supabase Storage werden derzeit nicht in die JSON-Datei eingebettet.</div></div>
  <div class="card pad section" style="border-color:#ffd4d4;background:#fffafa"><h3>⚠️ Daten zurücksetzen</h3><p class="small muted">Jeder Reset erstellt zuerst automatisch ein Komplett-Backup und verlangt eine eindeutige Bestätigung.</p><div class="grid"><button class="secondary" onclick="openResetDialog('test')">🧪 Testdaten zurücksetzen</button><button class="secondary" onclick="openResetDialog('season')">🏁 Saison-/Wettbewerbsdaten zurücksetzen</button><button class="secondary danger" onclick="openResetDialog('full')">☢ Kompletter Datenreset</button></div></div>
@@ -603,7 +663,7 @@ async function logAdmin(action,details={}){
  }
 }
 async function buildBackup(){
- let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log'],backup={format:'Fit4Us Backup',version:'1.6',created_at:new Date().toISOString(),tables:{}};
+ let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes'],backup={format:'Fit4Us Backup',version:'1.6',created_at:new Date().toISOString(),tables:{}};
  for(let t of tables){let {data,error}=await sb.from(t).select('*');if(error)throw new Error('Backup-Fehler bei '+t+': '+error.message);backup.tables[t]=data||[]}
  return backup
 }
@@ -727,7 +787,16 @@ async function openProfile(){
 }
 function avatarFile(i){pendingAvatar=i.files?.[0]||null;if(pendingAvatar){let img=$('#avatarPreview');img.src=URL.createObjectURL(pendingAvatar);img.classList.remove('hidden')}}
 async function saveProfile(ev){ev.preventDefault();let path=me.avatar_path;try{if(pendingAvatar){let ext=(pendingAvatar.name.split('.').pop()||'jpg').toLowerCase();path=`${me.id}/avatar-${Date.now()}.${ext}`;let {error}=await sb.storage.from('avatars').upload(path,pendingAvatar);if(error)throw error}let {error}=await sb.from('profiles').update({first_name:$('#pfFirst').value.trim(),last_name:$('#pfLast').value.trim(),avatar_path:path}).eq('id',me.id);if(error)throw error;pendingAvatar=null;signedCache={};closeModal();await loadData();renderShell();await render();toast('Profil gespeichert ✓')}catch(err){toast(err.message)}}
-function rewardOptions(m){let seed=m+[...monthKey()].reduce((s,c)=>s+c.charCodeAt(0),0);return [0,1,2].map(i=>REWARDS[(seed+i*3)%REWARDS.length])}
+function activeRewardsForMilestone(m){
+ let db=rewardPool.filter(r=>r.active&&+r.points_required===+m);
+ return db.length?db:REWARDS.map((r,i)=>({...r,id:'legacy-'+r.key,points_required:MILESTONES[i%MILESTONES.length],active:true}))
+}
+function rewardOptions(m){
+ let pool=activeRewardsForMilestone(m);
+ if(!pool.length)return [];
+ let seed=m+[...monthKey()].reduce((s,c)=>s+c.charCodeAt(0),0);
+ return [0,1,2].map(i=>pool[(seed+i)%pool.length]).filter((x,i,a)=>x&&a.findIndex(y=>y.id===x.id)===i)
+}
 function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎉 ${m} Punkte!</h2><button class="x" onclick="closeModal()">×</button></div><p>Wähle eine Belohnung:</p><div class="grid">${opts.map(r=>`<button class="choice" onclick="chooseReward(${m},'${r.key}')"><b>${r.name}</b><div class="muted small">${r.desc}</div></button>`).join('')}</div></div></div>`}
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
