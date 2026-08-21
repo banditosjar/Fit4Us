@@ -518,6 +518,22 @@ async function adminHTML(){
  <div class="card pad section"><h3>Datenbank</h3><div>Profile: ${active.length}</div><div>Einträge: ${entries.length}</div><div>Challenges im Pool: ${challengePool.length}</div><div>Offene Vorschläge: ${proposals.filter(p=>p.status==='voting').length}</div></div>
  <div class="card pad section"><h3>🧾 Admin-Auditlog</h3>${auditHtml}</div>`
 }
+async function logAdmin(action,details={}){
+ if(!me?.is_admin)return;
+ try{
+  const {data,error}=await sb.from('admin_audit_log')
+   .insert({admin_user_id:me.id,action,details})
+   .select()
+   .single();
+  if(error){
+   console.warn('Fit4Us Auditlog:',error);
+   return;
+  }
+  if(data)adminAudit.unshift(data);
+ }catch(err){
+  console.warn('Fit4Us Auditlog:',err);
+ }
+}
 async function buildBackup(){
  let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log'],backup={format:'Fit4Us Backup',version:'1.6',created_at:new Date().toISOString(),tables:{}};
  for(let t of tables){let {data,error}=await sb.from(t).select('*');if(error)throw new Error('Backup-Fehler bei '+t+': '+error.message);backup.tables[t]=data||[]}
@@ -542,7 +558,7 @@ async function restoreBackup(){
   let current=await buildBackup();downloadBackupObject(current,'pre-restore');
   await logAdmin('restore_started',{source_version:data.version||'unknown'});
   let order=['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','achievements','challenge_proposals','challenge_pool'];
-  for(let t of order){if(data.tables[t]){await sb.from(t).delete().neq('id','00000000-0000-0000-0000-000000000000'); if(data.tables[t].length){let {error}=await sb.from(t).insert(data.tables[t]);if(error)throw new Error(t+': '+error.message)}}}
+  for(let t of order){if(data.tables[t]){await clearTable(t); if(data.tables[t].length){let {error}=await sb.from(t).insert(data.tables[t]);if(error)throw new Error(t+': '+error.message)}}}
   await logAdmin('restore_completed',{source_version:data.version||'unknown'});
   closeModal();await loadData();await render();toast('Restore abgeschlossen ✓')
  }catch(err){toast('Restore-Fehler: '+err.message)}
@@ -556,10 +572,31 @@ function openResetDialog(mode){
  let d=defs[mode];
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>⚠️ ${d.title}</h2><button class="x" onclick="closeModal()">×</button></div><div class="error">${d.desc}<br><br><b>Vor dem Reset wird automatisch ein Komplett-Backup heruntergeladen.</b></div><div class="field section"><label>Zur Bestätigung exakt <b>${d.word}</b> eingeben</label><input id="resetConfirm"></div><button class="cta danger" onclick="executeReset('${mode}','${d.word}')">Backup erstellen & Reset ausführen</button></div></div>`
 }
-async function deleteAll(table,column='id'){
- let {error}=await sb.from(table).delete().neq(column,'00000000-0000-0000-0000-000000000000');
- if(error)throw new Error(table+': '+error.message)
+const TABLE_CLEAR_KEYS={
+ profiles:['id','00000000-0000-0000-0000-000000000000'],
+ entries:['id','00000000-0000-0000-0000-000000000000'],
+ reactions:['id','00000000-0000-0000-0000-000000000000'],
+ weekly_challenges:['week_key','__never__'],
+ reward_choices:['id','00000000-0000-0000-0000-000000000000'],
+ challenge_pool:['id','00000000-0000-0000-0000-000000000000'],
+ challenge_proposals:['id','00000000-0000-0000-0000-000000000000'],
+ challenge_proposal_votes:['proposal_id','00000000-0000-0000-0000-000000000000'],
+ challenge_ratings:['id','00000000-0000-0000-0000-000000000000'],
+ group_challenge_assignments:['week_key','__never__'],
+ daily_challenge_assignments:['challenge_date','0001-01-01'],
+ daily_challenge_completions:['id','00000000-0000-0000-0000-000000000000'],
+ achievements:['id','00000000-0000-0000-0000-000000000000'],
+ challenge_completions:['id','00000000-0000-0000-0000-000000000000'],
+ admin_audit_log:['id','00000000-0000-0000-0000-000000000000']
+};
+async function clearTable(table){
+ let cfg=TABLE_CLEAR_KEYS[table];
+ if(!cfg)throw new Error('Keine Löschdefinition für '+table);
+ let {error}=await sb.from(table).delete().neq(cfg[0],cfg[1]);
+ if(error)throw new Error(table+': '+error.message);
 }
+async function deleteAll(table){return clearTable(table)}
+
 async function executeReset(mode,word){
  if($('#resetConfirm').value!==word)return toast('Bestätigung stimmt nicht.');
  try{
@@ -569,10 +606,10 @@ async function executeReset(mode,word){
    for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements'])await deleteAll(t);
   }
   if(mode==='season'){
-   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements','daily_challenge_assignments','group_challenge_assignments','weekly_challenges'])await deleteAll(t,t==='weekly_challenges'?'week_key':'id');
+   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements','daily_challenge_assignments','group_challenge_assignments','weekly_challenges'])await clearTable(t);
   }
   if(mode==='full'){
-   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','challenge_proposals'])await deleteAll(t,t==='weekly_challenges'?'week_key':'id');
+   for(let t of ['challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','achievements','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','challenge_proposals'])await clearTable(t);
    let {error}=await sb.from('challenge_pool').delete().eq('is_system',false);if(error)throw new Error('challenge_pool: '+error.message);
   }
   await logAdmin('reset_completed',{mode});
