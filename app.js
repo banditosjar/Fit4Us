@@ -263,7 +263,7 @@ function renderShell(){
 async function navs(){
  let nav=[['home','🏠','Heute'],['group','👥','Gruppe'],['add','＋',''],['challenges','🎯','Challenges'],['me','👤','Mein Profil']];
  $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'?`<button class="plus" onclick="openEntry()">＋</button>`:`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
- $('#sideNav').innerHTML=[['home','🏠 Heute'],['group','👥 Gruppe'],['challenges','🎯 Challenges'],['me','📊 Ich'],['rules','📖 Punkte & Regeln'],['history','🗓️ Historie'],...(me?.is_admin?[['admin','🛡️ Admin']]:[])].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
+ $('#sideNav').innerHTML=[['home','🏠 Heute'],['group','👥 Gruppe'],['challenges','🎯 Challenges'],['me','📊 Mein Profil'],['rules','📖 Punkte & Regeln'],['history','🗓️ Historie'],...(me?.is_admin?[['admin','🛡️ Admin']]:[])].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
  let av=await avatarHTML(me,42);$('#topUser').innerHTML=`${av}<div><b>${escapeHtml(firstName(me))}</b><div class="tiny muted">@${escapeHtml(me.username)}</div></div>`;
  $('#sideUser').innerHTML=`<button class="secondary" style="width:100%" onclick="logout()">Abmelden</button>`
 }
@@ -376,6 +376,10 @@ async function homeHTML(){
    <div class="grid kpis section"><div class="card kpi"><div>👟</div><b>${st.toLocaleString('de-DE')}</b><div class="tiny muted">Schritte heute</div></div><div class="card kpi"><div>⏱️</div><b>${min}</b><div class="tiny muted">aktive Min.</div></div><div class="card kpi"><div>🥗</div><b>${food}/7</b><div class="tiny muted">Ernährungsziele</div></div></div>
    <div class="sectionTitle"><h2>Deine Challenges</h2><button class="react" onclick="go('challenges')">Details</button></div>
    <div class="grid challengeGrid">${compactChallengeHTML()}${compactGroupChallengeHTML()}</div>
+   <div class="sectionTitle"><h2>☀️ Challenge des Tages</h2><span class="pill">freiwillig · +1 P</span></div>
+   ${dailyPinnedHTML()}
+   <div class="sectionTitle"><h2>Meine heutigen Einträge</h2><span class="pill">✏️ direkt bearbeitbar</span></div>
+   <div class="grid">${await todayOwnEntriesHTML()}</div>
    <div class="card pad suggestionCard section"><b>💡 Was kannst du heute noch machen?</b>${suggestions.length?suggestions.map(x=>`<div class="suggestion"><div class="suggestionIcon">${x.icon}</div><div><b>${x.title}</b><div class="small muted">${x.desc}</div></div></div>`).join(''):'<div class="notice" style="margin-top:10px">Für heute sieht es richtig gut aus – dranbleiben! 🎉</div>'}</div>
    <div class="card pad section"><b>🔥 Streak-Motivation</b><div style="margin-top:8px">${sk} aktive Tage in Folge</div><div class="muted small">Nächstes Ziel: ${sn[0]} Tage → <b>+${sn[1]} Bonuspunkte</b></div></div>
    <button class="cta section" style="width:100%" onclick="openEntry()">＋ Aktivität / Tageswert eintragen</button>
@@ -388,6 +392,26 @@ async function homeHTML(){
 }
 
 
+
+async function todayOwnEntriesHTML(){
+ let list=entries.filter(e=>e.user_id===me.id&&e.entry_date===fmtDate());
+ let daily=dailyCompletions.filter(d=>d.user_id===me.id&&d.challenge_date===fmtDate());
+ if(!list.length&&!daily.length)return `<div class="card pad muted">Heute noch keine Einträge.</div>`;
+ let out='';
+ for(let e of list){
+  let label=e.kind==='steps'
+   ?`👟 ${(+e.steps||0).toLocaleString('de-DE')} Schritte`
+   :e.kind==='food'
+    ?`🥗 Ernährung · ${(e.food_items||[]).length}/7 Ziele`
+    :`${ACTIVITIES[e.activity]?.icon||'⚡'} ${ACTIVITIES[e.activity]?.name||'Aktivität'} · ${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}`;
+  out+=`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${label}</b><div class="tiny muted">+${e.points} P</div></div>${entryEditControls(e)}</div></div>`
+ }
+ for(let d of daily){
+  let c=challengePool.find(x=>x.id===d.challenge_pool_id);
+  out+=`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${escapeHtml(c?.emoji||'☀️')} ${escapeHtml(c?.name||'Tageschallenge')}</b><div class="tiny muted">+1 P · „${escapeHtml(d.completion_text)}“</div></div><button class="react danger" onclick="undoDailyCompletion('${d.id}')">↩ Zurücknehmen</button></div></div>`
+ }
+ return out
+}
 async function recordChallengeCompletion(kind,challengeId,title,emoji,points,periodKey){
  if(challengeCompletions.some(x=>x.user_id===me.id&&x.challenge_kind===kind&&x.period_key===periodKey&&x.challenge_ref===String(challengeId)))return;
  let {data,error}=await sb.from('challenge_completions').insert({user_id:me.id,challenge_kind:kind,challenge_ref:String(challengeId),title,emoji,points:+points||0,period_key:periodKey}).select().single();
@@ -440,7 +464,7 @@ function weeklyOptions(key=weekKey()){let seed=[...key].reduce((s,c)=>s+c.charCo
 function currentSelection(){return selectionForWeek(weekKey())}
 function prevChampion(){let r=ranking(lastWeek());if(!r.length||r[0].pts===0)return null;return r[0].p}
 function challengeProgress(ch,userId=me.id){return challengeProgressForWeek(ch,userId,weekKey())}
-async function challengesHTML(){let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,champ=prevChampion(),choose=(!sel&&champ?.id===me.id)||(!sel&&me.is_admin);let main=ch?(()=>{let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());return `<div class="card challenge challengeHome personal"><div class="challengeTop"><span class="pill">🎯 Persönliche Wochenchallenge</span><span class="points">+${ch.points} P</span></div><h2>${ch.icon} ${ch.title}</h2><p class="muted">${ch.desc}</p><div class="progress"><i style="width:${Math.min(100,a/b*100)}%"></i></div><div class="challengeFooter"><b>${a} / ${b}</b><span>${a>=b?'Geschafft! 🎉':'Weiter dranbleiben'}</span></div></div>`})():`<div class="card pad muted">Für diese Woche wurde noch keine Challenge gewählt.</div>`;let pick='';if(choose)pick=`<div class="sectionTitle"><h2>Du darfst die nächste Challenge wählen 🎉</h2></div><div class="grid choiceGrid">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${c.title}</b><div class="tiny muted">${c.desc}</div></button>`).join('')}</div>`;else if(!sel&&champ)pick=`<div class="notice section"><b>${escapeHtml(firstName(champ))}</b> ist Wochenchampion der Vorwoche und darf aus drei Challenges wählen.</div>`;let gc=groupChallengeForWeek(monthKey()),gv=groupChallengeValueMonth(monthKey()),gp=Math.min(100,gv/gc.target*100),gval=gc.kind==='steps'?Math.round(gv).toLocaleString('de-DE'):Number(gv.toFixed?.(1)??gv).toLocaleString('de-DE'),dc=dailyChallengeFor();return `<h1>Challenges</h1>${main}${pick}<div class="sectionTitle"><h2>Gemeinsame Monatsmission</h2><span class="pill">🎲 monatlich zufällig aus Pool</span></div><div class="card challenge challengeHome group"><div class="challengeTop"><span class="pill">👥 Gruppen-Monatschallenge</span><span class="points">+${gc.points||5} P für alle</span></div><h2>${gc.icon} ${gc.title}</h2><p class="muted">${gc.desc}</p><div class="progress"><i style="width:${gp}%"></i></div><div class="challengeFooter"><b>${gval} / ${gc.target.toLocaleString('de-DE')} ${gc.unit}</b><span>${gv>=gc.target?'Gemeinsam geschafft! 🎉':`${Math.round(gp)} % erreicht`}</span></div></div>${dc?`<div class="sectionTitle"><h2>Challenge des Tages</h2><span class="pill">+1 Sonderpunkt</span></div>${dailyPinnedHTML()}`:''}<div class="sectionTitle"><h2>Challenge-Pool</h2><button class="cta" onclick="openProposal()">＋ Neue Challenge vorschlagen</button></div><details class="card pad" open><summary style="cursor:pointer;font-weight:900">📚 Alle verfügbaren Challenges anzeigen (${challengePool.filter(poolAvailable).length})</summary><div class="section">${challengePoolHTML()}</div></details>`}
+async function challengesHTML(){let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,champ=prevChampion(),choose=(!sel&&champ?.id===me.id)||(!sel&&me.is_admin);let main=ch?(()=>{let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());return `<div class="card challenge challengeHome personal"><div class="challengeTop"><span class="pill">🎯 Persönliche Wochenchallenge</span><span class="points">+${ch.points} P</span></div><h2>${ch.icon} ${ch.title}</h2><p class="muted">${ch.desc}</p><div class="progress"><i style="width:${Math.min(100,a/b*100)}%"></i></div><div class="challengeFooter"><b>${a} / ${b}</b><span>${a>=b?'Geschafft! 🎉':'Weiter dranbleiben'}</span></div></div>`})():`<div class="card pad muted">Für diese Woche wurde noch keine Challenge gewählt.</div>`;let pick='';if(choose)pick=`<div class="sectionTitle"><h2>Du darfst die nächste Challenge wählen 🎉</h2></div><div class="grid choiceGrid">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${c.title}</b><div class="tiny muted">${c.desc}</div></button>`).join('')}</div>`;else if(!sel&&champ)pick=`<div class="notice section"><b>${escapeHtml(firstName(champ))}</b> ist Wochenchampion der Vorwoche und darf aus drei Challenges wählen.</div>`;let gc=groupChallengeForWeek(monthKey()),gv=groupChallengeValueMonth(monthKey()),gp=Math.min(100,gv/gc.target*100),gval=gc.kind==='steps'?Math.round(gv).toLocaleString('de-DE'):Number(gv.toFixed?.(1)??gv).toLocaleString('de-DE'),dc=dailyChallengeFor();return `<h1>Challenges</h1>${main}${pick}<div class="sectionTitle"><h2>Gemeinsame Monatsmission</h2><span class="pill">🎲 monatlich zufällig aus Pool</span></div><div class="card challenge challengeHome group"><div class="challengeTop"><span class="pill">👥 Gruppen-Monatschallenge</span><span class="points">+${gc.points||5} P für alle</span></div><h2>${gc.icon} ${gc.title}</h2><p class="muted">${gc.desc}</p><div class="progress"><i style="width:${gp}%"></i></div><div class="challengeFooter"><b>${gval} / ${gc.target.toLocaleString('de-DE')} ${gc.unit}</b><span>${gv>=gc.target?'Gemeinsam geschafft! 🎉':`${Math.round(gp)} % erreicht`}</span></div></div><div class="sectionTitle"><h2>Challenge-Pool</h2><button class="cta" onclick="openProposal()">＋ Neue Challenge vorschlagen</button></div><details class="card pad" open><summary style="cursor:pointer;font-weight:900">📚 Alle verfügbaren Challenges anzeigen (${challengePool.filter(poolAvailable).length})</summary><div class="section">${challengePoolHTML()}</div></details>`}
 
 function groupChallengeValueMonth(mk){
  let ch=groupChallengeForWeek(mk),from=mk+'-01',to=mk+'-31',es=entries.filter(e=>e.entry_date>=from&&e.entry_date<=to);
