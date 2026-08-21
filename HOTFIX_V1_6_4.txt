@@ -1,0 +1,16 @@
+Fit4Us V1.6.4
+================
+Keine Supabase-Migration nötig.
+
+Neu:
+- Home zeigt bei „Deine Punkte“ nicht mehr nur Punktestufen.
+- Stattdessen werden die drei KONKRETEN Belohnungen für das nächste Punkte-Ziel angezeigt.
+- „Mein Profil“ enthält jetzt eine vollständige Übersicht ALLER Punkteziele.
+- Für jedes Punkte-Ziel werden die drei möglichen Belohnungen samt Beschreibung gezeigt.
+- Offene, bereits ausgewählte Belohnungen bleiben weiterhin monatsübergreifend sichtbar, bis sie eingelöst werden.
+
+Update:
+1. UPDATE-ZIP in GitHub hochladen / Dateien ersetzen.
+2. config.js unverändert lassen.
+3. Commit erstellen.
+4. Keine SQL-Migration nötig.

@@ -502,7 +502,9 @@ async function meHTML(){
  return `<h1>Mein Profil</h1><div class="grid grid2"><div><div class="card statBig">${av}<h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h2><div class="muted">@${escapeHtml(me.username)}</div><strong>${pts} P</strong><div class="muted">diesen Monat</div>${bonusSummary(me.id,currentMonthEntries())}<button class="secondary section" onclick="openProfile()">Profil bearbeiten</button></div>
  <div class="card pad section"><h3>Diese Woche vs. Vorwoche</h3>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></div>
  <div><div class="card pad"><h3>🔥 Dein Streak</h3><div class="big">${streak()} Tage</div><div class="muted">${(()=>{let n=streakNext(streak());return `Noch ${Math.max(0,n[0]-streak())} aktive Tage bis +${n[1]} Bonuspunkte`;})()}</div></div>
- <div class="card pad section"><h3>🎁 Belohnungen</h3>${rewards.length?rewards.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Erste Belohnung bei 50 Punkten.</div>'}${openRewardsInventoryHTML()}</div></div></div>
+ <div class="card pad section"><h3>🎁 Meine offenen Belohnungen</h3>${rewards.length?rewards.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Deine erste Belohnung wartet bei 50 Punkten.</div>'}${openRewardsInventoryHTML()}</div>
+ <div class="sectionTitle"><h2>Alle Belohnungen</h2><span class="pill">Was gibt es bei wie vielen Punkten?</span></div>
+ ${allRewardMilestonesHTML()}</div></div>
  <h2 class="section">Achievements</h2><div class="card pad">${achievementHTML()}</div><h2 class="section">Monatsrückblick</h2>${monthlyReviewHTML()}<h2 class="section">Hall of Fame</h2>${hallOfFameHTML()}<h2 class="section">Meine Einträge – aktueller Monat</h2><div class="grid">${await ownEntriesHTML()}</div>`
 }
 
@@ -520,9 +522,29 @@ function openRewardChoices(){
 }
 function rewardName(key){return REWARDS.find(x=>x.key===key)?.name||key}
 function rewardsOverviewHTML(){
- let pts=monthPoints(),next=nextMilestone(pts),open=openRewardChoices();
- return `<div class="rewardOverview"><div class="rewardTrack">${MILESTONES.map(m=>`<div class="rewardNode ${pts>=m?'done':''}"><span>${pts>=m?'✓':'🎁'}</span><b>${m}</b></div>`).join('')}</div><div class="tiny muted" style="margin-top:8px">${pts>=MILESTONES.at(-1)?'Alle Belohnungsziele dieses Monats erreicht 🎉':`Nächstes Belohnungsziel: ${next} Punkte`}</div>${open.length?`<div class="notice small" style="margin-top:10px"><b>🎁 ${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben erhalten, bis du sie einlöst.</div>`:''}</div>`
+ let pts=monthPoints(),next=MILESTONES.find(m=>m>pts),open=openRewardChoices();
+ if(!next){
+  return `<div class="rewardOverview"><div class="rewardNextHead"><div><div class="tiny muted">🎁 Belohnungen</div><b>Alle Punkteziele dieses Monats erreicht!</b></div><span class="rewardBig">🎉</span></div>${open.length?`<div class="notice small" style="margin-top:10px"><b>${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben erhalten, bis du sie einlöst.</div>`:''}<button class="react" style="margin-top:10px" onclick="go('me')">Alle Belohnungen ansehen</button></div>`
+ }
+ let opts=rewardOptions(next),remaining=Math.max(0,next-pts);
+ return `<div class="rewardOverview">
+   <div class="rewardNextHead"><div><div class="tiny muted">🎁 Nächste Belohnung bei ${next} Punkten</div><b>Noch ${remaining} Punkt${remaining===1?'':'e'}</b></div><span class="rewardBig">🎁</span></div>
+   <div class="rewardChoicePreview">${opts.map(r=>`<div class="rewardPreviewItem"><b>${escapeHtml(r.name)}</b><div class="tiny muted">${escapeHtml(r.desc)}</div></div>`).join('')}</div>
+   <div class="tiny muted" style="margin-top:8px">Beim Erreichen von ${next} P wählst du eine dieser drei Belohnungen.</div>
+   ${open.length?`<div class="notice small" style="margin-top:10px"><b>${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben monatsübergreifend erhalten.</div>`:''}
+   <button class="react" style="margin-top:10px" onclick="go('me')">Alle Belohnungen ansehen</button>
+ </div>`
 }
+function allRewardMilestonesHTML(){
+ return `<div class="grid">${MILESTONES.map(m=>{
+   let opts=rewardOptions(m),unlocked=monthPoints()>=m;
+   return `<div class="card pad rewardMilestoneCard ${unlocked?'rewardUnlocked':''}">
+     <div class="challengeTop"><div><span class="pill">${unlocked?'✓ Freigeschaltet':'🎁 Punkte-Ziel'}</span><h3 style="margin:8px 0 0">${m} Punkte</h3></div><b class="points">${unlocked?'erreicht':''}</b></div>
+     <div class="rewardChoicePreview section">${opts.map(r=>`<div class="rewardPreviewItem"><b>${escapeHtml(r.name)}</b><div class="tiny muted">${escapeHtml(r.desc)}</div></div>`).join('')}</div>
+   </div>`
+ }).join('')}</div>`
+}
+
 function openRewardsInventoryHTML(){
  let open=openRewardChoices();
  if(!open.length)return '';

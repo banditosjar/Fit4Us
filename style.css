@@ -86,3 +86,12 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 .rewardNode.done{color:#087e6d;font-weight:900}
 .rewardNode.done span{background:#ddf8f1;color:#087e6d}
 @media(max-width:600px){.rewardTrack{grid-template-columns:repeat(4,1fr);row-gap:10px}}
+
+.rewardNextHead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.rewardBig{font-size:30px}
+.rewardChoicePreview{display:grid;gap:8px;margin-top:10px}
+.rewardPreviewItem{padding:9px 11px;border-radius:13px;background:rgba(255,255,255,.76);border:1px solid rgba(220,230,238,.9)}
+.rewardPreviewItem b{font-size:13px}
+.rewardMilestoneCard{box-shadow:none}
+.rewardMilestoneCard.rewardUnlocked{border-color:#bdebdc;background:linear-gradient(145deg,#fff,#f1fcf8)}
+@media(min-width:760px){.rewardChoicePreview{grid-template-columns:repeat(3,1fr)}}
