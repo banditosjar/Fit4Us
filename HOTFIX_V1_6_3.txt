@@ -1,0 +1,10 @@
+Fit4Us V1.6.3
+- Heute -> Home
+- Belohnungsübersicht auf Home
+- offene Belohnungen bleiben monatsübergreifend aktiv
+- Hall of Fame bei 0 leer
+- Tageschallenge ohne 0/x-Gruppenanzeige
+- Anerkennung konkreter formuliert
+- separater Streak-Block entfernt
+- nächster Streak-Bonus kompakt im Badge
+Update: MIGRATION_V1_6_3.sql ausführen, GitHub-Dateien ersetzen, config.js nicht überschreiben.

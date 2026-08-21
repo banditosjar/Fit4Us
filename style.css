@@ -78,3 +78,11 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 
 .entryActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 @media(min-width:760px){.entryActions{margin-top:0;justify-content:flex-end}}
+
+.rewardOverview{margin-top:8px;padding-top:12px;border-top:1px solid rgba(11,34,57,.08)}
+.rewardTrack{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;align-items:center}
+.rewardNode{text-align:center;font-size:10px;color:#8493a0}
+.rewardNode span{display:grid;place-items:center;width:28px;height:28px;margin:0 auto 3px;border-radius:50%;background:#edf2f5;font-size:13px}
+.rewardNode.done{color:#087e6d;font-weight:900}
+.rewardNode.done span{background:#ddf8f1;color:#087e6d}
+@media(max-width:600px){.rewardTrack{grid-template-columns:repeat(4,1fr);row-gap:10px}}
