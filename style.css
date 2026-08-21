@@ -109,3 +109,8 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 .mobileMenuGrid .adminMobile{background:#f5f1ff;border-color:#ded2f5}
 .mobileLogout{width:100%;margin-top:12px}
 @media(min-width:1100px){#mobileMenuRoot{display:none!important}}
+
+.rewardPoolCard{padding:0!important;overflow:hidden}
+.rewardCardMain{display:block;width:100%;border:0;background:transparent;text-align:left;padding:13px;color:inherit;font:inherit}
+.rewardVotes{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:0 13px 12px}
+.rewardVotes .tiny{margin-left:auto}
