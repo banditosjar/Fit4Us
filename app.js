@@ -153,7 +153,7 @@ async function init(){
  const {data}=await sb.auth.getSession(); session=data.session;
  sb.auth.onAuthStateChange(async(evt,s)=>{session=s;if(!s){stopRealtime();showAuth()}else{await bootApp()}});
  if(session)await bootApp(); else showAuth();
- if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+ 
 }
 function showAuth(){
  $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/fit4us-logo.png">
@@ -828,4 +828,65 @@ function rewardOptions(m){
 function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎉 ${m} Punkte!</h2><button class="x" onclick="closeModal()">×</button></div><p>Wähle eine Belohnung:</p><div class="grid">${opts.map(r=>`<button class="choice" onclick="chooseReward(${m},'${r.key}')"><b>${r.name}</b><div class="muted small">${r.desc}</div></button>`).join('')}</div></div></div>`}
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
-document.addEventListener('DOMContentLoaded',init);
+
+const FIT4US_VERSION='1.7.3';
+let fit4usReloading=false;
+
+async function setupAppUpdates(){
+ if(!('serviceWorker' in navigator))return;
+
+ // A versioned SW URL + updateViaCache:'none' forces the browser to check GitHub,
+ // instead of reusing a cached sw.js.
+ const reg=await navigator.serviceWorker.register(`./sw.js?v=${FIT4US_VERSION}`,{updateViaCache:'none'});
+
+ // Explicit check on every app start.
+ try{await reg.update()}catch(err){console.warn('Update check:',err)}
+
+ // If a new worker is waiting, activate it immediately.
+ if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+
+ reg.addEventListener('updatefound',()=>{
+   const worker=reg.installing;
+   if(!worker)return;
+   worker.addEventListener('statechange',()=>{
+     if(worker.state==='installed'&&navigator.serviceWorker.controller){
+       worker.postMessage({type:'SKIP_WAITING'});
+     }
+   });
+ });
+
+ // Reload exactly once when the new SW takes control.
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   if(fit4usReloading)return;
+   fit4usReloading=true;
+   const key='fit4us-controller-reload-'+FIT4US_VERSION;
+   if(!sessionStorage.getItem(key)){
+     sessionStorage.setItem(key,'1');
+     location.reload();
+   }
+ });
+
+ // Also compare the published build version. This catches iOS/PWA edge cases.
+ await checkPublishedVersion();
+
+ // While app remains open, check periodically.
+ setInterval(()=>{reg.update().catch(()=>{});checkPublishedVersion().catch(()=>{})},15*60*1000);
+}
+
+async function checkPublishedVersion(){
+ try{
+   const res=await fetch(`./version.json?ts=${Date.now()}`,{cache:'no-store'});
+   if(!res.ok)return;
+   const info=await res.json();
+   if(info.version&&info.version!==FIT4US_VERSION){
+     const key='fit4us-version-reload-'+info.version;
+     if(sessionStorage.getItem(key))return;
+     sessionStorage.setItem(key,'1');
+     // Fetch the current page itself bypassing cache, then reload.
+     await fetch(`./?v=${info.version}&ts=${Date.now()}`,{cache:'no-store'}).catch(()=>{});
+     location.replace(`./?v=${info.version}`);
+   }
+ }catch(err){console.warn('Version check:',err)}
+}
+
+document.addEventListener('DOMContentLoaded',async()=>{await setupAppUpdates().catch(err=>console.warn('App update:',err));init()});

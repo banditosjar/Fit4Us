@@ -2,7 +2,7 @@
   "name": "Fit4Us",
   "short_name": "Fit4Us",
   "description": "Gemeinsam fitter, bewusster und motivierter.",
-  "start_url": "./",
+  "start_url": "./?v=1.7.3",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f7fb",
@@ -19,5 +19,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "id": "./"
 }
