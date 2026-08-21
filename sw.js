@@ -1,13 +1,13 @@
-const VERSION='1.7.3';
-const CACHE='fit4us-v1.7.3';
+const VERSION='1.7.4';
+const CACHE='fit4us-v1.7.4';
 const CORE=[
  './',
- './index.html?v=1.7.3',
- './style.css?v=1.7.3',
- './app.js?v=1.7.3',
- './config.js?v=1.7.3',
- './manifest.webmanifest?v=1.7.3',
- './version.json?v=1.7.3',
+ './index.html?v=1.7.4',
+ './style.css?v=1.7.4',
+ './app.js?v=1.7.4',
+ './config.js?v=1.7.4',
+ './manifest.webmanifest?v=1.7.4',
+ './version.json?v=1.7.4',
  './assets/fit4us-logo.png',
  './assets/fit4us-icon.png',
  './assets/fit4us-icon-192.png'
@@ -52,7 +52,7 @@ self.addEventListener('fetch',event=>{
           if(response.ok)caches.open(CACHE).then(cache=>cache.put(event.request,response.clone()));
           return response;
         })
-        .catch(()=>caches.match(event.request).then(cached=>cached||caches.match('./index.html?v=1.7.3')))
+        .catch(()=>caches.match(event.request).then(cached=>cached||caches.match('./index.html?v=1.7.4')))
     );
     return;
   }

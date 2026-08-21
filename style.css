@@ -114,3 +114,6 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 .rewardCardMain{display:block;width:100%;border:0;background:transparent;text-align:left;padding:13px;color:inherit;font:inherit}
 .rewardVotes{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:0 13px 12px}
 .rewardVotes .tiny{margin-left:auto}
+
+.foodFeedGoals{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.foodGoalChip{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;background:#f2f8f3;border:1px solid #dcebdc;font-size:12px;font-weight:800;color:#375847}
