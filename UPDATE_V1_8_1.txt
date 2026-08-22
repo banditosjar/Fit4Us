@@ -1,0 +1,26 @@
+Fit4Us V1.8.1 – Update-Auslieferung Hotfix
+============================================
+Keine Supabase-Migration nötig.
+
+Behoben:
+- V1.8.0 enthielt intern im app.js noch eine alte FIT4US_VERSION. Das konnte die
+  Versions-/Update-Erkennung durcheinanderbringen.
+- app.js und style.css werden jetzt intern mit einer Versionskennung geladen.
+  WICHTIG: Die sichtbare Website-Adresse bleibt trotzdem sauber:
+  https://banditosjar.github.io/Fit4Us/
+- Dadurch kann der Browser nicht mehr versehentlich ein altes app.js/style.css
+  verwenden, obwohl index.html bereits neu ist.
+- Service-Worker-Version und version.json sind synchron auf V1.8.1.
+
+V1.8-Oberfläche enthalten:
+- neues Home
+- neue Gruppenansicht mit Wochenabschluss
+- neu strukturierte Challenges
+- Mein Profil mit 4-Wochen-Entwicklung
+- neue Historie Monat/Gesamt
+
+Update:
+1. ALLE Dateien aus UPDATE V1.8.1 in das GitHub-Repository übernehmen/ersetzen.
+2. config.js nicht überschreiben.
+3. Commit abwarten, bis GitHub Pages deployed hat.
+4. Danach ausschließlich https://banditosjar.github.io/Fit4Us/ öffnen.
