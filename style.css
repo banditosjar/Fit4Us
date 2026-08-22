@@ -304,3 +304,31 @@ html[data-theme="dark"] .photoPreview,
 html[data-theme="dark"] .feedPhoto{background:#101a22}
 html[data-theme="dark"] summary{color:#e8f1f6}
 html[data-theme="dark"] a{color:#55d8cf}
+
+
+/* V1.13.5 – Dark Mode witness badge contrast */
+html[data-theme="dark"] .witnessBadge{
+ background:#20313c !important;
+ color:#e7f1f6 !important;
+ border-color:#3b5361 !important;
+}
+html[data-theme="dark"] .witnessBadge.pending{
+ background:#3a3320 !important;
+ color:#ffe7a3 !important;
+ border-color:#6a5a2d !important;
+}
+html[data-theme="dark"] .witnessBadge.confirmed{
+ background:#17372c !important;
+ color:#b8f1d5 !important;
+ border-color:#2f6a55 !important;
+}
+html[data-theme="dark"] .witnessBadge.declined{
+ background:#3a2227 !important;
+ color:#ffd0d6 !important;
+ border-color:#6a3942 !important;
+}
+html[data-theme="dark"] .witnessBadge.honor{
+ background:#24343e !important;
+ color:#dce7ed !important;
+ border-color:#3b5361 !important;
+}

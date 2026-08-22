@@ -1,0 +1,13 @@
+Fit4Us V1.13.5 – Dark Mode Zeugen-Badge Hotfix
+================================================
+Keine Supabase-Migration nötig.
+
+Behoben:
+- Zeugen-Badges waren im Dark Mode zu hell und der Text dadurch kaum lesbar.
+- Pending/Bestätigt/Abgelehnt/Ehrenkodex haben jetzt eigene kontrastreiche
+  Dark-Mode-Flächen und passende Schriftfarben.
+
+UPDATE
+1. UPDATE-Dateien in GitHub ersetzen.
+2. config.js NICHT überschreiben.
+3. Keine SQL-Migration erforderlich.
