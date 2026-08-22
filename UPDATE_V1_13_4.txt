@@ -1,0 +1,21 @@
+Fit4Us V1.13.4 – Tageschallenge Text-Constraint Hotfix
+========================================================
+Keine Supabase-Migration nötig.
+
+URSACHE
+- PostgreSQL verlangt bei completion_text mindestens 3 Zeichen nach trim().
+- JavaScript .length zählt viele Emojis als zwei UTF-16-Einheiten.
+- Beispiel: Zwei Emojis können im Browser length=4 haben, PostgreSQL char_length=2.
+- Dadurch bestand die Browser-Prüfung, aber die Datenbank lehnte den Datensatz ab.
+
+BEHOBEN
+- Fit4Us zählt nun Unicode-Codepoints mit Array.from(), passend zur PostgreSQL-Logik.
+- Mindestens 3 echte Zeichen sind erforderlich.
+- Das Formular erklärt die Mindestlänge direkt.
+- Sollte die DB-Constraint dennoch ausgelöst werden, erscheint eine verständliche Meldung
+  statt des technischen Constraint-Fehlers.
+
+UPDATE
+1. UPDATE-Dateien in GitHub ersetzen.
+2. config.js NICHT überschreiben.
+3. Keine SQL-Migration erforderlich.

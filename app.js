@@ -638,6 +638,10 @@ function openActiveChallenge(kind){
 /* V1.13.1 restored core helpers */
 function canEditEntryAnywhere(e){return !!e && e.user_id===me.id && e.entry_date.startsWith(monthKey())}
 
+function dbCharLength(value){
+ return Array.from(String(value||'').trim()).length;
+}
+
 async function completeDaily(e){
  e.preventDefault();
 
@@ -649,7 +653,7 @@ async function completeDaily(e){
      saved=null;
 
  if(!c)return toast('Keine Tageschallenge gefunden.');
- if(text.length<3)return toast('Bitte kurz beschreiben, was du gemacht hast.');
+ if(dbCharLength(text)<3)return toast('Bitte mindestens 3 Zeichen eingeben (auch bei Emojis zählen echte Zeichen, nicht die technische Browser-Länge).');
 
  // Phase 1: optionales Foto hochladen.
  // Scheitert der Upload, wird die Challenge bewusst noch NICHT gespeichert.
@@ -688,7 +692,10 @@ async function completeDaily(e){
     console.warn('Foto-Cleanup fehlgeschlagen:',cleanErr);
    }
   }
-  return toast('Tageschallenge konnte nicht gespeichert werden: '+(err?.message||err));
+  let msg=String(err?.message||err||'');
+  if(/daily_challenge_completions.*completion_text.*check|completion_text_check|competion_text_check/i.test(msg))
+   return toast('Bitte mindestens 3 Zeichen bei „Was hast du gemacht?“ eingeben.');
+  return toast('Tageschallenge konnte nicht gespeichert werden: '+msg);
  }
 
  // Ab hier ist die Tageschallenge verbindlich gespeichert.
@@ -766,7 +773,7 @@ function openDailyComplete(){
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} Tageschallenge erledigt</h2><button class="x" onclick="closeModal()">×</button></div>
  <p>${escapeHtml(c.description)}</p>
  <form class="form" onsubmit="completeDaily(event)">
-  <div class="field"><label>Was hast du gemacht?</label><textarea id="dailyText" rows="5" required minlength="3"></textarea></div>
+  <div class="field"><label>Was hast du gemacht?</label><textarea id="dailyText" rows="5" required></textarea><div class="tiny muted">Mindestens 3 Zeichen. Beispiel: „Erledigt“, „War gut“ oder mindestens 3 Emojis.</div></div>
   <div class="field"><label>Foto <span class="muted">(optional)</span></label><input id="dailyPhoto" type="file" accept="image/*" onchange="previewDailyPhoto(this)"><div class="tiny muted">Optionales Foto anhängen. Dein Gerät entscheidet, ob Kamera, Galerie/Fotomediathek oder Dateien angeboten werden.</div><img id="dailyPhotoPreview" class="photoPreview hidden" alt="Vorschau"></div>
   <button class="cta">Erledigt · +1 P</button>
  </form></div></div>`
@@ -1247,7 +1254,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.13.3';
+const FIT4US_VERSION='1.13.4';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
