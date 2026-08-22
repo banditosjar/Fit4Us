@@ -640,11 +640,31 @@ function canEditEntryAnywhere(e){return !!e && e.user_id===me.id && e.entry_date
 
 async function completeDaily(e){
  e.preventDefault();
- let before=celebrationSnapshot(),c=dailyChallengeFor(),text=$('#dailyText')?.value?.trim()||'',file=$('#dailyPhoto')?.files?.[0]||null,photo=null;
+
+ let before=celebrationSnapshot(),
+     c=dailyChallengeFor(),
+     text=$('#dailyText')?.value?.trim()||'',
+     file=$('#dailyPhoto')?.files?.[0]||null,
+     photo=null,
+     saved=null;
+
  if(!c)return toast('Keine Tageschallenge gefunden.');
  if(text.length<3)return toast('Bitte kurz beschreiben, was du gemacht hast.');
+
+ // Phase 1: optionales Foto hochladen.
+ // Scheitert der Upload, wird die Challenge bewusst noch NICHT gespeichert.
+ if(file){
+  try{
+   photo=await uploadProof(file);
+  }catch(err){
+   console.error('Tageschallenge Foto-Upload:',err);
+   return toast('Foto konnte nicht hochgeladen werden: '+(err?.message||err));
+  }
+ }
+
+ // Phase 2: Tageschallenge + Foto-Verknüpfung gemeinsam in der DB speichern.
+ // Nur wenn DIESER Schritt scheitert, wird ein zuvor hochgeladenes Foto aufgeräumt.
  try{
-  if(file)photo=await uploadProof(file);
   let payload={
    challenge_date:fmtDate(),
    challenge_pool_id:c.id,
@@ -654,18 +674,53 @@ async function completeDaily(e){
    points:1
   };
   if(photo)payload.photo_path=photo;
+
   let {data,error}=await sb.from('daily_challenge_completions').insert(payload).select().single();
   if(error)throw error;
-  closeModal();
-  await loadData();
-  await recordChallengeCompletion('daily',c.id,c.name,c.emoji,1,fmtDate());
-  await render();
-  maybeCelebrate(before);
-  toast(photo?'Tageschallenge geschafft +1 P · Foto gespeichert 📸':'Tageschallenge geschafft +1 P 🎉');
+  saved=data;
  }catch(err){
-  if(photo){try{await sb.storage.from('proofs').remove([photo])}catch{}}
-  toast('Tageschallenge konnte nicht gespeichert werden: '+(err?.message||err));
+  console.error('Tageschallenge DB-Speicherung:',err);
+  if(photo){
+   try{
+    let rm=await sb.storage.from('proofs').remove([photo]);
+    if(rm.error)console.warn('Verwaistes Tageschallenge-Foto konnte nicht entfernt werden:',rm.error);
+   }catch(cleanErr){
+    console.warn('Foto-Cleanup fehlgeschlagen:',cleanErr);
+   }
+  }
+  return toast('Tageschallenge konnte nicht gespeichert werden: '+(err?.message||err));
  }
+
+ // Ab hier ist die Tageschallenge verbindlich gespeichert.
+ // Nachgelagerte UI-/Challenge-Funktionen dürfen diesen Erfolg nicht mehr zurückrollen
+ // und insbesondere das Foto niemals mehr löschen.
+ closeModal();
+
+ try{
+  await loadData();
+ }catch(err){
+  console.warn('Tageschallenge gespeichert, Daten-Neuladen fehlgeschlagen:',err);
+ }
+
+ try{
+  await recordChallengeCompletion('daily',c.id,c.name,c.emoji,1,fmtDate());
+ }catch(err){
+  console.warn('Tageschallenge gespeichert, Completion-Record fehlgeschlagen:',err);
+ }
+
+ try{
+  await render();
+ }catch(err){
+  console.warn('Tageschallenge gespeichert, Rendern fehlgeschlagen:',err);
+ }
+
+ try{
+  maybeCelebrate(before);
+ }catch(err){
+  console.warn('Tageschallenge gespeichert, Celebration fehlgeschlagen:',err);
+ }
+
+ toast(photo?'Tageschallenge geschafft +1 P · Foto gespeichert 📸':'Tageschallenge geschafft +1 P 🎉');
 }
 
 function dailyPinnedHTML(){let c=dailyChallengeFor(),done=dailyCompletedBy(me.id),count=dailyCompletions.filter(x=>x.challenge_date===fmtDate()).length;if(!c)return '';return `<div class="card pad section" style="background:linear-gradient(135deg,#fff8ec,#fff)"><div class="challengeTop"><span class="pill">☀️ Tageschallenge</span><span class="points">+1 P</span></div><h3>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h3><div class="small muted">${escapeHtml(c.description)}</div>${done?`<div class="notice small" style="margin-top:10px">✓ Heute erledigt: „${escapeHtml(done.completion_text)}“</div>`:`<button class="cta" style="margin-top:10px" onclick="openDailyComplete()">Als erledigt markieren</button>`}</div>`}
@@ -1192,7 +1247,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.13.2';
+const FIT4US_VERSION='1.13.3';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
