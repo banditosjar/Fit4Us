@@ -128,3 +128,10 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 .historyHero{background:linear-gradient(135deg,#10283d,#244a63);color:#fff}.historyHero small{color:#d7e6ef}.historyHero h2{font-size:34px}.histWeek{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.histWeek small{display:block;color:var(--muted)}.personalMonth{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px}.trend{height:100px;display:grid;grid-template-columns:repeat(4,1fr);align-items:end;gap:8px}.trend>div{text-align:center;display:flex;flex-direction:column;align-items:center}.trend i{width:28px;background:var(--accent);border-radius:7px 7px 2px 2px}.trend b{font-size:11px}.trend small{font-size:9px;color:var(--muted)}
 @media(max-width:850px){.challengeCurrent{grid-template-columns:1fr}.historyTop{align-items:flex-start}.todayDash{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:480px){.homeHead,.historyTop{flex-direction:column;align-items:flex-start}.todayDash{gap:5px}.todayDash>div{padding:10px 4px}.todayDash span{font-size:20px}.todayDash b{font-size:16px}.todayDash small{font-size:10px}.segmented{width:100%}.segmented button{flex:1}.historyHero h2{font-size:27px}.historyHero>span{font-size:36px}.histWeek{flex-direction:column}}
+
+/* V1.9 – clickable Home challenges */
+.tasks .homeTask{width:100%;display:grid;grid-template-columns:32px 1fr auto;gap:9px;align-items:center;padding:11px 8px;margin:0;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer;border-radius:12px;transition:background .15s ease,transform .15s ease}
+.tasks .homeTask:last-child{border-bottom:0}
+.tasks .homeTask:hover,.tasks .homeTask:focus-visible{background:#f4f8f9;outline:none}
+.tasks .homeTask:active{transform:scale(.995)}
+.tasks .homeTask>span{font-size:22px}.tasks .homeTask p{margin:0}.tasks .homeTask small{display:block;color:var(--muted);margin-top:2px}.tasks .homeTask strong{white-space:nowrap}
