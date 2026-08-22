@@ -1,0 +1,49 @@
+Fit4Us V1.13.0 – Engagement, Social, Notifications & Comfort
+============================================================
+SUPABASE-MIGRATION ERFORDERLICH: MIGRATION_V1_13_0.sql
+Voraussetzung: V1.9.0-Migration ist bereits installiert.
+
+WICHTIGER BUGFIX
+- Home und Gruppe waren in V1.9.0 versehentlich aus app.js entfernt worden. Beide Render-Funktionen sind wieder vorhanden.
+- Mein Profil wurde vollständig neu aufgebaut und geprüft.
+
+V1.10 ENGAGEMENT
+- Celebration-Popups bei Punkte-Meilensteinen, Streak-Meilensteinen, Rekorden und Challenge-Erfolgen.
+- Optionaler Erfolgssound (standardmäßig AUS).
+- 8-Wochen-Streak-Heatmap und persönliche Rekorde.
+- Fast-geschafft-Hinweise und „Starker Tag – alles Weitere ist Bonus“.
+- Automatische Schnellvorlagen aus den häufigsten Aktivitäten der letzten 30 Tage.
+
+V1.11 SOCIAL
+- Zeugenbestätigung für benannte Personen. EHRENKODEX benötigt ausdrücklich KEINE Bestätigung.
+- Zeugenbestätigung ist sozial/freiwillig: Eintrag bleibt auch bei offen/abgelehnt bestehen.
+- Feed-Kommentare ohne Threads.
+- Zusätzliche ❤️-Reaktion.
+- Crew-Moment der Woche und persönlicher Wochenrückblick.
+
+V1.12 NOTIFICATIONS
+- Web-Push-Subscription im Profil aktivierbar.
+- Kategorien: Reaktionen/Kommentare, Zeugen, Challenges, Streak.
+- Edge Function push-notification enthalten.
+- Edge Function scheduled-notifications enthalten: morgens Challenge-Hinweis, abends Streak-Erinnerung.
+- Für echtes Push sind VAPID-Key + Edge-Function-Deployment nötig (siehe unten).
+
+V1.13 KOMFORT
+- Dark Mode: System/Hell/Dunkel.
+- Feed-Privatsphäre je Kategorie.
+- Onboarding nach erster Freischaltung + informativer Wartebildschirm.
+- Offline-Outbox für Einträge ohne Foto; automatische Synchronisierung bei wieder vorhandenem Netz.
+
+PUSH EINRICHTEN (einmalig, optional)
+1. VAPID-Keypair erzeugen, z.B. mit `npx web-push generate-vapid-keys`.
+2. In der bestehenden config.js zusätzlich `pushVapidPublicKey: 'DEIN_PUBLIC_KEY'` eintragen. UPDATE überschreibt config.js NICHT.
+3. Supabase Secrets setzen: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, CRON_SECRET.
+4. `supabase functions deploy push-notification` und `supabase functions deploy scheduled-notifications`.
+5. scheduled-notifications stündlich per Supabase Cron/Webhook mit Header x-cron-secret aufrufen; die Function sendet nur um 08:00 bzw. 19:00 Europe/Berlin.
+Ohne diese optionale Einrichtung läuft die komplette App weiter; nur Hintergrund-Push bleibt aus.
+
+UPDATE
+1. MIGRATION_V1_13_0.sql in Supabase ausführen.
+2. UPDATE-Dateien nach GitHub kopieren/ersetzen.
+3. config.js NICHT überschreiben.
+4. Commit/Deployment abwarten.

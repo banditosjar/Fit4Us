@@ -4,5 +4,6 @@
 // WICHTIG: Niemals den service_role Key in diese Datei eintragen.
 window.FIT4US_CONFIG = {
   supabaseUrl: "DEINE_SUPABASE_PROJECT_URL",
+  pushVapidPublicKey: 'DEIN_VAPID_PUBLIC_KEY',
   supabaseKey: "DEIN_SUPABASE_PUBLISHABLE_ODER_ANON_KEY"
 };

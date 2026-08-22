@@ -1,5 +1,5 @@
-const VERSION='1.9.0';
-const CACHE='fit4us-v1.9.0';
+const VERSION='1.13.0';
+const CACHE='fit4us-v1.13.0';
 
 const CORE=[
   './',
@@ -75,3 +75,6 @@ self.addEventListener('fetch',event=>{
     }))
   );
 });
+
+self.addEventListener('push',event=>{let d={};try{d=event.data?.json()||{}}catch{d={body:event.data?.text()||''}};event.waitUntil(self.registration.showNotification(d.title||'Fit4Us',{body:d.body||'',icon:'./assets/fit4us-icon-192.png',badge:'./assets/fit4us-icon-192.png',data:{url:d.url||'./'},tag:d.tag||'fit4us'}))});
+self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{let url=event.notification.data?.url||'./';for(const w of ws){if('focus'in w)return w.focus()}return clients.openWindow(url)}))});
