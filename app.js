@@ -712,7 +712,7 @@ function openDailyComplete(){
  <p>${escapeHtml(c.description)}</p>
  <form class="form" onsubmit="completeDaily(event)">
   <div class="field"><label>Was hast du gemacht?</label><textarea id="dailyText" rows="5" required minlength="3"></textarea></div>
-  <div class="field"><label>Foto <span class="muted">(optional)</span></label><input id="dailyPhoto" type="file" accept="image/*" capture="environment" onchange="previewDailyPhoto(this)"><div class="tiny muted">Wenn du möchtest, kannst du wie bei Aktivitäten oder Ernährung ein Foto anhängen.</div><img id="dailyPhotoPreview" class="photoPreview hidden" alt="Vorschau"></div>
+  <div class="field"><label>Foto <span class="muted">(optional)</span></label><input id="dailyPhoto" type="file" accept="image/*" onchange="previewDailyPhoto(this)"><div class="tiny muted">Optionales Foto anhängen. Dein Gerät entscheidet, ob Kamera, Galerie/Fotomediathek oder Dateien angeboten werden.</div><img id="dailyPhotoPreview" class="photoPreview hidden" alt="Vorschau"></div>
   <button class="cta">Erledigt · +1 P</button>
  </form></div></div>`
 }
@@ -1192,7 +1192,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.13.1';
+const FIT4US_VERSION='1.13.2';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
