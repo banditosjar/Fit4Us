@@ -143,3 +143,164 @@ details summary{list-style:none}details summary::-webkit-details-marker{display:
 .comments{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.comment{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:start;padding:5px 0;font-size:13px}.comment button{border:0;background:transparent;color:var(--muted)}.comments form{display:grid;grid-template-columns:1fr 38px;gap:6px;margin-top:8px}.comments input{border:1px solid var(--line);border-radius:999px;padding:8px 11px;background:var(--card);color:inherit}.comments form button{border:0;border-radius:50%;background:var(--teal);color:#fff}.specialFeed{overflow:hidden}.achievementFeed{background:linear-gradient(145deg,#fffbea,#fff)}.challengeFeed{background:linear-gradient(145deg,#f5f0ff,#fff)}.dailyFeed{background:linear-gradient(145deg,#fffaf0,#fff)}.feedItem blockquote{margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--teal);background:#f7fbfb;border-radius:0 10px 10px 0}.settingToggle{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)}.settingsCard h4{margin-bottom:4px}.onboarding{text-align:center}.onboardingGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.onboardingGrid>div{border:1px solid var(--line);border-radius:16px;padding:14px}.onboardingGrid span,.onboardingGrid b{display:block}.onboardingGrid span{font-size:30px}.onboardingGrid p{font-size:12px;color:var(--muted)}.pendingIntro{display:grid;gap:7px;text-align:left;margin:14px 0;padding:12px;background:#f7fafb;border-radius:13px}.celebrationCard{text-align:center;position:relative;overflow:hidden}.celebrateEmoji{font-size:58px}.confetti i{position:absolute;left:50%;top:36%;width:7px;height:12px;background:hsl(calc(var(--i)*39),75%,58%);transform:rotate(calc(var(--i)*31deg)) translateY(-120px);animation:confetti .9s ease-out forwards;animation-delay:calc(var(--i)*.015s)}@keyframes confetti{to{transform:rotate(calc(var(--i)*61deg)) translate(calc((var(--i) - 9)*13px),190px);opacity:0}}.outboxNotice{display:flex;justify-content:space-between;align-items:center;gap:10px}
 [data-theme="dark"]{--navy:#0b2239;--bg:#0f1821;--card:#17232d;--muted:#9fb0be;--line:#2c3b47;--shadow:0 10px 30px rgba(0,0,0,.28);color-scheme:dark}html[data-theme="dark"] body{background:linear-gradient(180deg,#0d151d,#111b24);color:#e9f1f6}html[data-theme="dark"] .authCard,html[data-theme="dark"] .modalCard,html[data-theme="dark"] .choice,html[data-theme="dark"] .secondary,html[data-theme="dark"] .react,html[data-theme="dark"] .quickTemplate,html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] textarea{background:#17232d;color:#e9f1f6}html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3{color:#eef7ff}html[data-theme="dark"] .bottom{background:rgba(18,29,39,.96)}html[data-theme="dark"] .notice{background:#15332f;border-color:#245047}html[data-theme="dark"] .progress{background:#293945}html[data-theme="dark"] .rankMe{background:#173b37}html[data-theme="dark"] .feedItem blockquote{background:#12242a}
 @media(max-width:650px){.quickTemplates{grid-template-columns:1fr}.onboardingGrid{grid-template-columns:1fr}.witnessRequest{align-items:flex-start;flex-direction:column}.todayEnough{align-items:flex-start;flex-direction:column}.heatLegend{gap:8px;flex-direction:column}}
+
+
+/* ============================================================
+   V1.13.1 – complete Dark Mode surface pass
+   ============================================================ */
+html[data-theme="dark"]{
+ --navy:#eaf4fb;
+ --bg:#0d151d;
+ --card:#16232d;
+ --muted:#9fb1bf;
+ --line:#30414e;
+ --softTeal:#14312f;
+ --softGreen:#1b2d21;
+ --softPurple:#29223a;
+ --purple:#b998f0;
+ --orange:#ffad70;
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .shell,
+html[data-theme="dark"] .main{
+ background:#0d151d;
+ color:#e8f1f6;
+}
+html[data-theme="dark"] .side{
+ background:#09141e;
+ color:#fff;
+}
+html[data-theme="dark"] .sideNav button{color:#a9bdcb}
+html[data-theme="dark"] .sideNav button.active,
+html[data-theme="dark"] .sideNav button:hover{background:#17384f;color:#fff}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .authCard,
+html[data-theme="dark"] .modalCard,
+html[data-theme="dark"] .choice,
+html[data-theme="dark"] .quickTemplate,
+html[data-theme="dark"] .rewardOverview,
+html[data-theme="dark"] .rewardPreviewItem,
+html[data-theme="dark"] .reward,
+html[data-theme="dark"] .kpi,
+html[data-theme="dark"] details,
+html[data-theme="dark"] .settingsCard{
+ background:#16232d;
+ color:#e8f1f6;
+ border-color:#30414e;
+}
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .monthHero,
+html[data-theme="dark"] .todayDash>div,
+html[data-theme="dark"] .homeHead>div:last-child>*,
+html[data-theme="dark"] .nowCard,
+html[data-theme="dark"] .nowCard.daily,
+html[data-theme="dark"] .nowCard.weekly,
+html[data-theme="dark"] .nowCard.monthly,
+html[data-theme="dark"] .weekRecap,
+html[data-theme="dark"] .crewMoment,
+html[data-theme="dark"] .almostThere,
+html[data-theme="dark"] .todayEnough,
+html[data-theme="dark"] .achievementFeed,
+html[data-theme="dark"] .challengeFeed,
+html[data-theme="dark"] .dailyFeed,
+html[data-theme="dark"] .pendingIntro{
+ background:#182630 !important;
+ color:#e8f1f6;
+ border-color:#30414e !important;
+}
+html[data-theme="dark"] .historyHero{
+ background:linear-gradient(135deg,#132838,#1a394c);
+ color:#fff;
+}
+html[data-theme="dark"] .segmented,
+html[data-theme="dark"] .tabs{
+ background:#101c25;
+}
+html[data-theme="dark"] .segmented button,
+html[data-theme="dark"] .tabs button{color:#9fb1bf}
+html[data-theme="dark"] .segmented .active,
+html[data-theme="dark"] .tabs button.active{
+ background:#22323d;
+ color:#fff;
+ box-shadow:none;
+}
+html[data-theme="dark"] .monthNav{
+ background:#16232d;
+ border-color:#30414e;
+}
+html[data-theme="dark"] .monthNav button,
+html[data-theme="dark"] .x{
+ background:#243540;
+ color:#eef7ff;
+}
+html[data-theme="dark"] .monthNav select,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .comments input{
+ background:#101b24;
+ color:#eef7ff;
+ border-color:#354956;
+}
+html[data-theme="dark"] input[type="file"]{color:#dce8ef}
+html[data-theme="dark"] input::file-selector-button{
+ background:#22343f;color:#eef7ff;border:1px solid #3b515e;border-radius:9px;padding:7px 10px;
+}
+html[data-theme="dark"] .secondary,
+html[data-theme="dark"] .react,
+html[data-theme="dark"] .uploadBtn{
+ background:#1b2a34;
+ color:#e8f1f6;
+ border-color:#354956;
+}
+html[data-theme="dark"] .react.active{
+ background:#153c39;
+ border-color:#2d8b82;
+}
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .witnessBadge.honor{
+ background:#24343e;
+ color:#dce7ed;
+}
+html[data-theme="dark"] .notice{
+ background:#12332f;
+ border-color:#245a52;
+ color:#dff4ef;
+}
+html[data-theme="dark"] .error{
+ background:#3a2024;
+ border-color:#62343a;
+ color:#ffd9dc;
+}
+html[data-theme="dark"] .foodGoalChip{
+ background:#1b3125;
+ border-color:#345340;
+ color:#cce8d4;
+}
+html[data-theme="dark"] .progress{background:#30414d}
+html[data-theme="dark"] .rankRow{border-color:#293a45}
+html[data-theme="dark"] .rankMe{background:#173b37}
+html[data-theme="dark"] .settingToggle,
+html[data-theme="dark"] .comments{border-color:#30414e}
+html[data-theme="dark"] .feedItem blockquote{
+ background:#10262d;
+ color:#dceaf0;
+}
+html[data-theme="dark"] .heatCell{background:#293b46}
+html[data-theme="dark"] .heatCell.on{background:var(--teal)}
+html[data-theme="dark"] .recordMini{border-color:#30414e;background:#14212a}
+html[data-theme="dark"] .homeTask{color:#e8f1f6}
+html[data-theme="dark"] .tasks .homeTask:hover,
+html[data-theme="dark"] .tasks .homeTask:focus-visible{background:#1b2d37}
+html[data-theme="dark"] .bottom{
+ background:rgba(13,22,30,.97);
+ border-color:#30414e;
+}
+html[data-theme="dark"] .navBtn{color:#8fa5b4}
+html[data-theme="dark"] .navBtn.active{color:#35d1c8}
+html[data-theme="dark"] .avatar{background:#263844}
+html[data-theme="dark"] .photoPreview,
+html[data-theme="dark"] .feedPhoto{background:#101a22}
+html[data-theme="dark"] summary{color:#e8f1f6}
+html[data-theme="dark"] a{color:#55d8cf}
