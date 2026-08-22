@@ -1,0 +1,12 @@
+Fit4Us V1.8.0 – Competition & History Update
+Keine Supabase-Migration nötig.
+
+- Home neu priorisiert: Heute-KPIs, Aufgaben, Punkte, einklappbare eigene Einträge, Ranking, Feed.
+- Challenges klar als HEUTE / DIESE WOCHE / DIESEN MONAT strukturiert.
+- Gruppe mit automatischem Rückblick auf den letzten Wochenchampion.
+- Historie komplett neu: Monat/Gesamt, Monatsauswahl, Endstand, Wochenchampions, Crew-KPIs, Monatsrekorde, persönliche Monatswerte und All-Time.
+- Mein Profil mit 4-Wochen-Punkteentwicklung.
+- Responsive für Desktop, iPad und Smartphone.
+- Historie wird aus bestehenden Daten berechnet; keine Monatsdaten werden gelöscht.
+
+Update: Dateien nach GitHub ersetzen, config.js nicht überschreiben, committen.
