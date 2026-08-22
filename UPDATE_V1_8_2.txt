@@ -1,0 +1,27 @@
+Fit4Us V1.8.2 – Navigations-/Render-Hotfix
+============================================
+Keine Supabase-Migration nötig.
+
+URSACHE GEFUNDEN:
+Beim großen V1.8-Umbau wurde beim Ersetzen der Gruppenansicht versehentlich ein
+zusammenhängender Block bestehender Hilfsfunktionen mit entfernt. Dadurch liefen
+Home, Gruppe, Challenges und Mein Profil beim Rendern in JavaScript-Fehler.
+Punkte & Regeln, Historie und Admin waren davon nicht betroffen – exakt das
+beobachtete Fehlerbild.
+
+BEHOBEN:
+- todayOwnEntriesHTML wiederhergestellt
+- pinnedProposalsHTML / voteProposal wiederhergestellt
+- entryEditControls / canEditEntryAnywhere wiederhergestellt
+- Tageschallenge-Funktionen wiederhergestellt
+- Challenge-Completion/Rating-Funktionen wiederhergestellt
+- groupChallengeValueMonth / groupChallengeHTML wiederhergestellt
+- V1.8-Oberflächen bleiben erhalten
+- Versions-/Cachekennung auf V1.8.2 synchronisiert
+- app.js und style.css weiterhin intern versionsgebunden; öffentliche URL bleibt sauber
+
+UPDATE:
+1. Alle Dateien aus UPDATE V1.8.2 in GitHub ersetzen.
+2. config.js NICHT überschreiben.
+3. Commit/Deployment abwarten.
+4. Normale Fit4Us-URL öffnen.

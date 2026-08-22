@@ -402,6 +402,91 @@ function monthView(m){let rank=monthRank(m),team=profiles.filter(p=>p.approved).
 function allTimeView(){let u=profiles.filter(p=>p.approved).map(p=>{let es=entries.filter(e=>e.user_id===p.id);return {p,pts:pointsOf(p.id,es),s:mStats(p.id,'')}}).sort((a,b)=>b.pts-a.pts);return `<div class="historyHero"><div><small>∞ FIT4US ALL-TIME</small><h2>${u[0]?escapeHtml(firstName(u[0].p)):'–'}</h2><b>${u[0]?.pts||0} Gesamtpunkte</b></div><span>🏛️</span></div><div class="grid grid2 section">${u.map((x,i)=>`<div class="card pad"><div class="challengeTop"><h3>${['🥇','🥈','🥉'][i]||i+1+'.'} ${escapeHtml(firstName(x.p))}</h3><b>${x.pts} P</b></div><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span></div></div>`).join('')}</div>`}
 async function homeHTML(){let pts=monthPoints(),st=streak();return `<div class="homeHead"><div><small>FIT4US · ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'})}</small><h1>Hallo ${escapeHtml(firstName(me))} 👋</h1></div><div><b>${pts} P</b><span>🔥 ${st} Tage</span></div></div>${todaySummary()}<div class="sectionTitle"><h2>Deine Aufgaben</h2><button class="react" onclick="go('challenges')">Alle Challenges</button></div><div class="card pad">${taskSummary()}</div><div class="sectionTitle"><h2>Deine Punkte</h2></div>${rewardsOverviewHTML()}<details class="card pad section"><summary><b>📝 Meine heutigen Einträge bearbeiten</b></summary><div class="section">${await todayOwnEntriesHTML()}</div></details><div class="quickAdd"><button class="cta" onclick="openEntry()">＋ Eintrag hinzufügen</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="sectionTitle"><h2>Diese Woche</h2><button class="react" onclick="go('group')">Zur Gruppe</button></div><div class="card pad">${await rankingHTML(currentWeekEntries())}</div><div class="sectionTitle"><h2>Feed</h2><span class="pill">Crew</span></div><div class="grid">${await feedHTML(35)}</div>`}
 async function groupHTML(){let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk);return `<h1>Gruppe</h1>${c?`<div class="weekRecap"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="grid grid2"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries())}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries())}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
+
+
+/* Restored V1.7.7 interaction helpers – V1.8.2 hotfix */
+function canEditEntryAnywhere(e){return !!e && e.user_id===me.id && e.entry_date.startsWith(monthKey())}
+
+async function completeDaily(e){e.preventDefault();let c=dailyChallengeFor(),text=$('#dailyText').value.trim(),{error}=await sb.from('daily_challenge_completions').insert({challenge_date:fmtDate(),challenge_pool_id:c.id,user_id:me.id,completion_text:text,points:1});if(error)return toast(error.message);closeModal();await loadData();let poolc=dailyChallengeFor();await recordChallengeCompletion('daily',c.id,c.name,c.emoji,1,fmtDate());await render();toast('Tageschallenge geschafft +1 P 🎉')}
+
+function dailyPinnedHTML(){let c=dailyChallengeFor(),done=dailyCompletedBy(me.id),count=dailyCompletions.filter(x=>x.challenge_date===fmtDate()).length;if(!c)return '';return `<div class="card pad section" style="background:linear-gradient(135deg,#fff8ec,#fff)"><div class="challengeTop"><span class="pill">☀️ Tageschallenge</span><span class="points">+1 P</span></div><h3>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h3><div class="small muted">${escapeHtml(c.description)}</div>${done?`<div class="notice small" style="margin-top:10px">✓ Heute erledigt: „${escapeHtml(done.completion_text)}“</div>`:`<button class="cta" style="margin-top:10px" onclick="openDailyComplete()">Als erledigt markieren</button>`}</div>`}
+
+async function detectChallengeCompletions(){
+ if(!me?.id)return;
+ let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;
+ if(ch){let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());if(a>=b)await recordChallengeCompletion('weekly',ch.id,ch.title,ch.icon,ch.points,weekKey())}
+ let gc=groupChallengeForWeek(monthKey()),gv=groupChallengeValueMonth(monthKey());
+ if(gc&&gv>=gc.target)await recordChallengeCompletion('group',gc.dbId||gc.id,gc.title,gc.icon,gc.points,monthKey());
+}
+
+function entryEditControls(e){
+ if(!canEditEntryAnywhere(e))return '';
+ return `<div class="entryActions"><button class="react" onclick="event.stopPropagation();editEntry('${e.id}')">✏️ Bearbeiten</button><button class="react danger" onclick="event.stopPropagation();deleteEntry('${e.id}')">🗑 Löschen</button></div>`
+}
+
+function openDailyComplete(){let c=dailyChallengeFor();if(!c)return;$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} Tageschallenge erledigt</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(c.description)}</p><form class="form" onsubmit="completeDaily(event)"><div class="field"><label>Was hast du gemacht?</label><textarea id="dailyText" rows="5" required minlength="3" style="width:100%;border:1px solid #dbe4eb;border-radius:13px;padding:12px"></textarea></div><button class="cta">Erledigt · +1 P</button></form></div></div>`}
+
+function openPostChallengeRating(challengeId,title){
+ let c=challengePool.find(x=>x.id===challengeId||x.slug===challengeId);
+ if(!c)return;
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎉 Challenge geschafft!</h2><button class="x" onclick="closeModal()">×</button></div><p><b>${escapeHtml(title)}</b> ist erfüllt.</p><p>Wie fandest du die Challenge?</p><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div></div>`
+}
+
+async function pinnedProposalsHTML(){let active=proposals.filter(p=>p.status==='voting');if(!active.length)return '';return `<div class="sectionTitle"><h2>📌 Offene Abstimmungen</h2></div>`+active.map(p=>{let who=profileById(p.proposer_id),v=proposalVoteCounts(p.id),mine=proposalVotes.find(x=>x.proposal_id===p.id&&x.user_id===me.id);return `<div class="card pad section" style="border-color:#dfd4f7;background:#fbf9ff"><div class="challengeTop"><span class="pill">📌 Challenge-Vorschlag</span><span class="tiny muted">${v.total}/${allApprovedUsers().length} Stimmen</span></div><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted" style="margin-top:6px">von ${escapeHtml(firstName(who))} · ${escapeHtml(p.challenge_type)} · +${p.points} P</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteProposal('${p.id}',true)">👍 ${v.yes}</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteProposal('${p.id}',false)">👎 ${v.no}</button></div>${v.total>=allApprovedUsers().length?'<div class="notice small" style="margin-top:8px">Alle haben abgestimmt – wartet auf Admin-Entscheidung.</div>':''}</div>`}).join('')}
+
+async function recordChallengeCompletion(kind,challengeId,title,emoji,points,periodKey){
+ if(challengeCompletions.some(x=>x.user_id===me.id&&x.challenge_kind===kind&&x.period_key===periodKey&&x.challenge_ref===String(challengeId)))return;
+ let {data,error}=await sb.from('challenge_completions').insert({user_id:me.id,challenge_kind:kind,challenge_ref:String(challengeId),title,emoji,points:+points||0,period_key:periodKey}).select().single();
+ if(!error&&data){challengeCompletions.push(data);openPostChallengeRating(challengeId,title)}
+}
+
+async function todayOwnEntriesHTML(){
+ let list=entries.filter(e=>e.user_id===me.id&&e.entry_date===fmtDate());
+ let daily=dailyCompletions.filter(d=>d.user_id===me.id&&d.challenge_date===fmtDate());
+ if(!list.length&&!daily.length)return `<div class="card pad muted">Heute noch keine Einträge.</div>`;
+ let out='';
+ for(let e of list){
+  let label=e.kind==='steps'
+   ?`👟 ${(+e.steps||0).toLocaleString('de-DE')} Schritte`
+   :e.kind==='food'
+    ?`🥗 Ernährung · ${(e.food_items||[]).length}/7 Ziele`
+    :`${ACTIVITIES[e.activity]?.icon||'⚡'} ${ACTIVITIES[e.activity]?.name||'Aktivität'} · ${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}`;
+  out+=`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${label}</b><div class="tiny muted">+${e.points} P</div></div>${entryEditControls(e)}</div></div>`
+ }
+ for(let d of daily){
+  let c=challengePool.find(x=>x.id===d.challenge_pool_id);
+  out+=`<div class="card pad"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>${escapeHtml(c?.emoji||'☀️')} ${escapeHtml(c?.name||'Tageschallenge')}</b><div class="tiny muted">+1 P · „${escapeHtml(d.completion_text)}“</div></div><button class="react danger" onclick="undoDailyCompletion('${d.id}')">↩ Zurücknehmen</button></div></div>`
+ }
+ return out
+}
+
+async function undoDailyCompletion(id){
+ let d=dailyCompletions.find(x=>x.id===id);
+ if(!d||d.user_id!==me.id)return toast('Dieser Eintrag gehört nicht dir.');
+ if(!d.challenge_date.startsWith(monthKey()))return toast('Vergangene Monate können nicht geändert werden.');
+ if(!confirm('Tageschallenge wirklich zurücknehmen? Der +1 Punkt und der Feed-Eintrag werden entfernt.'))return;
+ let cc=challengeCompletions.filter(x=>x.user_id===me.id&&x.challenge_kind==='daily'&&x.period_key===d.challenge_date);
+ if(cc.length)await sb.from('challenge_completions').delete().in('id',cc.map(x=>x.id));
+ let {error}=await sb.from('daily_challenge_completions').delete().eq('id',id);
+ if(error)return toast(error.message);
+ await loadData();await render();toast('Tageschallenge zurückgenommen');
+}
+
+async function voteProposal(id,vote){let old=proposalVotes.find(x=>x.proposal_id===id&&x.user_id===me.id),q=old?sb.from('challenge_proposal_votes').update({vote}).eq('proposal_id',id).eq('user_id',me.id):sb.from('challenge_proposal_votes').insert({proposal_id:id,user_id:me.id,vote});let {error}=await q;if(error)return toast(error.message);await loadData();await render()}
+
+function groupChallengeValueMonth(mk){
+ let ch=groupChallengeForWeek(mk),from=mk+'-01',to=mk+'-31',es=entries.filter(e=>e.entry_date>=from&&e.entry_date<=to);
+ if(ch.kind==='steps')return es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0);
+ if(ch.kind==='minutes')return es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0);
+ if(ch.kind==='outdoor')return es.filter(e=>e.kind==='activity'&&['walk','hike'].includes(e.activity)).length;
+ if(ch.kind==='distance')return es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.distance||0),0);
+ if(ch.kind==='healthy')return es.filter(e=>e.kind==='food'&&(e.food_items||[]).length>=5).length;
+ if(ch.kind==='activities')return es.filter(e=>e.kind==='activity').length;
+ return 0
+}
+
+function groupChallengeHTML(){let ch=groupChallengeForWeek(monthKey()),v=groupChallengeValueMonth(monthKey());return `<div class="progress"><i style="width:${Math.min(100,v/ch.target*100)}%"></i></div>`}
+
 function feedDateTime(item){
  let date=item?.created_at?new Date(item.created_at):null;
  if(date&&!Number.isNaN(date.getTime())){
@@ -763,7 +848,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.8.1';
+const FIT4US_VERSION='1.8.2';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
