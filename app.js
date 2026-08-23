@@ -58,7 +58,13 @@ const REWARDS=[
 const MILESTONES=[50,100,150,200,250,300,400];
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const fmtDate=d=>{let x=d?new Date(d):new Date(); return x.toISOString().slice(0,10)};
+const fmtDate=d=>{
+ if(typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d))return d;
+ let x=d?new Date(d):new Date();
+ if(Number.isNaN(x.getTime()))return '';
+ let y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),day=String(x.getDate()).padStart(2,'0');
+ return `${y}-${m}-${day}`;
+};
 const monthKey=d=>fmtDate(d).slice(0,7);
 function startOfWeek(d=new Date()){let x=new Date(d);x.setHours(12,0,0,0);let day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x}
 function weekKey(d=new Date()){return fmtDate(startOfWeek(d))}
@@ -1254,7 +1260,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.13.5';
+const FIT4US_VERSION='1.13.6';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){

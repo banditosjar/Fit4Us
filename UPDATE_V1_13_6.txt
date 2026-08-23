@@ -1,0 +1,21 @@
+Fit4Us V1.13.6 – Lokales Tagesdatum Hotfix
+=============================================
+Keine Supabase-Migration nötig.
+
+URSACHE
+- Fit4Us hat das Tagesdatum bisher mit new Date().toISOString().slice(0,10) erzeugt.
+- toISOString() arbeitet immer in UTC.
+- In Deutschland kann lokal bereits ein neuer Tag sein, während UTC noch beim Vortag ist.
+- Dadurch blieb nach Mitternacht unter anderem die alte Tageschallenge aktiv.
+
+BEHOBEN
+- fmtDate() verwendet jetzt Jahr, Monat und Tag aus der lokalen Gerätezeit.
+- Bereits vorhandene YYYY-MM-DD-Daten werden unverändert übernommen.
+- Damit verwenden Tageschallenge, Schritte, Ernährung, Streaks und Tagesansichten
+  konsequent das lokale Kalenderdatum des Geräts.
+- Zeitstempel wie created_at bleiben weiterhin korrekt als UTC-ISO-Zeitstempel gespeichert.
+
+UPDATE
+1. UPDATE-Dateien in GitHub ersetzen.
+2. config.js NICHT überschreiben.
+3. Keine SQL-Migration erforderlich.
