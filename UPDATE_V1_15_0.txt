@@ -1,0 +1,69 @@
+Fit4Us V1.15.0 – UX Refresh
+================================
+SUPABASE-MIGRATION ERFORDERLICH:
+MIGRATION_V1_15_0.sql einmal im Supabase SQL Editor ausführen.
+
+HOME
+- Komplett entschlackt: Tagesstatus, 3 aktuelle Challenges, Quick Add, Wochen-Snapshot.
+- Nur 3 neueste Crew-Feed-Einträge auf Home.
+- Meine heutigen Einträge standardmäßig eingeklappt.
+- Offene Abstimmungen nur als kompakter Hinweis, nicht als doppelte Vollansicht.
+
+GRUPPE
+- Wird zum Social-Hub.
+- Crew-Snapshot + Wochen-/Monatsranking.
+- Vollständiger Crew Feed.
+- Start mit 8 Einträgen, danach „Weitere Aktivitäten laden“ in 8er-Schritten.
+
+FEED / SOCIAL
+- Neue generische feed_reactions für Entry, Tageschallenge, Challengeabschluss und Achievement.
+- Reaktionen 👏 🔥 💪 ❤️ überall konsistent möglich.
+- Kommentare überall konsistent möglich.
+- Kommentarfeld standardmäßig eingeklappt; öffnet sich erst bei Klick.
+- Bestehende klassische Entry-Reaktionen werden in die neue Tabelle übernommen.
+
+FOTOS
+- Aktivität, Ernährung und Profil nutzen nur noch EINEN nativen Datei-/Foto-Button.
+- Smartphone entscheidet selbst über Kamera/Galerie/Dateien.
+- Desktop-Feed stellt Beiträge mit Foto zweispaltig dar.
+- Klick auf Foto öffnet große Lightbox.
+
+CHALLENGES
+- Klare Hierarchie Heute / Woche / Monat.
+- Monatsmission: +15 P pro Crew-Mitglied.
+- Wochenchallenge: +5 P.
+- Wochengewinner bekommt drei zufällig erzeugte, persistente Optionen.
+- Solange keine Wahl getroffen ist, sehen alle, wer aktuell wählen darf.
+- Nach 18 Stunden wird beim nächsten Fit4Us-Abgleich automatisch eine der drei Optionen gewählt.
+- Optionen werden serverseitig zufällig aus dem aktiven Pool erzeugt.
+- Letzte 6 Wochen werden möglichst nicht wiederholt.
+- Tageschallenges werden wirklich zufällig gezogen, ca. 20 % Gruppenbezug; letzte 14 Tage derselben Person möglichst ohne Wiederholung.
+- Monatschallenge wird zufällig gezogen; letzte 6 Monate möglichst ohne Wiederholung.
+- Abstimmungen stehen ausschließlich im Challenge-Reiter; Home zeigt nur Hinweis.
+
+BELOHNUNGEN
+- Falscher „Zum Reiter Belohnungen“-Button auf der Belohnungsseite entfernt.
+- Alle Belohnungsstufen standardmäßig eingeklappt.
+- Neuer hochwertiger System-Pool pro Stufe; alte System-Belohnungen bleiben historisch erhalten, werden aber für neue Auswahlen deaktiviert.
+- Auswahl versucht bereits in diesem Monat verwendete Belohnungen zu vermeiden.
+- Drei Optionen werden zufällig statt deterministisch erzeugt.
+
+PROFIL
+- Neue kompakte Profil-Hero-Zeile.
+- Streak, Rekorde, Trend und Wochenvergleich strukturiert.
+- Achievements, Monatsrückblick/Hall of Fame und „Meine Einträge“ standardmäßig ausklappbar.
+
+DARK MODE
+- Neue UX-Komponenten vollständig mit Dark-Mode-Flächen versehen.
+
+WICHTIG ZUR 18H-AUTOMATIK
+- Die Auswahl wird durch eine serverseitige RPC geprüft.
+- Da Fit4Us derzeit keinen dauerhaft laufenden Serverprozess für Wochenwechsel nutzt,
+  wird die fällige automatische Auswahl beim ersten App-Aufruf/Realtime-Abgleich nach Ablauf der 18 h ausgeführt.
+- Bereits gesetzte Wochenchallenges werden niemals überschrieben.
+
+UPDATE
+1. MIGRATION_V1_15_0.sql in Supabase ausführen.
+2. Danach UPDATE-Dateien in GitHub ersetzen.
+3. config.js NICHT überschreiben.
+4. Deployment abwarten.

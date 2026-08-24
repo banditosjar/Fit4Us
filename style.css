@@ -509,3 +509,77 @@ html[data-theme="dark"] .witnessBadge.declined{background:#3a2227 !important;col
  .wishHeroSide{grid-template-columns:1fr 1fr}
  .wishHeroAmount{font-size:42px}
 }
+
+
+/* ============================================================
+   V1.15.0 – UX Refresh
+   ============================================================ */
+:root{
+ --surface-1:#fff;--surface-2:#f6f9fa;--surface-3:#edf3f4;
+ --radius-xl:26px;--radius-lg:20px;--radius-md:15px;
+}
+.main{max-width:1320px}
+.pageHead{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:20px}.pageHead small,.homeHero small,.profileHero small,.focusChallenge small,.weeklyPicker small,.weekSnapshot small{font-weight:900;letter-spacing:.09em;color:var(--muted)}.pageHead h1{margin:3px 0 0}.compactCta{padding:10px 15px}
+.compactTitle{margin-top:24px;margin-bottom:10px}.compactTitle h2{font-size:19px;margin:0}.textLink{border:0;background:transparent;color:var(--teal);font-weight:900;padding:6px;cursor:pointer}
+
+.homeHero{display:flex;justify-content:space-between;align-items:center;padding:24px 2px 15px}.homeHero h1{font-size:34px;margin:5px 0}.homeHero p{margin:0;color:var(--muted)}.homeHeroMark{font-size:48px;color:var(--teal);opacity:.35}
+.homeMetrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.homeMetrics>div{padding:13px 15px;background:var(--surface-1);border:1px solid var(--line);border-radius:var(--radius-md)}.homeMetrics small,.homeMetrics b{display:block}.homeMetrics small{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.homeMetrics b{font-size:20px;margin-top:3px}
+.homeChallengeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.homeChallengeTile{min-height:126px;border:0;border-radius:var(--radius-lg);padding:16px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:7px;cursor:pointer;color:var(--navy);box-shadow:inset 0 0 0 1px var(--line)}.homeChallengeTile small{text-transform:uppercase;font-weight:900;letter-spacing:.06em;color:var(--muted)}.homeChallengeTile b{font-size:17px}.homeChallengeTile span{margin-top:auto;font-size:12px;font-weight:900}.homeChallengeTile.daily{background:linear-gradient(145deg,#fff9e8,#fff)}.homeChallengeTile.weekly{background:linear-gradient(145deg,#edf8ff,#fff)}.homeChallengeTile.monthly{background:linear-gradient(145deg,#eafaf3,#fff)}
+.quickAddModern{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.quickAddModern button{border:1px solid var(--line);background:var(--surface-1);color:inherit;border-radius:18px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;cursor:pointer}.quickAddModern span{font-size:21px}.quickAddModern b{font-size:14px}
+.weekSnapshot{display:grid;grid-template-columns:1.5fr repeat(3,1fr) auto;align-items:center;gap:12px;margin-top:22px}.weekSnapshot>div:not(:first-child){border-left:1px solid var(--line);padding-left:14px}.weekSnapshot small,.weekSnapshot span,.weekSnapshot b{display:block}.weekSnapshot span{font-size:10px;color:var(--muted)}.weekSnapshot b{font-size:18px}
+.votingBanner{width:100%;margin-top:14px;border:1px solid #eadf9d;background:linear-gradient(135deg,#fff9da,#fffdf3);border-radius:17px;padding:12px 15px;display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;text-align:left;color:inherit;cursor:pointer}.votingBanner>span{font-size:24px}.votingBanner b,.votingBanner small{display:block}.votingBanner small{color:var(--muted);margin-top:2px}
+.disclosureCard>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;cursor:pointer;list-style:none}.disclosureCard>summary::-webkit-details-marker{display:none}.disclosureCard>summary:after{content:'⌄';color:var(--muted);font-size:18px}.disclosureCard[open]>summary:after{transform:rotate(180deg)}
+.homeFeed .feedMore{display:none}
+
+.crewSnapshot{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.crewPerson{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid var(--line);background:var(--surface-1);border-radius:17px}.crewPerson.me{background:var(--softTeal);border-color:#9fded4}.crewPerson b,.crewPerson span{display:block}.crewPerson span{font-size:10px;color:var(--muted)}
+.groupFeed{display:grid;gap:11px}.feedMore{display:flex;justify-content:center;align-items:center;gap:12px;padding:8px 0 20px}
+
+.feedItem{padding:0;overflow:hidden;display:block}.feedContent{padding:16px}.feedHead .points{margin-left:auto}.feedActions{margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}.compactReactions{margin:0}.compactReactions .react{padding:6px 9px}.compactReactions .react span{font-size:11px}.feedSocial{margin-top:6px}.socialAction{border:0;background:transparent;color:var(--muted);padding:5px 0;font:inherit;font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer}.socialAction.active,.socialAction:hover{color:var(--teal)}.comments{margin-top:8px}
+.feedMediaButton{border:0;background:transparent;padding:0;display:block;width:100%;cursor:zoom-in}.feedMediaButton .feedPhoto{display:block;width:100%;max-height:520px;border-radius:0;object-fit:cover}
+.photoLightbox{background:rgba(5,10,15,.9)}.photoLightboxInner{position:relative;max-width:min(94vw,1300px);max-height:94vh}.photoLightboxInner img{max-width:100%;max-height:92vh;object-fit:contain;border-radius:16px}.photoClose{position:absolute;right:10px;top:10px;z-index:2;background:#0b1720cc!important}
+
+.challengeStack{display:grid;gap:12px}.focusChallenge{border-radius:var(--radius-xl);padding:22px;border:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;align-items:center}.focusChallenge>div{width:100%}.focusChallenge h2{margin:5px 0 7px}.focusChallenge p{margin:0 0 11px;color:var(--muted)}.focusChallenge.daily{background:linear-gradient(135deg,#fff8e6,#fff)}.focusChallenge.weekly{background:linear-gradient(135deg,#edf7ff,#fff)}.focusChallenge.monthly{background:linear-gradient(135deg,#eaf9f2,#fff)}.statusDone{font-weight:900;color:#24825c;white-space:nowrap}.challengeWaiting{display:flex;gap:12px;align-items:flex-start;padding:12px 0 2px}.challengeWaiting>span{font-size:26px}.challengeWaiting b,.challengeWaiting small{display:block}.challengeWaiting small{color:var(--muted);margin-top:3px}.weeklyPicker{margin-top:14px}.weeklyPicker .choice{position:relative}.weeklyPicker .points{display:block;margin-top:8px}
+.profileHero{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:16px;padding:20px 22px;border-radius:var(--radius-xl)}.profileHero h1{font-size:27px;margin:3px 0}.profileHeroStats{display:flex;gap:9px}.profileHeroStats>div{padding:9px 12px;border-left:1px solid var(--line)}.profileHeroStats small,.profileHeroStats b{display:block}.profileHeroStats small{font-size:9px;color:var(--muted);text-transform:uppercase}.profileHeroStats b{font-size:16px}
+.primaryUpload{display:inline-flex;justify-content:center;min-width:180px}
+
+.rewardMilestoneCard .rewardChoicePreview{grid-template-columns:repeat(3,1fr)}
+.rewardPreviewItem{min-height:85px}
+
+@media(min-width:900px){
+ .feedItem.hasMedia{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr)}
+ .feedItem.hasMedia .feedMediaButton{height:100%;min-height:240px;border-left:1px solid var(--line)}
+ .feedItem.hasMedia .feedPhoto{height:100%;max-height:none;object-fit:cover}
+}
+@media(max-width:850px){
+ .homeMetrics{grid-template-columns:repeat(2,1fr)}
+ .homeChallengeGrid,.crewSnapshot{grid-template-columns:1fr 1fr}
+ .weekSnapshot{grid-template-columns:1fr 1fr}.weekSnapshot>div:not(:first-child){border-left:0;padding-left:0}.weekSnapshot .textLink{grid-column:1/-1;text-align:left}
+ .profileHero{grid-template-columns:auto 1fr}.profileHeroStats{grid-column:1/-1}.profileHero>button{grid-column:1/-1}
+}
+@media(max-width:600px){
+ .homeHero{padding-top:8px}.homeHero h1{font-size:29px}.homeHeroMark{display:none}
+ .homeMetrics{grid-template-columns:1fr 1fr}.homeMetrics b{font-size:17px}
+ .homeChallengeGrid,.crewSnapshot,.quickAddModern{grid-template-columns:1fr}
+ .focusChallenge{align-items:flex-start;flex-direction:column;padding:18px}
+ .pageHead{align-items:flex-start}.pageHead .pill{display:none}
+ .profileHeroStats{display:grid;grid-template-columns:repeat(3,1fr);width:100%}.profileHeroStats>div{border:0;padding:7px 2px}
+ .rewardMilestoneCard .rewardChoicePreview{grid-template-columns:1fr}
+}
+
+/* Dark mode refinements for UX Refresh */
+html[data-theme="dark"]{--surface-1:#16232d;--surface-2:#101b24;--surface-3:#22333e}
+html[data-theme="dark"] .homeMetrics>div,
+html[data-theme="dark"] .quickAddModern button,
+html[data-theme="dark"] .crewPerson{background:#16232d;border-color:#30414e}
+html[data-theme="dark"] .crewPerson.me{background:#173b37;border-color:#2d6e65}
+html[data-theme="dark"] .homeChallengeTile{color:#e8f1f6;border-color:#30414e}
+html[data-theme="dark"] .homeChallengeTile.daily,
+html[data-theme="dark"] .focusChallenge.daily{background:linear-gradient(135deg,#302a1c,#1a252d)}
+html[data-theme="dark"] .homeChallengeTile.weekly,
+html[data-theme="dark"] .focusChallenge.weekly{background:linear-gradient(135deg,#172d3c,#18242d)}
+html[data-theme="dark"] .homeChallengeTile.monthly,
+html[data-theme="dark"] .focusChallenge.monthly{background:linear-gradient(135deg,#18352d,#18252c)}
+html[data-theme="dark"] .votingBanner{background:linear-gradient(135deg,#352f1c,#1d282e);border-color:#62552d}
+html[data-theme="dark"] .feedActions{border-color:#30414e}
+html[data-theme="dark"] .socialAction{color:#9fb1bf}
+html[data-theme="dark"] .profileHero{background:#16232d!important}

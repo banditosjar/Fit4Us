@@ -1,14 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
-const tz='Europe/Berlin';
-Deno.serve(async req=>{try{
- if(req.headers.get('x-cron-secret')!==Deno.env.get('CRON_SECRET'))return new Response('Unauthorized',{status:401});
- const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:fit4us@example.invalid',Deno.env.get('VAPID_PUBLIC_KEY')!,Deno.env.get('VAPID_PRIVATE_KEY')!);
- const now=new Date(),parts=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hour12:false}).formatToParts(now),get=(t:string)=>parts.find(x=>x.type===t)?.value||'';const date=`${get('year')}-${get('month')}-${get('day')}`,hour=Number(get('hour'));
- if(hour!==8&&hour!==19)return new Response(JSON.stringify({skipped:true,hour}));
- const {data:profiles}=await admin.from('profiles').select('id,first_name').eq('approved',true);const {data:prefs}=await admin.from('user_preferences').select('*');const {data:subs}=await admin.from('push_subscriptions').select('*');
- async function send(uid:string,title:string,body:string){for(const s of (subs||[]).filter(x=>x.user_id===uid)){try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body,url:'https://banditosjar.github.io/Fit4Us/'}))}catch(e){if(e?.statusCode===404||e?.statusCode===410)await admin.from('push_subscriptions').delete().eq('id',s.id)}}}
- if(hour===8){for(const p of profiles||[]){let pr=(prefs||[]).find(x=>x.user_id===p.id);if(pr?.notify_challenges!==false)await send(p.id,'☀️ Deine Fit4Us-Challenge wartet',`Guten Morgen ${p.first_name} – schau dir deine persönliche Tagesaufgabe an.`)}}
- if(hour===19){let {data:entries}=await admin.from('entries').select('user_id,points').eq('entry_date',date).gt('points',0);let {data:daily}=await admin.from('daily_challenge_completions').select('user_id,points').eq('challenge_date',date);let active=new Set([...(entries||[]).map(x=>x.user_id),...(daily||[]).filter(x=>(x.points||1)>0).map(x=>x.user_id)]);for(const p of profiles||[]){let pr=(prefs||[]).find(x=>x.user_id===p.id);if(pr?.notify_streak!==false&&!active.has(p.id))await send(p.id,'🔥 Dein Streak ist heute noch offen',`Ein einziger Punkt reicht heute, ${p.first_name}.`)}}
- return new Response(JSON.stringify({ok:true,hour,date}),{headers:{'content-type':'application/json'}})
-}catch(e){return new Response(String(e?.message||e),{status:500})}});
+const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
+Deno.serve(async req=>{if(req.method==='OPTIONS')return new Response('ok',{headers:cors});try{
+ const url=Deno.env.get('SUPABASE_URL')!,anon=Deno.env.get('SUPABASE_ANON_KEY')!,service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+ const auth=req.headers.get('Authorization')||'';const userClient=createClient(url,anon,{global:{headers:{Authorization:auth}}});const {data:{user}}=await userClient.auth.getUser();if(!user)return new Response('Unauthorized',{status:401,headers:cors});
+ const {target_user_id,title,body,category='challenges',url:targetUrl}=await req.json();if(!target_user_id||!title)return new Response('Bad request',{status:400,headers:cors});
+ const admin=createClient(url,service);let {data:pref}=await admin.from('user_preferences').select('*').eq('user_id',target_user_id).maybeSingle();
+ const prefKey=category==='reactions'?'notify_reactions':category==='witness'?'notify_witness':category==='streak'?'notify_streak':'notify_challenges';if(pref&&pref[prefKey]===false)return new Response(JSON.stringify({sent:0,disabled:true}),{headers:{...cors,'content-type':'application/json'}});
+ let {data:subs}=await admin.from('push_subscriptions').select('*').eq('user_id',target_user_id);if(!subs?.length)return new Response(JSON.stringify({sent:0}),{headers:{...cors,'content-type':'application/json'}});
+ webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:fit4us@example.invalid',Deno.env.get('VAPID_PUBLIC_KEY')!,Deno.env.get('VAPID_PRIVATE_KEY')!);
+ let sent=0;for(const s of subs){try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body,url:targetUrl||'https://banditosjar.github.io/Fit4Us/'}));sent++}catch(e){if(e?.statusCode===404||e?.statusCode===410)await admin.from('push_subscriptions').delete().eq('id',s.id)}}
+ return new Response(JSON.stringify({sent}),{headers:{...cors,'content-type':'application/json'}})
+}catch(e){return new Response(String(e?.message||e),{status:500,headers:cors})}});
