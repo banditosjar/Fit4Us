@@ -1,5 +1,5 @@
-const VERSION='1.15.1';
-const CACHE='fit4us-v1.15.1';
+const VERSION='1.16.0';
+const CACHE='fit4us-v1.16.0';
 
 const CORE=[
   './',
@@ -76,5 +76,24 @@ self.addEventListener('fetch',event=>{
   );
 });
 
-self.addEventListener('push',event=>{let d={};try{d=event.data?.json()||{}}catch{d={body:event.data?.text()||''}};event.waitUntil(self.registration.showNotification(d.title||'Fit4Us',{body:d.body||'',icon:'./assets/fit4us-icon-192.png',badge:'./assets/fit4us-icon-192.png',data:{url:d.url||'./'},tag:d.tag||'fit4us'}))});
-self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{let url=event.notification.data?.url||'./';for(const w of ws){if('focus'in w)return w.focus()}return clients.openWindow(url)}))});
+
+self.addEventListener('push',event=>{
+ let d={};try{d=event.data?.json()||{}}catch{d={body:event.data?.text()||''}}
+ event.waitUntil((async()=>{
+  if('setAppBadge'in self.navigator){try{await self.navigator.setAppBadge(1)}catch{}}
+  await self.registration.showNotification(d.title||'Fit4Us',{
+   body:d.body||'',icon:'./assets/fit4us-icon-192.png',badge:'./assets/fit4us-icon-192.png',
+   data:{url:d.url||'./'},tag:d.tag||'fit4us',renotify:true
+  })
+ })())
+})
+self.addEventListener('notificationclick',event=>{
+ event.notification.close()
+ event.waitUntil((async()=>{
+  if('clearAppBadge'in self.navigator){try{await self.navigator.clearAppBadge()}catch{}}
+  const target=new URL(event.notification.data?.url||'./',self.location.origin).href
+  const ws=await clients.matchAll({type:'window',includeUncontrolled:true})
+  for(const w of ws){if('navigate'in w)await w.navigate(target);if('focus'in w)return w.focus()}
+  return clients.openWindow(target)
+ })())
+})

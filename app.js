@@ -206,7 +206,7 @@ function bonusPointsBetween(userId,from,to){
  // Monatsmission: +5 P für alle am tatsächlichen Tag, an dem die Crew das Ziel erreicht.
  for(let mk of monthKeysBetween(from,to)){
   let doneDate=groupChallengeCompletionDateMonth(mk);
-  if(doneDate&&doneDate>=from&&doneDate<=to)bonus+=5;
+  if(doneDate&&doneDate>=from&&doneDate<=to)bonus+=15;
  }
  bonus+=streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+x.points,0);
  bonus+=dailyCompletions.filter(x=>x.user_id===userId&&x.challenge_date>=from&&x.challenge_date<=to).reduce((s,x)=>s+(+x.points||1),0);
@@ -301,9 +301,27 @@ async function avatarHTML(p,size=42){
  return url?`<div class="avatar" style="width:${size}px;height:${size}px"><img src="${url}"></div>`:`<div class="avatar" style="width:${size}px;height:${size}px">${escapeHtml((p?.first_name||'?')[0])}</div>`;
 }
 
+
+const REMEMBER_LOGIN_KEY='fit4us_remember_login';
+function rememberLoginEnabled(){
+ let v=localStorage.getItem(REMEMBER_LOGIN_KEY);
+ return v===null?true:v==='1';
+}
+function setRememberLogin(enabled){localStorage.setItem(REMEMBER_LOGIN_KEY,enabled?'1':'0')}
+const fit4usAuthStorage={
+ getItem(key){
+  return rememberLoginEnabled()?localStorage.getItem(key):sessionStorage.getItem(key);
+ },
+ setItem(key,value){
+  if(rememberLoginEnabled()){localStorage.setItem(key,value);sessionStorage.removeItem(key)}
+  else{sessionStorage.setItem(key,value);localStorage.removeItem(key)}
+ },
+ removeItem(key){localStorage.removeItem(key);sessionStorage.removeItem(key)}
+};
+
 async function init(){
  if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/fit4us-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
- sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true}});
+ sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:fit4usAuthStorage}});
  const {data}=await sb.auth.getSession(); session=data.session;
  sb.auth.onAuthStateChange(async(evt,s)=>{session=s;if(!s){stopRealtime();showAuth()}else{await bootApp()}});
  if(session)await bootApp(); else showAuth();
@@ -319,6 +337,7 @@ function authTab(tab){
  $('#authBody').innerHTML=tab==='login'?`<form class="form" onsubmit="login(event)">
   <div class="field"><label>Benutzername</label><input id="loginUser" autocomplete="username" required></div>
   <div class="field"><label>Passwort</label><input id="loginPass" type="password" autocomplete="current-password" required></div>
+  <label class="rememberLogin"><input id="rememberLogin" type="checkbox" ${rememberLoginEnabled()?'checked':''}><span><b>Angemeldet bleiben</b><small>Auf diesem Gerät dauerhaft angemeldet bleiben.</small></span></label>
   <div id="authErr"></div><button class="cta">Anmelden</button>
   <div class="tiny muted">Der Benutzername wird nur für den Login verwendet. In Fit4Us sehen andere deinen Vornamen.</div>
  </form>`:`<form class="form two" onsubmit="register(event)">
@@ -332,9 +351,11 @@ function authTab(tab){
  </form>`
 }
 async function login(e){
- e.preventDefault();let user=$('#loginUser').value.trim().toLowerCase(),pass=$('#loginPass').value;
+ e.preventDefault();
+ let user=$('#loginUser').value.trim().toLowerCase(),pass=$('#loginPass').value,remember=$('#rememberLogin')?.checked!==false;
+ setRememberLogin(remember);
  let {error}=await sb.auth.signInWithPassword({email:syntheticEmail(user),password:pass});
- if(error)showError($('#authErr'),'Benutzername oder Passwort ist nicht korrekt.')
+ if(error)showError($('#authErr'),'Benutzername oder Passwort ist nicht korrekt.');
 }
 async function register(e){
  e.preventDefault();let username=$('#regUser').value.trim().toLowerCase(),first=$('#regFirst').value.trim(),last=$('#regLast').value.trim(),p=$('#regPass').value,p2=$('#regPass2').value;
@@ -356,6 +377,7 @@ async function bootApp(){
    return;
  }
  await loadData();
+ try{let ps=await currentPushSubscription();if(ps)await sb.from('push_subscriptions').update({last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('endpoint',ps.endpoint).eq('user_id',me.id)}catch{}
  renderShell();
  await render();
  startRealtime();
@@ -367,7 +389,7 @@ function showPendingApproval(){
    <div style="font-size:48px">🔒</div>
    <h2>Freischaltung ausstehend</h2>
    <p>Hallo <b>${escapeHtml(me.first_name)}</b>! Dein Fit4Us-Konto wurde erstellt, muss aber zuerst von einem Admin freigeschaltet werden.</p>
-   <div class="notice small" style="text-align:left"><b>Private Gruppe:</b> Ohne Freigabe hast du keinen Zugriff auf Feed, Rankings, Fotos oder andere Nutzerdaten.</div><div class="pendingIntro"><div>⭐ Punkte sammeln</div><div>🔥 Jeden Punktetag als Streak sichern</div><div>🎯 Individuelle Tages- & Wochenchallenges</div><div>🎁 Belohnungen freischalten</div></div>
+   <div class="notice small" style="text-align:left"><b>Private Crew:</b> Ohne Freigabe hast du keinen Zugriff auf Feed, Rankings, Fotos oder andere Nutzerdaten.</div><div class="pendingIntro"><div>⭐ Punkte sammeln</div><div>🔥 Jeden Punktetag als Streak sichern</div><div>🎯 Individuelle Tages- & Wochenchallenges</div><div>🎁 Belohnungen freischalten</div></div>
    <div class="grid" style="margin-top:18px">
      <button class="cta" onclick="checkApproval()">Status prüfen</button>
      <button class="secondary" onclick="logout()">Abmelden</button>
@@ -510,17 +532,73 @@ async function addComment(ev,type,id,ownerId){ev.preventDefault();let input=ev.t
 async function deleteComment(id){let {error}=await sb.from('feed_comments').delete().eq('id',id).eq('user_id',me.id);if(error)return toast(error.message);await loadData();await render()}
 
 function base64ToUint8Array(base64){let pad='='.repeat((4-base64.length%4)%4),s=(base64+pad).replace(/-/g,'+').replace(/_/g,'/'),raw=atob(s);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
-async function enablePushNotifications(){
- if(!('Notification'in window)||!('serviceWorker'in navigator)||!('PushManager'in window))return toast('Push wird von diesem Browser nicht unterstützt.');
- if(!CFG.pushVapidPublicKey)return toast('Push ist noch nicht konfiguriert. Siehe UPDATE-Anleitung.');
- let perm=await Notification.requestPermission();if(perm!=='granted')return toast('Benachrichtigungen wurden nicht erlaubt.');
- let reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64ToUint8Array(CFG.pushVapidPublicKey)}),j=sub.toJSON();
- let {error}=await sb.from('push_subscriptions').upsert({user_id:me.id,endpoint:j.endpoint,p256dh:j.keys?.p256dh,auth:j.keys?.auth,user_agent:navigator.userAgent,updated_at:new Date().toISOString()},{onConflict:'endpoint'});if(error)return toast(error.message);toast('Push-Benachrichtigungen aktiviert ✓')
-}
-async function notifyUser(targetUserId,title,body,category='challenges'){if(!targetUserId||targetUserId===me?.id)return;try{await sb.functions.invoke('push-notification',{body:{target_user_id:targetUserId,title,body,category,url:'https://banditosjar.github.io/Fit4Us/'}})}catch(e){console.warn('push',e)}}
-async function notifyGroup(title,body){for(let p of profiles.filter(p=>p.approved&&p.id!==me.id))await notifyUser(p.id,title,body)}
 
-function settingsHTML(){let p=prefFor();return `<div class="card pad settingsCard"><h3>⚙️ Komfort & Datenschutz</h3><div class="field section"><label>Darstellung</label><select onchange="changeTheme(this.value)"><option value="system" ${p.theme==='system'?'selected':''}>System</option><option value="light" ${p.theme==='light'?'selected':''}>Hell</option><option value="dark" ${p.theme==='dark'?'selected':''}>Dunkel</option></select></div><h4>Im Feed teilen</h4>${[['feed_activity','Aktivitäten'],['feed_food','Ernährung'],['feed_steps','Schritte'],['feed_daily','Tageschallenges'],['feed_achievements','Achievements']].map(([k,l])=>`<label class="settingToggle"><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"><span>${l}</span></label>`).join('')}<h4>Benachrichtigungen</h4>${[['notify_reactions','Reaktionen & Kommentare'],['notify_witness','Zeugenanfragen'],['notify_challenges','Challenges & Missionen'],['notify_streak','Streak-Erinnerung']].map(([k,l])=>`<label class="settingToggle"><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"><span>${l}</span></label>`).join('')}<label class="settingToggle"><input type="checkbox" ${p.celebration_sound?'checked':''} onchange="togglePref('celebration_sound',this.checked)"><span>🔊 Sound bei großen Erfolgen</span></label><button class="secondary section" onclick="enablePushNotifications()">🔔 Push auf diesem Gerät aktivieren</button></div>`}
+function isStandalonePWA(){return window.matchMedia?.('(display-mode: standalone)').matches||window.navigator.standalone===true}
+function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+function pushSupported(){return 'Notification'in window&&'serviceWorker'in navigator&&'PushManager'in window}
+function pushInstallHint(){
+ if(isIOS()&&!isStandalonePWA())return 'Auf iPhone/iPad funktioniert Web Push erst in der installierten Fit4Us-WebApp. Öffne Fit4Us in Safari → Teilen → „Zum Home-Bildschirm“ und starte Fit4Us anschließend über das App-Symbol.';
+ if(!pushSupported())return 'Dieser Browser bzw. dieses Gerät unterstützt Web Push nicht.';
+ return '';
+}
+async function currentPushSubscription(){
+ if(!pushSupported())return null;
+ try{let reg=await navigator.serviceWorker.ready;return await reg.pushManager.getSubscription()}catch{return null}
+}
+async function pushDeviceStatusHTML(){
+ let hint=pushInstallHint();
+ if(hint)return `<div class="pushStatus warning"><b>🔔 Push noch nicht verfügbar</b><span>${escapeHtml(hint)}</span></div>`;
+ let sub=await currentPushSubscription(),perm=Notification.permission;
+ if(sub&&perm==='granted')return `<div class="pushStatus success"><b>✅ Push auf diesem Gerät aktiv</b><span>Fit4Us darf echte System-Benachrichtigungen senden.</span><div class="uploadBtns"><button class="secondary" onclick="sendTestPush()">Test-Push senden</button><button class="secondary danger" onclick="disablePushNotifications()">Auf diesem Gerät deaktivieren</button></div></div>`;
+ if(perm==='denied')return `<div class="pushStatus error"><b>🔕 Benachrichtigungen blockiert</b><span>Erlaube Mitteilungen in den System-/Browser-Einstellungen und öffne Fit4Us danach erneut.</span></div>`;
+ return `<div class="pushStatus"><b>🔔 Push auf diesem Gerät</b><span>Aktiviere echte Benachrichtigungen für Kommentare, Challenges, Zeugenanfragen und Erinnerungen.</span><button class="cta" onclick="enablePushNotifications()">Push-Benachrichtigungen aktivieren</button></div>`;
+}
+async function enablePushNotifications(){
+ let hint=pushInstallHint();if(hint)return toast(hint);
+ if(!CFG.pushVapidPublicKey)return toast('Push ist serverseitig noch nicht fertig konfiguriert.');
+ try{
+  let perm=await Notification.requestPermission();if(perm!=='granted')return toast('Benachrichtigungen wurden nicht erlaubt.');
+  let reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64ToUint8Array(CFG.pushVapidPublicKey)});
+  let j=sub.toJSON(),label=`${isIOS()?'iPhone/iPad':/Android/i.test(navigator.userAgent)?'Android':'Browser'} · ${new Date().toLocaleDateString('de-DE')}`;
+  let {error}=await sb.from('push_subscriptions').upsert({
+   user_id:me.id,endpoint:j.endpoint,p256dh:j.keys?.p256dh,auth:j.keys?.auth,
+   user_agent:navigator.userAgent,device_label:label,last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  },{onConflict:'endpoint'});
+  if(error)throw error;
+  toast('Push-Benachrichtigungen auf diesem Gerät aktiviert ✓');await render();
+ }catch(err){toast('Push konnte nicht aktiviert werden: '+(err?.message||err))}
+}
+async function disablePushNotifications(){
+ try{
+  let sub=await currentPushSubscription();
+  if(sub){await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint).eq('user_id',me.id);await sub.unsubscribe()}
+  toast('Push auf diesem Gerät deaktiviert.');await render();
+ }catch(err){toast('Push konnte nicht deaktiviert werden: '+(err?.message||err))}
+}
+async function sendTestPush(){
+ let res=await notifyUser(me.id,'✅ Fit4Us Push funktioniert','Wenn du das liest, sind echte Web-Push-Benachrichtigungen auf diesem Gerät aktiv.','challenges',true);
+ if(res!==false)toast('Test-Push wurde versendet.');
+}
+async function notifyUser(targetUserId,title,body,category='challenges',allowSelf=false){
+ if(!targetUserId||(!allowSelf&&targetUserId===me?.id))return false;
+ try{
+  let {data,error}=await sb.functions.invoke('push-notification',{body:{target_user_id:targetUserId,title,body,category,url:'https://banditosjar.github.io/Fit4Us/'}});
+  if(error)throw error;return data||true;
+ }catch(e){console.warn('push',e);return false}
+}
+async function notifyGroup(title,body,category='challenges'){for(let p of profiles.filter(p=>p.approved&&p.id!==me.id))await notifyUser(p.id,title,body,category)}
+
+async function settingsHTML(){
+ let p=prefFor();
+ return `<div class="card pad settingsCard"><h3>⚙️ Komfort & Datenschutz</h3>
+ <div class="field section"><label>Darstellung</label><select onchange="changeTheme(this.value)"><option value="system" ${p.theme==='system'?'selected':''}>System</option><option value="light" ${p.theme==='light'?'selected':''}>Hell</option><option value="dark" ${p.theme==='dark'?'selected':''}>Dunkel</option></select></div>
+ <h4>Im Feed teilen</h4>${[['feed_activity','Aktivitäten'],['feed_food','Ernährung'],['feed_steps','Schritte'],['feed_daily','Tageschallenges'],['feed_achievements','Achievements']].map(([k,l])=>`<label class="settingToggle"><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"><span>${l}</span></label>`).join('')}
+ <h4>Push-Kategorien</h4>${[['notify_reactions','💬 Reaktionen & Kommentare'],['notify_witness','👀 Zeugenanfragen'],['notify_challenges','🎯 Challenges & Crew-Missionen'],['notify_votes','📌 Abstimmungen'],['notify_streak','🔥 Streak-Erinnerung'],['notify_rewards','🎁 Belohnungen & Guthaben']].map(([k,l])=>`<label class="settingToggle"><input type="checkbox" ${p[k]!==false?'checked':''} onchange="togglePref('${k}',this.checked)"><span>${l}</span></label>`).join('')}
+ <div class="section">${await pushDeviceStatusHTML()}</div>
+ <label class="settingToggle"><input type="checkbox" ${p.celebration_sound?'checked':''} onchange="togglePref('celebration_sound',this.checked)"><span>🔊 Sound bei großen Erfolgen</span></label>
+ <button class="secondary section" onclick="logout()">Abmelden</button></div>`;
+}
 async function maybeShowOnboarding(){if(prefFor().onboarded)return;$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Fit4Us</h2><div class="onboardingGrid"><div><span>⭐</span><b>Punkte sammeln</b><p>Bewegung, Ernährung und Challenges bringen Punkte – ohne Negativpunkte.</p></div><div><span>🔥</span><b>Streak aufbauen</b><p>Schon ein einziger Punkt am Tag hält deine Serie am Leben.</p></div><div><span>🎁</span><b>Belohnungen freischalten</b><p>Deine Punkte werden nicht ausgegeben. Erreichte Belohnungen bleiben dir.</p></div></div><button class="cta" onclick="finishOnboarding()">Fit4Us starten</button></div></div>`}
 async function finishOnboarding(){await savePreferencePatch({onboarded:true});closeModal()}
 
@@ -543,9 +621,9 @@ function renderShell(){
  navs()
 }
 async function navs(){
- let nav=[['home','🏠','Home'],['group','👥','Gruppe'],['add','＋',''],['challenges','🎯','Challenges'],['more','☰','Mehr']];
+ let nav=[['home','🏠','Home'],['group','👥','Crew'],['add','＋',''],['challenges','🎯','Challenges'],['more','☰','Mehr']];
  $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">＋</button>`:id==='more'?`<button class="navBtn ${['rewards','me','rules','history','admin'].includes(currentView)?'active':''}" onclick="openMobileMenu()"><span>${ic}</span>${t}</button>`:`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
- $('#sideNav').innerHTML=[['home','🏠 Home'],['group','👥 Gruppe'],['challenges','🎯 Challenges'],['rewards','🎁 Belohnungen'],['me','📊 Mein Profil'],['rules','📖 Punkte & Regeln'],['history','🗓️ Historie'],...(me?.is_admin?[['admin','🛡️ Admin']]:[])].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
+ $('#sideNav').innerHTML=[['home','🏠 Home'],['group','👥 Crew'],['challenges','🎯 Challenges'],['rewards','🎁 Belohnungen'],['me','📊 Mein Profil'],['rules','📖 Punkte & Regeln'],['history','🗓️ Historie'],...(me?.is_admin?[['admin','🛡️ Admin']]:[])].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
  let av=await avatarHTML(me,42);$('#topUser').innerHTML=`${av}<div><b>${escapeHtml(firstName(me))}</b><div class="tiny muted">@${escapeHtml(me.username)}</div></div>`;
  $('#sideUser').innerHTML=`<button class="secondary" style="width:100%" onclick="logout()">Abmelden</button>`
 }
@@ -607,7 +685,7 @@ function streakNext(s){return STREAK_MARKS.find(x=>x[0]>s)||[30,25]}
 
 
 function dailyTemplateText(text,targetUser=null){
- let person=targetUser?firstName(targetUser):'eine andere Person aus der Gruppe';
+ let person=targetUser?firstName(targetUser):'eine andere Person aus der Crew';
  return String(text||'').replace(/\{person\}/g,person);
 }
 function dailyPoolByMode(mode){
@@ -767,7 +845,7 @@ function compactChallengeHTML(){
 function compactGroupChallengeHTML(){
  let ch=groupChallengeForPeriod(monthKey()),v=groupChallengeValueMonth(monthKey()),pct=Math.min(100,v/ch.target*100);
  let value=ch.kind==='steps'?Math.round(v).toLocaleString('de-DE'):Number(v.toFixed?.(1)??v).toLocaleString('de-DE');
- return `<div class="card challengeHome group"><div class="challengeTop"><span class="pill">👥 Gruppen-Monatschallenge</span><span class="points">+5 P alle</span></div><div class="challengeIcon">${ch.icon}</div><div class="challengeTitle">${ch.title}</div><div class="muted small">${ch.desc}</div><div class="progress" style="margin-top:12px"><i style="width:${pct}%"></i></div><div class="challengeFooter"><b>${value} / ${ch.target.toLocaleString('de-DE')} ${ch.unit}</b><span>${v>=ch.target?'Gemeinsam geschafft! 🎉':`${Math.round(pct)} %`}</span></div></div>`
+ return `<div class="card challengeHome group"><div class="challengeTop"><span class="pill">👥 Crewn-Monatschallenge</span><span class="points">+5 P alle</span></div><div class="challengeIcon">${ch.icon}</div><div class="challengeTitle">${ch.title}</div><div class="muted small">${ch.desc}</div><div class="progress" style="margin-top:12px"><i style="width:${pct}%"></i></div><div class="challengeFooter"><b>${value} / ${ch.target.toLocaleString('de-DE')} ${ch.unit}</b><span>${v>=ch.target?'Gemeinsam geschafft! 🎉':`${Math.round(pct)} %`}</span></div></div>`
 }
 
 let historyMode='month',historyMonth=null;
@@ -937,7 +1015,7 @@ async function chooseChallenge(id){
  if(!me.is_admin&&champ?.id!==me.id)return toast('Nur der Vorwochen-Champion darf wählen.');
  let {error}=await sb.rpc('choose_weekly_challenge',{target_week:weekKey(),challenge_slug:id});
  if(error)return toast(error.message);
- await loadData();await render();toast('Challenge gewählt ✓');
+ await loadData();await notifyGroup('🎯 Neue Wochenchallenge',`${firstName(me)} hat „${WEEKLY.find(x=>x.id===id)?.title||'eine Challenge'}“ ausgewählt.`,'challenges');await render();toast('Challenge gewählt ✓');
 }
 
 function statsFor(userId,from,to){
@@ -977,7 +1055,7 @@ function votingBannerHTML(){
  return `<button class="votingBanner" onclick="go('challenges')"><span>📌</span><div><b>${n} offene Abstimmung${n===1?'':'en'}</b><small>Deine Stimme zählt – jetzt ansehen</small></div><strong>→</strong></button>`;
 }
 
-async function pinnedProposalsHTML(){let active=proposals.filter(p=>p.status==='voting');if(!active.length)return '';return `<div class="sectionTitle"><h2>📌 Offene Abstimmungen</h2></div>`+active.map(p=>{let who=profileById(p.proposer_id),v=proposalVoteCounts(p.id),mine=proposalVotes.find(x=>x.proposal_id===p.id&&x.user_id===me.id);return `<div class="card pad section proposalVotingCard"><div class="challengeTop"><span class="pill">📌 Challenge-Vorschlag</span><span class="tiny muted">${v.total}/${allApprovedUsers().length} Stimmen</span></div><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted" style="margin-top:6px">von ${escapeHtml(firstName(who))} · ${escapeHtml(p.challenge_type)}${p.challenge_type==='daily'&&p.daily_target_mode==='group_other'?' · 👥 Gruppenbezug':''} · +${p.points} P</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteProposal('${p.id}',true)">👍 ${v.yes}</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteProposal('${p.id}',false)">👎 ${v.no}</button></div>${v.total>=allApprovedUsers().length?'<div class="notice small" style="margin-top:8px">Alle haben abgestimmt – wartet auf Admin-Entscheidung.</div>':''}</div>`}).join('')}
+async function pinnedProposalsHTML(){let active=proposals.filter(p=>p.status==='voting');if(!active.length)return '';return `<div class="sectionTitle"><h2>📌 Offene Abstimmungen</h2></div>`+active.map(p=>{let who=profileById(p.proposer_id),v=proposalVoteCounts(p.id),mine=proposalVotes.find(x=>x.proposal_id===p.id&&x.user_id===me.id);return `<div class="card pad section proposalVotingCard"><div class="challengeTop"><span class="pill">📌 Challenge-Vorschlag</span><span class="tiny muted">${v.total}/${allApprovedUsers().length} Stimmen</span></div><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted" style="margin-top:6px">von ${escapeHtml(firstName(who))} · ${escapeHtml(p.challenge_type)}${p.challenge_type==='daily'&&p.daily_target_mode==='group_other'?' · 👥 Crewnbezug':''} · +${p.points} P</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteProposal('${p.id}',true)">👍 ${v.yes}</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteProposal('${p.id}',false)">👎 ${v.no}</button></div>${v.total>=allApprovedUsers().length?'<div class="notice small" style="margin-top:8px">Alle haben abgestimmt – wartet auf Admin-Entscheidung.</div>':''}</div>`}).join('')}
 
 async function recordChallengeCompletion(kind,challengeId,title,emoji,points,periodKey){
  if(challengeCompletions.some(x=>x.user_id===me.id&&x.challenge_kind===kind&&x.period_key===periodKey&&x.challenge_ref===String(challengeId)))return;
@@ -1081,17 +1159,60 @@ async function homeHTML(){
  <div class="sectionTitle compactTitle"><h2>Neu in deiner Crew</h2><button class="textLink" onclick="go('group')">Alle Aktivitäten →</button></div>
  <div class="homeFeed">${await feedHTML(3)}</div>`;
 }
+
+function crewPointBreakdown(userId,from=weekKey(),to=fmtDate(endOfWeek())){
+ let es=entries.filter(e=>e.user_id===userId&&e.entry_date>=from&&e.entry_date<=to);
+ let activity=es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.points||0),0);
+ let steps=es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.points||0),0);
+ let food=es.filter(e=>e.kind==='food').reduce((s,e)=>s+(+e.points||0),0);
+ let daily=dailyCompletions.filter(d=>d.user_id===userId&&d.challenge_date>=from&&d.challenge_date<=to).reduce((s,d)=>s+(+d.points||1),0);
+ let streakPts=streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+(+x.points||0),0);
+ let weekly=0;
+ for(let wk of weekKeysBetween(from,to)){
+  let sel=selectionForWeek(wk),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,done=weeklyChallengeCompletionDate(ch,userId,wk);
+  if(done&&done>=from&&done<=to)weekly+=+ch.points||0;
+ }
+ let crew=0;
+ for(let mk of monthKeysBetween(from,to)){
+  let done=groupChallengeCompletionDateMonth(mk);
+  if(done&&done>=from&&done<=to)crew+=15;
+ }
+ let total=pointsBetween(userId,from,to);
+ let accounted=activity+steps+food+daily+streakPts+weekly+crew;
+ return {activity,steps,food,daily,streak:streakPts,weekly,crew,other:Math.max(0,total-accounted),total};
+}
+async function openCrewMember(userId){
+ let p=profileById(userId);if(!p)return;
+ let b=crewPointBreakdown(userId),av=await avatarHTML(p,68);
+ let rows=[
+  ['🏃','Aktivitäten',b.activity],
+  ['👟','Schritte',b.steps],
+  ['🥗','Ernährung',b.food],
+  ['☀️','Tageschallenges',b.daily],
+  ['🔥','Streak-Boni',b.streak],
+  ['🎯','Wochenchallenge',b.weekly],
+  ['👥','Crew-Mission',b.crew],
+  ...(b.other?[['⭐','Weitere Bonuspunkte',b.other]]:[])
+ ].filter(x=>x[2]>0);
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard crewMemberModal">
+  <div class="modalHead"><h2>Crew-Woche</h2><button class="x" onclick="closeModal()">×</button></div>
+  <div class="crewMemberHero">${av}<div><h2>${escapeHtml(firstName(p))}</h2><span class="muted">KW ${isoWeek(new Date())}</span></div><strong>${b.total} P</strong></div>
+  <div class="crewBreakdown">${rows.length?rows.map(([icon,label,pts])=>`<div><span class="crewBreakIcon">${icon}</span><b>${label}</b><strong>+${pts} P</strong></div>`).join(''):'<div class="muted">Diese Woche noch keine Punkte gesammelt.</div>'}</div>
+  <div class="tiny muted section">Die Summe umfasst alle Fit4Us-Punkte dieser Woche einschließlich Challenge- und Streak-Boni.</div>
+ </div></div>`;
+}
+
 async function crewSnapshotHTML(){
  let from=weekKey(),to=fmtDate(endOfWeek()),cards='';
  for(let p of allApprovedUsers()){
   let av=await avatarHTML(p,42),pts=pointsBetween(p.id,from,to);
-  cards+=`<div class="crewPerson ${p.id===me.id?'me':''}">${av}<div><b>${escapeHtml(firstName(p))}</b><span>${pts} P diese Woche</span></div></div>`;
+  cards+=`<button class="crewPerson ${p.id===me.id?'me':''}" onclick="openCrewMember('${p.id}')">${av}<div><b>${escapeHtml(firstName(p))}</b><span>${pts} P diese Woche</span></div><strong>›</strong></button>`;
  }
  return `<div class="crewSnapshot">${cards}</div>`;
 }
 async function groupHTML(){
  let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk);
- return `<div class="pageHead"><div><small>UNSERE CREW</small><h1>Gruppe</h1></div><span class="pill">${allApprovedUsers().length} Mitglieder</span></div>
+ return `<div class="pageHead"><div><small>UNSERE CREW</small><h1>Crew</h1></div><span class="pill">${allApprovedUsers().length} Mitglieder</span></div>
  ${await crewSnapshotHTML()}
  ${crewMomentHTML()}
  ${c?`<div class="weekRecap section"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}
@@ -1199,13 +1320,13 @@ async function challengesHTML(){
  <details class="card pad section disclosureCard" ${openVotingCount()?'open':''}><summary><b>📌 Vorschläge & Abstimmungen</b><span class="pill">${openVotingCount()} offen</span></summary><div class="section">${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}</div></details>
  <details class="card pad section disclosureCard"><summary><b>📚 Challenge-Pool</b><span class="tiny muted">${challengePool.filter(poolAvailable).length} verfügbar</span></summary><div class="section">${challengePoolHTML()}</div></details>`;
 }
-function challengePoolHTML(){return ['weekly','group','daily'].map(type=>{let title=type==='weekly'?'🎯 Wochenchallenges':type==='group'?'👥 Gruppen-Monatschallenges':'☀️ Tageschallenges',list=challengePool.filter(c=>c.challenge_type===type);return `<h3>${title}</h3><div class="grid grid2">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by);return `<button class="choice ${!poolAvailable(c)?'disabled':''}" onclick="openChallengeDetail('${c.id}')"><div><b>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</b>${!poolAvailable(c)?' 🔒':''}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?' 👥':''}</div><div class="tiny muted">${escapeHtml(dailyTemplateText(c.description,null))}</div><div class="tiny muted" style="margin-top:5px">+${c.points} P · 👍 ${r.filter(x=>x.rating==='again').length} · 😐 ${r.filter(x=>x.rating==='okay').length} · 👎 ${r.filter(x=>x.rating==='never').length}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</div></button>`}).join('')}</div>`}).join('')}
-function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=ratings.filter(x=>x.challenge_pool_id===id),creator=profileById(c.created_by),poolDesc=dailyTemplateText(c.description,null);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(poolDesc)}</p><div class="notice"><b>Typ:</b> ${escapeHtml(c.challenge_type)}<br><b>Punkte:</b> +${c.points}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?'<br><b>Gruppenbezug:</b> Fit4Us lost täglich eine andere Person aus.':''}${c.target_value?`<br><b>Ziel:</b> ${c.target_value} ${escapeHtml(c.target_unit||'')}`:''}${creator?`<br><b>Vorgeschlagen von:</b> ${escapeHtml(firstName(creator))}`:''}</div><div class="section"><b>Bewertungen nach Durchführung</b><div class="reactions"><span class="react">👍 ${r.filter(x=>x.rating==='again').length}</span><span class="react">😐 ${r.filter(x=>x.rating==='okay').length}</span><span class="react">👎 ${r.filter(x=>x.rating==='never').length}</span></div></div><div class="section"><b>Wie fandest du diese Challenge?</b><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="adminSuspendChallenge('${c.id}')">⏸ Sperren</button>${!poolAvailable(c)?`<button class="secondary" onclick="adminUnsuspendChallenge('${c.id}')">▶ Entsperren</button>`:''}<button class="secondary danger" onclick="adminDeleteChallenge('${c.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`}
+function challengePoolHTML(){return ['weekly','group','daily'].map(type=>{let title=type==='weekly'?'🎯 Wochenchallenges':type==='group'?'👥 Crewn-Monatschallenges':'☀️ Tageschallenges',list=challengePool.filter(c=>c.challenge_type===type);return `<h3>${title}</h3><div class="grid grid2">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by);return `<button class="choice ${!poolAvailable(c)?'disabled':''}" onclick="openChallengeDetail('${c.id}')"><div><b>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</b>${!poolAvailable(c)?' 🔒':''}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?' 👥':''}</div><div class="tiny muted">${escapeHtml(dailyTemplateText(c.description,null))}</div><div class="tiny muted" style="margin-top:5px">+${c.points} P · 👍 ${r.filter(x=>x.rating==='again').length} · 😐 ${r.filter(x=>x.rating==='okay').length} · 👎 ${r.filter(x=>x.rating==='never').length}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</div></button>`}).join('')}</div>`}).join('')}
+function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=ratings.filter(x=>x.challenge_pool_id===id),creator=profileById(c.created_by),poolDesc=dailyTemplateText(c.description,null);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(poolDesc)}</p><div class="notice"><b>Typ:</b> ${escapeHtml(c.challenge_type)}<br><b>Punkte:</b> +${c.points}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?'<br><b>Crew-Bezug:</b> Fit4Us lost täglich eine andere Person aus.':''}${c.target_value?`<br><b>Ziel:</b> ${c.target_value} ${escapeHtml(c.target_unit||'')}`:''}${creator?`<br><b>Vorgeschlagen von:</b> ${escapeHtml(firstName(creator))}`:''}</div><div class="section"><b>Bewertungen nach Durchführung</b><div class="reactions"><span class="react">👍 ${r.filter(x=>x.rating==='again').length}</span><span class="react">😐 ${r.filter(x=>x.rating==='okay').length}</span><span class="react">👎 ${r.filter(x=>x.rating==='never').length}</span></div></div><div class="section"><b>Wie fandest du diese Challenge?</b><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="adminSuspendChallenge('${c.id}')">⏸ Sperren</button>${!poolAvailable(c)?`<button class="secondary" onclick="adminUnsuspendChallenge('${c.id}')">▶ Entsperren</button>`:''}<button class="secondary danger" onclick="adminDeleteChallenge('${c.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`}
 async function rateChallenge(id,rating){let old=ratings.find(x=>x.challenge_pool_id===id&&x.user_id===me.id&&x.week_key===weekKey()),payload={challenge_pool_id:id,user_id:me.id,week_key:weekKey(),rating},q=old?sb.from('challenge_ratings').update({rating}).eq('id',old.id):sb.from('challenge_ratings').insert(payload),{error}=await q;if(error)return toast(error.message);closeModal();await loadData();await render();toast('Bewertung gespeichert')}
 function openProposal(){
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>Neue Challenge vorschlagen</h2><button class="x" onclick="closeModal()">×</button></div><form class="form section" onsubmit="submitProposal(event)">
- <div class="field"><label>Typ</label><select id="prType" onchange="proposalTypeChanged()"><option value="weekly">Wochenchallenge</option><option value="group">Gruppen-Challenge</option><option value="daily">Tageschallenge</option></select></div>
- <div class="field hidden" id="prDailyModeWrap"><label>Art der Tageschallenge</label><select id="prDailyMode"><option value="general">Allgemein</option><option value="group_other">Bezieht sich auf eine andere Person der Gruppe</option></select><div class="tiny muted">Bei Gruppenbezug lost Fit4Us täglich automatisch eine andere Person aus. Die Aufgabe sollte deshalb auch per Nachricht, Anruf oder aus der Ferne machbar sein. Nutze in der Beschreibung <b>{person}</b> als Platzhalter.</div></div>
+ <div class="field"><label>Typ</label><select id="prType" onchange="proposalTypeChanged()"><option value="weekly">Wochenchallenge</option><option value="group">Crew-Challenge</option><option value="daily">Tageschallenge</option></select></div>
+ <div class="field hidden" id="prDailyModeWrap"><label>Art der Tageschallenge</label><select id="prDailyMode"><option value="general">Allgemein</option><option value="group_other">Bezieht sich auf eine andere Person der Crew</option></select><div class="tiny muted">Bei Crew-Bezug lost Fit4Us täglich automatisch eine andere Person aus. Die Aufgabe sollte deshalb auch per Nachricht, Anruf oder aus der Ferne machbar sein. Nutze in der Beschreibung <b>{person}</b> als Platzhalter.</div></div>
  <div class="field"><label>Name</label><input id="prName" required maxlength="60"></div>
  <div class="field"><label>Emoji</label><input id="prEmoji" required maxlength="8" value="🎯"></div>
  <div class="field"><label>Beschreibung</label><textarea id="prDesc" rows="4" required maxlength="400" style="width:100%;border:1px solid #dbe4eb;border-radius:13px;padding:12px"></textarea></div>
@@ -1258,7 +1379,7 @@ async function rewardsHTML(){
  <div class="wishHero card"><div><small>💰 DEIN WUNSCH-GUTHABEN</small><div class="wishHeroAmount">${euro(bal)}</div><p>Je 100 Gesamtpunkte kommen dauerhaft 5,00 € hinzu.</p></div><div class="wishHeroSide"><div><b>${life} P</b><span>Gesamtpunkte</span></div><div><b>${remaining} P</b><span>bis +5,00 €</span></div><button class="cta" ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></div></div>
  <div class="sectionTitle compactTitle"><h2>Deine offenen Belohnungen</h2><span class="pill">${monthPoints()} P diesen Monat</span></div>
  <div class="card pad">${reached.length?reached.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Noch keine Monatsbelohnung freigeschaltet.</div>'}${openRewardsInventoryHTML()}</div>
- <div class="sectionTitle compactTitle"><h2>Belohnungen der Gruppe</h2><span class="tiny muted">Einlösen kann jeder nur selbst</span></div><div class="grid grid2 rewardPeopleGrid">${group}</div>
+ <div class="sectionTitle compactTitle"><h2>Belohnungen der Crew</h2><span class="tiny muted">Einlösen kann jeder nur selbst</span></div><div class="grid grid2 rewardPeopleGrid">${group}</div>
  <details class="card pad section disclosureCard"><summary><b>🎁 Alle Belohnungen & Stufen</b><span class="tiny muted">Pool, Bewertungen & Vorschläge</span></summary><div class="section">${rewardsRulesHTML()}</div></details>
  <details class="card pad section disclosureCard"><summary><b>💳 Mein Guthaben-Verlauf</b><span class="tiny muted">Verdient & eingelöst</span></summary><div class="section">${ownWishHistoryHTML()}</div></details>`;
 }
@@ -1279,7 +1400,7 @@ async function meHTML(){
  <details class="card pad section disclosureCard"><summary><b>🏅 Achievements</b><span class="tiny muted">${achievements.filter(a=>a.user_id===me.id).length} erreicht</span></summary><div class="section">${achievementHTML()}</div></details>
  <details class="card pad section disclosureCard"><summary><b>📊 Monatsrückblick & Hall of Fame</b></summary><div class="section">${monthlyReviewHTML()}<h3 class="section">Hall of Fame</h3>${hallOfFameHTML()}</div></details>
  <details class="card pad section disclosureCard"><summary><b>📝 Meine Einträge – aktueller Monat</b><span class="tiny muted">nur bei Bedarf öffnen</span></summary><div class="grid section">${await ownEntriesHTML()}</div></details>
- ${settingsHTML()}`;
+ ${await settingsHTML()}`;
 }
 
 function achievementHTML(){let list=achievements.filter(a=>a.user_id===me.id);if(!list.length)return '<div class="muted">Noch keine Achievements.</div>';return `<div class="grid grid2">${list.map(a=>`<div class="choice"><b>${escapeHtml(a.emoji)} ${escapeHtml(a.title)}</b><div class="tiny muted">Erreicht am ${new Date(a.achieved_on+'T12:00').toLocaleDateString('de-DE')}</div></div>`).join('')}</div>`}
@@ -1382,12 +1503,12 @@ function rewardsRulesHTML(){
   }).join('')}</div></div>`
  }).join('');
  return `<div class="sectionTitle"><h2>🎁 Alle Belohnungen</h2><button class="react" onclick="openRewardProposal()">＋ Belohnung vorschlagen</button></div>
- <div class="notice small">Jeder darf neue Belohnungen vorschlagen. Die Gruppe stimmt 👍/👎 ab; erst nach Admin-Freigabe landet eine Belohnung im Pool.</div>
+ <div class="notice small">Jeder darf neue Belohnungen vorschlagen. Die Crew stimmt 👍/👎 ab; erst nach Admin-Freigabe landet eine Belohnung im Pool.</div>
  <div class="grid section">${cards}</div>`
 }
 function openRewardDetail(id){
  let r=rewardPool.find(x=>x.id===id);if(!r)return;
- $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎁 ${escapeHtml(r.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(r.description||'')}</p>${(()=>{let v=rewardPoolVoteCounts(r.id),mine=myRewardPoolVote(r.id);return `<div class="notice"><b>Punkte:</b> ${r.points_required}<br><b>Status:</b> ${r.active?'Aktiv':'Deaktiviert'}<br><b>Gruppenmeinung:</b> 👍 ${v.yes} · 👎 ${v.no}</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteRewardPool('${r.id}',true)">👍 Dafür</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteRewardPool('${r.id}',false)">👎 Dagegen</button></div>`})()}${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="toggleReward('${r.id}',${!r.active})">${r.active?'⏸ Deaktivieren':'▶ Aktivieren'}</button><button class="secondary danger" onclick="deleteReward('${r.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎁 ${escapeHtml(r.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(r.description||'')}</p>${(()=>{let v=rewardPoolVoteCounts(r.id),mine=myRewardPoolVote(r.id);return `<div class="notice"><b>Punkte:</b> ${r.points_required}<br><b>Status:</b> ${r.active?'Aktiv':'Deaktiviert'}<br><b>Crew-Meinung:</b> 👍 ${v.yes} · 👎 ${v.no}</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteRewardPool('${r.id}',true)">👍 Dafür</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteRewardPool('${r.id}',false)">👎 Dagegen</button></div>`})()}${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="toggleReward('${r.id}',${!r.active})">${r.active?'⏸ Deaktivieren':'▶ Aktivieren'}</button><button class="secondary danger" onclick="deleteReward('${r.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`
 }
 function openRewardProposal(){
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>🎁 Neue Belohnung vorschlagen</h2><button class="x" onclick="closeModal()">×</button></div><form class="form section" onsubmit="submitRewardProposal(event)"><div class="field"><label>Name</label><input id="rpName" required maxlength="80"></div><div class="field"><label>Beschreibung</label><textarea id="rpDesc" rows="4" required maxlength="400"></textarea></div><div class="field"><label>Punkte-Ziel</label><select id="rpPoints">${MILESTONES.map(m=>`<option value="${m}">${m} Punkte</option>`).join('')}</select></div><button class="cta">Zur Abstimmung stellen</button></form></div></div>`
@@ -1397,7 +1518,7 @@ async function submitRewardProposal(e){
  let payload={proposer_id:me.id,name:$('#rpName').value.trim(),description:$('#rpDesc').value.trim(),points_required:+$('#rpPoints').value};
  let {data,error}=await sb.from('reward_proposals').insert(payload).select().single();if(error)return toast(error.message);
  let voteRes=await sb.from('reward_proposal_votes').insert({proposal_id:data.id,user_id:me.id,vote:true});if(voteRes.error)return toast('Vorschlag gespeichert, aber Start-Stimme fehlgeschlagen: '+voteRes.error.message);
- closeModal();await loadData();await render();toast('Belohnungsvorschlag zur Abstimmung gestellt 📌')
+ closeModal();await loadData();await notifyGroup('📌 Neue Challenge-Abstimmung',`${firstName(me)} hat „${payload.name}“ vorgeschlagen.`,'votes');await render();toast('Challenge-Vorschlag zur Abstimmung gestellt 📌')
 }
 async function voteRewardProposal(id,vote){
  let old=rewardProposalVotes.find(x=>x.proposal_id===id&&x.user_id===me.id);
@@ -1447,7 +1568,7 @@ async function adminHTML(){
  let rewardProp=rewardProposals.filter(p=>p.status==='voting').map(p=>{let v=rewardVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>🎁 ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">${p.points_required} P · von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideRewardProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideRewardProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Belohnungsvorschläge.</div>';
  let auditHtml=adminAudit.length?adminAudit.slice(0,50).map(a=>{let p=profileById(a.admin_user_id);return `<div class="rankRow"><span>🧾</span><div><b>${escapeHtml(a.action)}</b><div class="tiny muted">${new Date(a.created_at).toLocaleString('de-DE')} · ${escapeHtml(firstName(p))}</div></div><button class="react" onclick='alert(${JSON.stringify(JSON.stringify(a.details||{},null,2))})'>Details</button></div>`}).join(''):'<div class="muted">Noch keine Admin-Aktionen protokolliert.</div>';
  return `<h1>Admin</h1>
- <div class="notice"><b>🔐 Private Fit4Us-Gruppe</b></div>
+ <div class="notice"><b>🔐 Private Fit4Us-Crew</b></div>
  <div class="section"><h2>Offene Registrierungen ${pending.length?`(${pending.length})`:''}</h2>${pendingHtml}</div>
  <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div><div class="section"><h2>Belohnungsvorschläge</h2>${rewardProp}</div>
  <div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div>
@@ -1618,7 +1739,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.15.1';
+const FIT4US_VERSION='1.16.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){

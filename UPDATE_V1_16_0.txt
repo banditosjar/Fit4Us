@@ -1,0 +1,44 @@
+Fit4Us V1.16.0 – Crew, Web Push & Login Persistence
+======================================================
+SUPABASE-MIGRATION ERFORDERLICH:
+MIGRATION_V1_16_0.sql einmal im Supabase SQL Editor ausführen.
+
+CREW
+- Reiter und sichtbare Texte „Gruppe“ wurden konsequent in „Crew“ umbenannt.
+- Klick auf ein Crew-Mitglied öffnet eine Wochen-Kurzübersicht:
+  Aktivitäten, Schritte, Ernährung, Tageschallenges, Streak-Boni,
+  Wochenchallenge und Crew-Mission.
+- Gesamtpunkte der aktuellen Woche werden direkt erklärt.
+
+ANGEMELDET BLEIBEN
+- Login enthält Checkbox „Angemeldet bleiben“ (standardmäßig aktiv).
+- Aktiv: Supabase-Session wird dauerhaft in localStorage gespeichert.
+- Deaktiviert: Session wird nur in sessionStorage gehalten.
+- Abmelden entfernt die Session aus beiden Speichern.
+
+WEB PUSH
+- Produktiver Multi-Device-Web-Push.
+- iPhone/iPad erkennt, ob Fit4Us als Home-Screen-WebApp läuft.
+- Wenn Fit4Us nur in Safari geöffnet ist, wird verständlich erklärt,
+  wie die WebApp installiert werden muss.
+- Push kann pro Gerät aktiviert und deaktiviert werden.
+- Test-Push direkt aus den Einstellungen.
+- Kategorien:
+  Reaktionen/Kommentare, Zeugen, Challenges/Crew-Missionen,
+  Abstimmungen, Streak, Belohnungen/Guthaben.
+- Ungültige Push-Subscriptions werden serverseitig automatisch entfernt.
+- Service Worker zeigt echte System-Notifications und unterstützt App-Badge.
+- Mehrere Geräte pro Benutzer möglich.
+
+PUSH EINMALIG KONFIGURIEREN
+Siehe PUSH_SETUP_V1_16_0.md.
+VAPID Private Key niemals in GitHub/config.js speichern.
+
+NEBENFIX
+- Crew-Missionsbonus in der zentralen Punkteberechnung auf die bereits
+  angezeigten +15 Punkte korrigiert.
+
+UPDATE
+1. MIGRATION_V1_16_0.sql in Supabase ausführen.
+2. UPDATE-Dateien nach GitHub übernehmen; config.js NICHT überschreiben.
+3. Push gemäß PUSH_SETUP_V1_16_0.md einmalig konfigurieren/deployen.
