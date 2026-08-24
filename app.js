@@ -1692,10 +1692,29 @@ async function setApproval(userId,allow){
 }
 
 function openEntry(kind='activity',edit=null){
- $('#modalRoot').innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="modalCard"><div class="modalHead"><h2>${edit?'Eintrag bearbeiten':'Eintragen'}</h2><button class="x" onclick="closeModal()">×</button></div>${edit?entryForm(edit.kind,edit):`<div class="tabs"><button class="active" onclick="entryTab('activity',this)">Aktivität</button><button onclick="entryTab('steps',this)">Schritte</button></div><div style="display:grid;grid-template-columns:1fr"><button class="secondary" onclick="entryTab('food',this)">🥗 Ernährung des Tages eintragen</button></div><div id="entryForm" class="section">${entryForm('activity')}</div>`}</div></div>`;
- if(edit)setTimeout(()=>wireDynamic(edit),0)
+ let initialKind=edit?.kind||kind;
+ if(!['activity','steps','food'].includes(initialKind))initialKind='activity';
+
+ let chooser=edit?'':`<div class="tabs">
+   <button class="${initialKind==='activity'?'active':''}" onclick="entryTab('activity',this)">Aktivität</button>
+   <button class="${initialKind==='steps'?'active':''}" onclick="entryTab('steps',this)">Schritte</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr">
+   <button class="secondary ${initialKind==='food'?'active':''}" data-entry-food-tab="1" onclick="entryTab('food',this)">🥗 Ernährung des Tages eintragen</button>
+  </div>`;
+
+ $('#modalRoot').innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="modalCard"><div class="modalHead"><h2>${edit?'Eintrag bearbeiten':'Eintragen'}</h2><button class="x" onclick="closeModal()">×</button></div>${chooser}<div id="entryForm" class="section">${entryForm(initialKind,edit)}</div></div></div>`;
+ setTimeout(()=>wireDynamic(edit),0);
 }
-function entryTab(kind,btn){$$('.modal .tabs button').forEach(x=>x.classList.remove('active'));if(btn?.closest('.tabs'))btn.classList.add('active');$('#entryForm').innerHTML=entryForm(kind);wireDynamic()}
+function entryTab(kind,btn){
+ $$('.modal .tabs button').forEach(x=>x.classList.remove('active'));
+ let foodBtn=$('.modal [data-entry-food-tab]');
+ foodBtn?.classList.remove('active');
+ if(btn?.closest('.tabs'))btn.classList.add('active');
+ else if(kind==='food')btn?.classList.add('active');
+ $('#entryForm').innerHTML=entryForm(kind);
+ wireDynamic();
+}
 function entryForm(kind,e=null){
  if(kind==='activity'){let a=e?.activity||'walk';return `<form class="form twoMobile" onsubmit="saveActivity(event,'${e?.id||''}')"><div class="field"><label>Aktivität</label><select id="aType" onchange="wireDynamic()">${Object.entries(ACTIVITIES).map(([k,x])=>`<option value="${k}" ${k===a?'selected':''}>${x.icon} ${x.name}</option>`).join('')}</select></div><div class="field"><label>Dauer (Min.)</label><input id="aMinutes" type="number" min="0" value="${e?.minutes||30}" oninput="livePts()"></div><div class="field" id="distWrap"><label>Distanz (km)</label><input id="aDistance" type="number" step=".1" min="0" value="${e?.distance||''}" oninput="livePts()"></div><div class="field"><label>Zeuge</label><select id="aWitness"><option value="honor" ${!e?.witness_user_id?'selected':''}>🤝 Ehrenkodex</option>${profiles.filter(p=>p.id!==me.id).map(p=>`<option value="${p.id}" ${e?.witness_user_id===p.id?'selected':''}>${escapeHtml(p.first_name)}</option>`).join('')}</select><div class="tiny muted">Ehrenkodex braucht keine Bestätigung. Bei einer Person erscheint eine freiwillige Zeugenanfrage.</div></div><div class="full"><label class="strong small">Optionaler Bildnachweis</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div><div id="livePts" class="notice full"></div><button class="cta full">${e?'Speichern':'Aktivität speichern'}</button></form>`}
  if(kind==='steps')return `<form class="form" onsubmit="saveSteps(event,'${e?.id||''}')"><div class="field"><label>Schritte</label><input id="sSteps" type="number" min="0" value="${e?.steps||''}" oninput="stepHint()" required></div><div id="stepHint" class="notice">Wird automatisch auf volle 100 abgerundet.</div><button class="cta">Schritte speichern</button></form>`;
@@ -1740,7 +1759,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.16.2';
+const FIT4US_VERSION='1.16.3';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){

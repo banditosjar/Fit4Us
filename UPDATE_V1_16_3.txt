@@ -1,0 +1,20 @@
+Fit4Us V1.16.3 – Quick-Add Routing Hotfix
+=============================================
+Keine Supabase-Migration nötig.
+
+BEHOBEN
+- „Schnell hinzufügen → Aktivität“ öffnet Aktivität.
+- „Schnell hinzufügen → Schritte“ öffnet direkt das Schritte-Formular.
+- „Schnell hinzufügen → Ernährung“ öffnet direkt das Ernährungs-Formular.
+- Die aktive Auswahl im Eintragen-Dialog wird passend markiert.
+- Wechsel zwischen Aktivität, Schritte und Ernährung bleibt weiterhin möglich.
+
+URSACHE
+openEntry(kind) bekam den richtigen Typ übergeben, ignorierte ihn beim
+Erstaufbau des Modals jedoch und renderte immer entryForm('activity').
+
+UPDATE
+1. UPDATE-Dateien nach GitHub übernehmen.
+2. config.js NICHT überschreiben.
+3. Keine SQL-Migration.
+4. Keine Edge Function neu deployen.
