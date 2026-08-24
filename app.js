@@ -235,18 +235,19 @@ function openRewardChoicesFor(userId){
 async function syncWishCredit(){
  if(!me?.id||!me?.approved)return;
  let target=Math.floor(lifetimePoints(me.id)/100)*100;
- let next=highestWishThreshold(me.id)+100,changed=false;
+ let next=highestWishThreshold(me.id)+100,claimed=[];
  while(next<=target){
-  let {error}=await sb.rpc('claim_wish_credit',{target_threshold:next});
+  let threshold=next,{error}=await sb.rpc('claim_wish_credit',{target_threshold:threshold});
   if(error){
    console.warn('Wunsch-Guthaben konnte nicht synchronisiert werden:',error);
    break;
   }
-  changed=true;next+=100;
+  claimed.push(threshold);next+=100;
  }
- if(changed){
+ if(claimed.length){
   let q=await sb.from('wish_credit_transactions').select('*').order('created_at',{ascending:false});
   if(!q.error)wishCreditTransactions=q.data||[];
+  for(let threshold of claimed)notifyUser(me.id,'💰 +5,00 € Wunsch-Guthaben',`Du hast ${threshold} Gesamtpunkte erreicht. Dein Wunsch-Guthaben ist gewachsen.`,'rewards',true);
  }
 }
 function wishCreditMiniHTML(){
@@ -492,7 +493,7 @@ function celebrate(title,text,emoji='🎉'){
 }
 function maybeCelebrate(before){
  let after=celebrationSnapshot(),cross=MILESTONES.find(m=>before.pts<m&&after.pts>=m);
- if(cross)return celebrate(`${cross} Punkte erreicht!`,'Du hast eine neue Belohnung freigeschaltet.','🎁');
+ if(cross){notifyUser(me.id,'🎁 Neue Belohnung freigeschaltet',`${cross} Punkte diesen Monat – du kannst jetzt eine Belohnung auswählen.`,'rewards',true);return celebrate(`${cross} Punkte erreicht!`,'Du hast eine neue Belohnung freigeschaltet.','🎁')}
  let sm=STREAK_MARKS.find(x=>before.st<x[0]&&after.st>=x[0]);if(sm)return celebrate(`${sm[0]}-Tage-Streak!`,`+${sm[1]} Bonuspunkte für deine Serie.`,'🔥');
  if(after.maxSteps>before.maxSteps&&after.maxSteps>=10000)return celebrate('Neuer Schritt-Rekord!',`${after.maxSteps.toLocaleString('de-DE')} Schritte – dein neuer persönlicher Bestwert.`,'👟');
  if(!before.wcDone&&after.wcDone)return celebrate('Wochenchallenge geschafft!','Stark – die Wochenchallenge ist im Ziel.','🎯');
@@ -1518,7 +1519,7 @@ async function submitRewardProposal(e){
  let payload={proposer_id:me.id,name:$('#rpName').value.trim(),description:$('#rpDesc').value.trim(),points_required:+$('#rpPoints').value};
  let {data,error}=await sb.from('reward_proposals').insert(payload).select().single();if(error)return toast(error.message);
  let voteRes=await sb.from('reward_proposal_votes').insert({proposal_id:data.id,user_id:me.id,vote:true});if(voteRes.error)return toast('Vorschlag gespeichert, aber Start-Stimme fehlgeschlagen: '+voteRes.error.message);
- closeModal();await loadData();await notifyGroup('📌 Neue Challenge-Abstimmung',`${firstName(me)} hat „${payload.name}“ vorgeschlagen.`,'votes');await render();toast('Challenge-Vorschlag zur Abstimmung gestellt 📌')
+ closeModal();await loadData();await notifyGroup('📌 Neue Belohnungs-Abstimmung',`${firstName(me)} schlägt „${payload.name}“ als neue Belohnung vor.`,'votes');await render();toast('Belohnungsvorschlag zur Abstimmung gestellt 📌')
 }
 async function voteRewardProposal(id,vote){
  let old=rewardProposalVotes.find(x=>x.proposal_id===id&&x.user_id===me.id);
@@ -1739,7 +1740,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.16.1';
+const FIT4US_VERSION='1.16.2';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){

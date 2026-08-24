@@ -68,3 +68,13 @@ Mehrere Geräte pro Nutzer sind möglich. Jedes Gerät wird als eigene Subscript
 - Abstimmungen
 - Streak-Erinnerungen
 - Belohnungen & Guthaben
+
+
+## V1.16.2 Patch
+Nach Installation von V1.16.2 muss nur die aktualisierte Cron-Function erneut deployed werden:
+
+```powershell
+npx.cmd supabase functions deploy scheduled-notifications --no-verify-jwt
+```
+
+Der bestehende Cron-Job und alle Secrets bleiben unverändert.
