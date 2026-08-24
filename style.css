@@ -583,3 +583,30 @@ html[data-theme="dark"] .votingBanner{background:linear-gradient(135deg,#352f1c,
 html[data-theme="dark"] .feedActions{border-color:#30414e}
 html[data-theme="dark"] .socialAction{color:#9fb1bf}
 html[data-theme="dark"] .profileHero{background:#16232d!important}
+
+
+/* V1.15.1 – Feed spacing & Load More hotfix */
+.groupFeed{
+ display:flex !important;
+ flex-direction:column;
+ gap:14px !important;
+}
+.groupFeed > .feedItem{
+ margin:0 !important;
+ flex:0 0 auto;
+}
+.homeFeed{
+ display:flex;
+ flex-direction:column;
+ gap:12px;
+}
+.homeFeed > .feedItem{
+ margin:0 !important;
+}
+.feedItem{
+ border-radius:20px;
+}
+.groupFeed .feedMore{
+ margin-top:2px;
+ padding:8px 0 18px;
+}

@@ -562,7 +562,7 @@ function openMobileMenu(){
 function closeMobileMenu(e){if(e&&e.target!==e.currentTarget)return;let r=$('#mobileMenuRoot');if(r)r.innerHTML=''}
 async function mobileGo(v){closeMobileMenu();await go(v)}
 
-async function go(v){if(v==='admin'&&!me?.is_admin){toast('Kein Admin-Zugriff.');v='home'}currentView=v;navs();await render()}
+async function go(v){if(v==='group'&&currentView!=='group')feedVisibleCount=8;if(v==='admin'&&!me?.is_admin){toast('Kein Admin-Zugriff.');v='home'}currentView=v;navs();await render()}
 async function logout(){await sb.auth.signOut()}
 async function render(){
  let c=$('#content'); if(!c)return;
@@ -1090,7 +1090,6 @@ async function crewSnapshotHTML(){
  return `<div class="crewSnapshot">${cards}</div>`;
 }
 async function groupHTML(){
- resetFeedCount();
  let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk);
  return `<div class="pageHead"><div><small>UNSERE CREW</small><h1>Gruppe</h1></div><span class="pill">${allApprovedUsers().length} Mitglieder</span></div>
  ${await crewSnapshotHTML()}
@@ -1619,7 +1618,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.15.0';
+const FIT4US_VERSION='1.15.1';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
