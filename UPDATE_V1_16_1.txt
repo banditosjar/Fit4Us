@@ -1,0 +1,34 @@
+Fit4Us V1.16.1 – Security Hardening
+=======================================
+SUPABASE-MIGRATION ERFORDERLICH:
+MIGRATION_V1_16_1.sql einmal im Supabase SQL Editor ausführen.
+
+SICHERHEIT
+- EXECUTE auf allen SECURITY-DEFINER-Funktionen für PUBLIC/anon entzogen.
+- Triggerfunktionen handle_new_user() und fit4us_create_preferences()
+  sind nicht mehr direkt per RPC durch Browser-Nutzer aufrufbar.
+- Benötigte RPCs werden ausschließlich explizit an authenticated vergeben.
+- Admin-RPCs bleiben serverseitig zusätzlich durch is_admin() geschützt.
+- Normale Benutzer-RPCs behalten approved_user()/auth.uid()-Prüfungen.
+- search_path aller SECURITY-DEFINER-Funktionen explizit auf public, pg_temp gesetzt.
+
+SUPABASE-LINTER
+- Die anon_security_definer_function_executable-Warnungen sollten damit verschwinden.
+- Bei einigen bewusst für authenticated freigegebenen SECURITY-DEFINER-RPCs kann der
+  Linter weiterhin WARN anzeigen. Diese sind geprüft und für Fit4Us beabsichtigt.
+- Details: SECURITY_AUDIT_V1_16_1.md
+
+NOCH MANUELL IN SUPABASE
+- Authentication → Security / Password Security
+- „Leaked Password Protection“ aktivieren.
+- Diese Auth-Einstellung wird nicht über die Fit4Us-Datenbankmigration geändert.
+
+DATEN
+- Keine Nutzdaten gelöscht oder verändert.
+- Keine aktive Challenge verändert.
+- Keine Punkte, Guthaben oder Belohnungen verändert.
+
+UPDATE
+1. MIGRATION_V1_16_1.sql in Supabase ausführen.
+2. UPDATE-Dateien nach GitHub übernehmen.
+3. config.js NICHT überschreiben.
