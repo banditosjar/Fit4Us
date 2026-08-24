@@ -1,5 +1,5 @@
-const VERSION='1.13.6';
-const CACHE='fit4us-v1.13.6';
+const VERSION='1.14.0';
+const CACHE='fit4us-v1.14.0';
 
 const CORE=[
   './',

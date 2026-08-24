@@ -332,3 +332,180 @@ html[data-theme="dark"] .witnessBadge.honor{
  color:#dce7ed !important;
  border-color:#3b5361 !important;
 }
+
+
+/* ============================================================
+   V1.14.0 – Belohnungen
+   ============================================================ */
+.rewardsHead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}.rewardsHead small{font-weight:900;letter-spacing:.09em;color:var(--muted)}.rewardsHead h1{margin:4px 0}
+.wishHero{padding:22px;display:grid;grid-template-columns:1.3fr .7fr;gap:22px;align-items:center;background:linear-gradient(135deg,#f2fffb,#fff9e9);border-color:#cdece3}.wishHero small{font-weight:900;letter-spacing:.08em;color:var(--muted)}.wishHeroAmount{font-size:48px;font-weight:950;margin:4px 0}.wishHero p{margin:4px 0;color:var(--muted)}.wishHeroSide{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wishHeroSide>div{background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:15px;padding:12px}.wishHeroSide b,.wishHeroSide span{display:block}.wishHeroSide b{font-size:20px}.wishHeroSide span{font-size:11px;color:var(--muted)}.wishHeroSide .cta{grid-column:1/-1}.cta:disabled{opacity:.5;cursor:not-allowed}
+.wishMini{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;background:linear-gradient(135deg,#f4fffc,#fffaf0)}.wishMini b{font-size:24px}
+.wishBalanceHero{display:flex;justify-content:space-between;align-items:center;padding:16px;border-radius:16px;background:#effbf7;border:1px solid #ccece1}.wishBalanceHero span{color:var(--muted)}.wishBalanceHero b{font-size:28px}
+.rewardPeopleGrid{align-items:stretch}.rewardPersonCard{height:100%}.rewardPersonMe{border-color:#89d9cd}.rewardPersonHead{display:flex;align-items:center;gap:10px}.rewardPersonStats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}.rewardPersonStats>div{border:1px solid var(--line);border-radius:13px;padding:10px}.rewardPersonStats span,.rewardPersonStats b{display:block}.rewardPersonStats span{font-size:11px;color:var(--muted)}.rewardPersonStats b{font-size:20px}
+.wishHistoryRow{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}.wishHistoryRow:last-child{border-bottom:0}
+.rewardProfileLink{display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+/* Replaces hard-coded light inline surfaces. */
+.dailyPinnedCard{background:linear-gradient(135deg,#fff8ec,#fff)}
+.proposalVotingCard{border-color:#dfd4f7;background:#fbf9ff}
+.rewardProposalVotingCard{background:linear-gradient(135deg,#fff,#fffaf2)}
+
+/* ============================================================
+   V1.14.0 – complete Dark Mode audit
+   Covers legacy light surfaces, proposal cards and new Rewards UI.
+   ============================================================ */
+html[data-theme="dark"]{
+ --navy:#eaf4fb;
+ --bg:#0d151d;
+ --card:#16232d;
+ --muted:#9fb1bf;
+ --line:#30414e;
+ --softTeal:#14312f;
+ --softGreen:#1b2d21;
+ --softPurple:#29223a;
+ --purple:#c5a8f4;
+ --orange:#ffb27a;
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .shell,
+html[data-theme="dark"] .main{background:#0d151d;color:#e8f1f6}
+html[data-theme="dark"] .side{background:#09141e;color:#fff}
+html[data-theme="dark"] .sideNav button{color:#a9bdcb}
+html[data-theme="dark"] .sideNav button.active,
+html[data-theme="dark"] .sideNav button:hover{background:#17384f;color:#fff}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .authCard,
+html[data-theme="dark"] .modalCard,
+html[data-theme="dark"] .choice,
+html[data-theme="dark"] .quickTemplate,
+html[data-theme="dark"] .rewardOverview,
+html[data-theme="dark"] .rewardPreviewItem,
+html[data-theme="dark"] .reward,
+html[data-theme="dark"] .kpi,
+html[data-theme="dark"] details,
+html[data-theme="dark"] .settingsCard,
+html[data-theme="dark"] .suggestionCard,
+html[data-theme="dark"] .rewardMilestoneCard,
+html[data-theme="dark"] .rewardPersonCard{
+ background:#16232d !important;
+ color:#e8f1f6;
+ border-color:#30414e !important;
+}
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .monthHero,
+html[data-theme="dark"] .rulesIntro,
+html[data-theme="dark"] .todayDash>div,
+html[data-theme="dark"] .homeHead>div:last-child>*,
+html[data-theme="dark"] .nowCard,
+html[data-theme="dark"] .nowCard.daily,
+html[data-theme="dark"] .nowCard.weekly,
+html[data-theme="dark"] .nowCard.monthly,
+html[data-theme="dark"] .weekRecap,
+html[data-theme="dark"] .crewMoment,
+html[data-theme="dark"] .almostThere,
+html[data-theme="dark"] .todayEnough,
+html[data-theme="dark"] .achievementFeed,
+html[data-theme="dark"] .challengeFeed,
+html[data-theme="dark"] .dailyFeed,
+html[data-theme="dark"] .pendingIntro,
+html[data-theme="dark"] .dailyPinnedCard,
+html[data-theme="dark"] .proposalVotingCard,
+html[data-theme="dark"] .rewardProposalVotingCard,
+html[data-theme="dark"] .challengeHome.personal,
+html[data-theme="dark"] .challengeHome.group,
+html[data-theme="dark"] .wishMini{
+ background:#182630 !important;
+ color:#e8f1f6 !important;
+ border-color:#30414e !important;
+}
+html[data-theme="dark"] .proposalVotingCard{
+ background:#211d2d !important;
+ border-color:#4c4162 !important;
+}
+html[data-theme="dark"] .rewardProposalVotingCard{
+ background:#2b261d !important;
+ border-color:#514832 !important;
+}
+html[data-theme="dark"] .dailyPinnedCard{background:#2a271d !important;border-color:#50492f !important}
+html[data-theme="dark"] .wishHero{
+ background:linear-gradient(135deg,#12302c,#2a2619) !important;
+ border-color:#31584f !important;
+ color:#eef7f4;
+}
+html[data-theme="dark"] .wishHeroSide>div,
+html[data-theme="dark"] .wishBalanceHero{
+ background:#172a2a !important;
+ border-color:#35514e !important;
+ color:#eef7f4;
+}
+html[data-theme="dark"] .rewardPersonMe{border-color:#3a847b !important}
+
+html[data-theme="dark"] .historyHero{background:linear-gradient(135deg,#132838,#1a394c);color:#fff}
+html[data-theme="dark"] .segmented,
+html[data-theme="dark"] .tabs{background:#101c25}
+html[data-theme="dark"] .segmented button,
+html[data-theme="dark"] .tabs button{color:#9fb1bf}
+html[data-theme="dark"] .segmented .active,
+html[data-theme="dark"] .tabs button.active{background:#22323d;color:#fff;box-shadow:none}
+html[data-theme="dark"] .monthNav{background:#16232d;border-color:#30414e}
+html[data-theme="dark"] .monthNav button,
+html[data-theme="dark"] .x{background:#243540;color:#eef7ff}
+html[data-theme="dark"] .monthNav select,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .comments input{background:#101b24;color:#eef7ff;border-color:#354956}
+html[data-theme="dark"] input[type="file"]{color:#dce8ef}
+html[data-theme="dark"] input::file-selector-button{background:#22343f;color:#eef7ff;border:1px solid #3b515e;border-radius:9px;padding:7px 10px}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder{color:#738a99}
+
+html[data-theme="dark"] .secondary,
+html[data-theme="dark"] .react,
+html[data-theme="dark"] .uploadBtn{background:#1b2a34;color:#e8f1f6;border-color:#354956}
+html[data-theme="dark"] .react.active{background:#153c39;border-color:#2d8b82}
+html[data-theme="dark"] .choice.selected{background:#15312f !important;border-color:#2d8b82 !important}
+html[data-theme="dark"] .choice.disabled{background:#121c24 !important}
+html[data-theme="dark"] .pill,
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .witnessBadge.honor{background:#24343e;color:#dce7ed}
+html[data-theme="dark"] .notice{background:#12332f;border-color:#245a52;color:#dff4ef}
+html[data-theme="dark"] .error{background:#3a2024;border-color:#62343a;color:#ffd9dc}
+html[data-theme="dark"] .adminOnly{background:#352c1d;border-color:#66532d}
+html[data-theme="dark"] .foodGoalChip{background:#1b3125;border-color:#345340;color:#cce8d4}
+html[data-theme="dark"] .progress{background:#30414d}
+html[data-theme="dark"] .rankRow{border-color:#293a45}
+html[data-theme="dark"] .rankMe{background:#173b37}
+html[data-theme="dark"] .settingToggle,
+html[data-theme="dark"] .comments{border-color:#30414e}
+html[data-theme="dark"] .feedItem blockquote{background:#10262d;color:#dceaf0}
+html[data-theme="dark"] .heatCell{background:#293b46}
+html[data-theme="dark"] .heatCell.on{background:var(--teal)}
+html[data-theme="dark"] .recordMini{border-color:#30414e;background:#14212a}
+html[data-theme="dark"] .homeTask{color:#e8f1f6}
+html[data-theme="dark"] .tasks .homeTask:hover,
+html[data-theme="dark"] .tasks .homeTask:focus-visible{background:#1b2d37}
+html[data-theme="dark"] .bottom{background:rgba(13,22,30,.97);border-color:#30414e}
+html[data-theme="dark"] .navBtn{color:#8fa5b4}
+html[data-theme="dark"] .navBtn.active{color:#35d1c8}
+html[data-theme="dark"] .avatar{background:#263844}
+html[data-theme="dark"] .photoPreview,
+html[data-theme="dark"] .feedPhoto{background:#101a22}
+html[data-theme="dark"] summary{color:#e8f1f6}
+html[data-theme="dark"] a{color:#55d8cf}
+html[data-theme="dark"] .suggestionIcon,
+html[data-theme="dark"] .rewardNode span{background:#253640}
+html[data-theme="dark"] .mobileMenuSheet{background:#14212a;color:#eef7ff}
+html[data-theme="dark"] .mobileMenuGrid button{background:#1a2a34;color:#eef7ff;border-color:#344853}
+html[data-theme="dark"] .mobileMenuGrid .adminMobile{background:#29233a;border-color:#51436b}
+html[data-theme="dark"] .witnessBadge{background:#20313c !important;color:#e7f1f6 !important;border-color:#3b5361 !important}
+html[data-theme="dark"] .witnessBadge.pending{background:#3a3320 !important;color:#ffe7a3 !important;border-color:#6a5a2d !important}
+html[data-theme="dark"] .witnessBadge.confirmed{background:#17372c !important;color:#b8f1d5 !important;border-color:#2f6a55 !important}
+html[data-theme="dark"] .witnessBadge.declined{background:#3a2227 !important;color:#ffd0d6 !important;border-color:#6a3942 !important}
+
+@media(max-width:700px){
+ .wishHero{grid-template-columns:1fr}
+ .wishHeroSide{grid-template-columns:1fr 1fr}
+ .wishHeroAmount{font-size:42px}
+}

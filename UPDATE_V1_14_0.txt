@@ -1,0 +1,47 @@
+Fit4Us V1.14.0 – Belohnungen & Wunsch-Guthaben
+=================================================
+SUPABASE-MIGRATION ERFORDERLICH:
+MIGRATION_V1_14_0.sql einmal im Supabase SQL Editor ausführen.
+
+NEUER REITER „BELOHNUNGEN“
+- Desktop: eigener Navigationspunkt „🎁 Belohnungen“.
+- Mobil: eigener Eintrag im Mehr-Menü.
+- Eigene normale Belohnungen und Wunsch-Guthaben werden an einer Stelle gebündelt.
+- Gruppenübersicht zeigt Guthaben und aktuell offene normale Belohnungen aller freigegebenen Teilnehmer.
+- Einlösen/Ändern ist weiterhin ausschließlich bei den eigenen Belohnungen möglich.
+
+WUNSCH-GUTHABEN
+- Je 100 verdiente Fit4Us-Gesamtpunkte entstehen dauerhaft +5,00 €.
+- Guthaben ist stackable/sammelbar und verfällt nicht am Monatsende.
+- Bereits verdiente 100-Punkte-Stufen werden nicht rückwirkend entzogen, wenn ein alter Eintrag korrigiert wird.
+- Teilweises Einlösen möglich.
+- Beim Einlösen: Betrag erforderlich, „Wofür?“ optional.
+- Restguthaben bleibt bestehen.
+- Eigener Buchungsverlauf mit +5,00-€-Stufen und Ausgaben.
+- Das Guthaben ist rein virtuell; der tatsächliche Kauf wird vom Nutzer selbst bezahlt.
+
+DATENBANK
+- Neue Tabelle wish_credit_transactions.
+- RPC claim_wish_credit: 5-€-Stufen nur sequenziell.
+- RPC redeem_wish_credit: prüft serverseitig, dass nicht mehr als das aktuelle Guthaben ausgegeben wird.
+- Andere freigegebene Nutzer dürfen offene reward_choices lesen.
+- reward_choices ändern/einlösen bleibt Eigentümer/Admin vorbehalten.
+- Backup/Restore/Reset und Realtime wurden erweitert.
+
+DARK MODE AUDIT
+- Challenge-Abstimmungen vollständig korrigiert.
+- Belohnungsvorschläge korrigiert.
+- Tageschallenge-Sonderkarte korrigiert.
+- Challenge-Karten, Vorschlagskarten, Reward-Karten, Mobile-Menü, Formulare,
+  Modals, Pills, History, Feed-Sonderkarten, Zeugenstatus und neue Belohnungsseite geprüft.
+- Harte Light-Mode-Flächen aus den Abstimmungskarten wurden durch theme-fähige CSS-Klassen ersetzt.
+
+REGELN
+- Tageschallenge-Regeltext korrigiert: individuelle Tageschallenge statt „dieselbe für alle“.
+- Punkte-&-Regeln verweist für Details auf den neuen Belohnungs-Reiter.
+
+UPDATE
+1. MIGRATION_V1_14_0.sql einmal in Supabase ausführen.
+2. Danach UPDATE-Dateien in GitHub ersetzen.
+3. config.js NICHT überschreiben.
+4. Deployment abwarten.
