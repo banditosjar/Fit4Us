@@ -80,10 +80,11 @@ function own(e){return e.user_id===me?.id}
 function currentMonthEntries(){let mk=monthKey();return entries.filter(e=>e.entry_date.startsWith(mk))}
 function currentWeekEntries(){let a=fmtDate(startOfWeek()),b=fmtDate(endOfWeek());return entries.filter(e=>e.entry_date>=a&&e.entry_date<=b)}
 function basePointsOf(userId,list){return list.filter(e=>e.user_id===userId).reduce((s,e)=>s+(+e.points||0),0)}
+function basePointsBetween(userId,from,to){return entries.filter(e=>e.user_id===userId&&e.entry_date>=from&&e.entry_date<=to).reduce((s,e)=>s+(+e.points||0),0)}
 function rangeOf(list){
  if(!list?.length)return null;
- let ds=list.map(e=>e.entry_date).sort();
- return [ds[0],ds.at(-1)]
+ let ds=list.map(e=>e.entry_date).filter(Boolean).sort();
+ return ds.length?[ds[0],ds.at(-1)]:null
 }
 function entriesForWeek(wk){let s=new Date(wk+'T12:00'),e=new Date(s);e.setDate(e.getDate()+6);let a=fmtDate(s),b=fmtDate(e);return entries.filter(x=>x.entry_date>=a&&x.entry_date<=b)}
 function poolAvailable(c,date=new Date()){if(!c||c.disabled||c.permanently_disabled)return false;if(c.disabled_until&&new Date(c.disabled_until)>date)return false;return c.approved!==false}
@@ -112,50 +113,99 @@ function challengeProgressForWeek(ch,userId,wk){
  if(ch.id==='mix3')return [new Set(es.filter(e=>e.kind==='activity').map(e=>e.activity)).size,3];
  return [0,1]
 }
+function weeklyChallengeCompletionDate(ch,userId,wk){
+ if(!ch)return null;
+ let es=entriesForWeek(wk).filter(e=>e.user_id===userId).slice().sort((a,b)=>String(a.entry_date).localeCompare(String(b.entry_date))||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+ if(ch.id==='move3'){
+  let days=[];for(let e of es){if(e.kind==='activity'&&+e.minutes>=30&&!days.includes(e.entry_date)){days.push(e.entry_date);if(days.length>=3)return e.entry_date}}
+ }
+ if(ch.id==='steps4'){
+  let q=es.filter(e=>e.kind==='steps'&&+e.steps>=10000);return q[3]?.entry_date||null;
+ }
+ if(ch.id==='healthy5'){
+  let q=es.filter(e=>e.kind==='food'&&(e.food_items||[]).length>=5);return q[4]?.entry_date||null;
+ }
+ if(ch.id==='sport180'){
+  let total=0;for(let e of es){if(e.kind==='activity'){total+=+e.minutes||0;if(total>=180)return e.entry_date}}
+ }
+ if(ch.id==='walk5'){
+  let q=es.filter(e=>e.kind==='activity'&&['walk','hike'].includes(e.activity));return q[4]?.entry_date||null;
+ }
+ if(ch.id==='mix3'){
+  let kinds=new Set();for(let e of es){if(e.kind==='activity'){kinds.add(e.activity);if(kinds.size>=3)return e.entry_date}}
+ }
+ return null;
+}
+function allPointDates(userId){
+ return [...new Set([
+  ...entries.filter(e=>e.user_id===userId&&(+e.points||0)>0).map(e=>e.entry_date),
+  ...dailyCompletions.filter(d=>d.user_id===userId&&(+d.points||1)>0).map(d=>d.challenge_date)
+ ].filter(Boolean))].sort();
+}
 function streakBonusEvents(userId){
- let dates=[...new Set(entries.filter(e=>e.user_id===userId).map(e=>e.entry_date))].sort();
- if(!dates.length)return [];
+ let dates=allPointDates(userId);if(!dates.length)return [];
  let min=new Date(dates[0]+'T12:00'),max=new Date(dates.at(-1)+'T12:00'),events=[],run=0;
  for(let d=new Date(min);d<=max;d.setDate(d.getDate()+1)){
-   let ds=fmtDate(d);
-   if(activeDay(ds,userId)){
-     run++;
-     let mark=STREAK_MARKS.find(x=>x[0]===run);
-     if(mark)events.push({date:ds,points:mark[1],days:mark[0]});
-   }else run=0;
+  let ds=fmtDate(d);
+  if(activeDay(ds,userId)){
+   run++;
+   let mark=STREAK_MARKS.find(x=>x[0]===run);
+   if(mark)events.push({date:ds,points:mark[1],days:mark[0]});
+  }else run=0;
  }
  return events
 }
-function bonusPointsOf(userId,list){
- let range=rangeOf(list);if(!range)return 0;
- let [from,to]=range,bonus=0;
- for(let sel of (window.weekSelections||[])){
-   let wk=sel.week_key,end=new Date(wk+'T12:00');end.setDate(end.getDate()+6);
-   if(fmtDate(end)<from||wk>to)continue;
-   let ch=WEEKLY.find(x=>x.id===sel.challenge_id),[a,b]=challengeProgressForWeek(ch,userId,wk);
-   if(a>=b)bonus+=(ch?.points||0);
-   if(groupChallengeComplete(wk))bonus+=5;
+function groupChallengeCompletionDateMonth(mk){
+ let ch=groupChallengeForPeriod(mk),from=mk+'-01',to=mk+'-31',es=entries.filter(e=>e.entry_date>=from&&e.entry_date<=to).slice().sort((a,b)=>String(a.entry_date).localeCompare(String(b.entry_date))||String(a.created_at||'').localeCompare(String(b.created_at||'')));
+ let value=0;
+ if(ch.kind==='steps'){
+  for(let e of es){if(e.kind==='steps'){value+=+e.steps||0;if(value>=ch.target)return e.entry_date}}
+ }else if(ch.kind==='minutes'){
+  for(let e of es){if(e.kind==='activity'){value+=+e.minutes||0;if(value>=ch.target)return e.entry_date}}
+ }else if(ch.kind==='distance'){
+  for(let e of es){if(e.kind==='activity'){value+=+e.distance||0;if(value>=ch.target)return e.entry_date}}
+ }else if(ch.kind==='outdoor'){
+  for(let e of es){if(e.kind==='activity'&&['walk','hike'].includes(e.activity)){value++;if(value>=ch.target)return e.entry_date}}
+ }else if(ch.kind==='healthy'){
+  for(let e of es){if(e.kind==='food'&&(e.food_items||[]).length>=5){value++;if(value>=ch.target)return e.entry_date}}
+ }else if(ch.kind==='activities'){
+  for(let e of es){if(e.kind==='activity'){value++;if(value>=ch.target)return e.entry_date}}
+ }
+ return null;
+}
+function monthKeysBetween(from,to){
+ let d=new Date(from+'T12:00'),end=new Date(to+'T12:00'),out=[];d.setDate(1);
+ while(d<=end){out.push(monthKey(d));d.setMonth(d.getMonth()+1)}return [...new Set(out)]
+}
+function weekKeysBetween(from,to){
+ let d=startOfWeek(new Date(from+'T12:00')),end=new Date(to+'T12:00'),out=[];
+ while(d<=end){out.push(weekKey(d));d.setDate(d.getDate()+7)}return [...new Set(out)]
+}
+function bonusPointsBetween(userId,from,to){
+ if(!from||!to||from>to)return 0;
+ let bonus=0;
+ // Persönliche Wochenchallenge: Bonus zählt am tatsächlichen Erfüllungstag.
+ for(let wk of weekKeysBetween(from,to)){
+  let sel=selectionForWeek(wk),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;
+  let doneDate=weeklyChallengeCompletionDate(ch,userId,wk);
+  if(doneDate&&doneDate>=from&&doneDate<=to)bonus+=+ch.points||0;
+ }
+ // Monatsmission: +5 P für alle am tatsächlichen Tag, an dem die Crew das Ziel erreicht.
+ for(let mk of monthKeysBetween(from,to)){
+  let doneDate=groupChallengeCompletionDateMonth(mk);
+  if(doneDate&&doneDate>=from&&doneDate<=to)bonus+=5;
  }
  bonus+=streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+x.points,0);
  bonus+=dailyCompletions.filter(x=>x.user_id===userId&&x.challenge_date>=from&&x.challenge_date<=to).reduce((s,x)=>s+(+x.points||1),0);
- return bonus
+ return bonus;
 }
-function pointsOf(userId,list){return basePointsOf(userId,list)+bonusPointsOf(userId,list)}
-
+function pointsBetween(userId,from,to){return basePointsBetween(userId,from,to)+bonusPointsBetween(userId,from,to)}
+function bonusPointsOf(userId,list){let range=rangeOf(list);return range?bonusPointsBetween(userId,range[0],range[1]):0}
+function pointsOf(userId,list){let range=rangeOf(list);return basePointsOf(userId,list)+(range?bonusPointsBetween(userId,range[0],range[1]):0)}
 function lifetimePoints(userId){
- let ownEntries=entries.filter(e=>e.user_id===userId);
- let dates=[
-  ...ownEntries.map(e=>e.entry_date),
-  ...dailyCompletions.filter(d=>d.user_id===userId).map(d=>d.challenge_date)
- ].filter(Boolean).sort();
+ let dates=[...allPointDates(userId),...streakBonusEvents(userId).map(x=>x.date)].sort();
  if(!dates.length)return 0;
- let ranged=[...ownEntries];
- // bonusPointsOf() verwendet den Datumsbereich der übergebenen Liste.
- // Die beiden neutralen Grenzzeilen stellen sicher, dass auch reine Tageschallenge-Tage
- // am Anfang/Ende in den lebenslangen Punktestand einfließen.
- ranged.push({user_id:'__range__',entry_date:dates[0],points:0});
- ranged.push({user_id:'__range__',entry_date:dates.at(-1),points:0});
- return Math.max(0,pointsOf(userId,ranged));
+ return Math.max(0,pointsBetween(userId,dates[0],dates.at(-1)));
 }
 function wishCreditRows(userId){return wishCreditTransactions.filter(x=>x.user_id===userId)}
 function wishCreditBalanceCents(userId){
@@ -424,7 +474,7 @@ async function saveQuickActivity(activity,minutes,distance){let before=celebrati
 
 function almostThereHTML(){let items=[],sel=currentSelection(),c=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;if(c){let [a,b]=challengeProgressForWeek(c,me.id,weekKey()),left=Math.max(0,b-a);if(left>0&&left<=Math.max(1,b*.34))items.push(`🎯 Noch <b>${left}</b> bis „${escapeHtml(c.title)}“`)}let gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey()),gl=Math.max(0,gc.target-gv),pct=gv/gc.target;if(gl>0&&pct>=.7)items.push(`👥 Crew fast am Ziel: noch <b>${Number(gl.toFixed?.(1)??gl).toLocaleString('de-DE')} ${escapeHtml(gc.unit||'')}</b>`);let pts=monthPoints(),next=MILESTONES.find(m=>m>pts);if(next&&next-pts<=10)items.push(`🎁 Noch <b>${next-pts} P</b> bis zur nächsten Belohnung`);return items.length?`<div class="card pad almostThere"><b>✨ Fast geschafft</b>${items.map(x=>`<div>${x}</div>`).join('')}</div>`:''}
 function todayEnoughHTML(){let p=pointsCollectedOnDate(fmtDate()),dc=dailyCompletedBy(me.id);if(p>=8||((todayEntry('steps')?.steps||0)>=10000&&todayActivityMinutes()>=30))return `<div class="todayEnough"><b>🌿 Starker Tag.</b><span>Dein Streak ist gesichert und du hast heute ${p} Punkt${p===1?'':'e'} gesammelt. Alles Weitere ist Bonus.</span></div>`;return ''}
-function previousWeekSummary(userId=me.id){let d=startOfWeek();d.setDate(d.getDate()-7),wk=weekKey(d),es=entriesForWeek(wk).filter(e=>e.user_id===userId);return {wk,pts:pointsOf(userId,es),steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),days:[...new Set(es.filter(e=>(+e.points||0)>0).map(e=>e.entry_date))].length}}
+function previousWeekSummary(userId=me.id){let d=startOfWeek();d.setDate(d.getDate()-7),wk=weekKey(d),from=wk,to=fmtDate(endOfWeek(d)),es=entriesForWeek(wk).filter(e=>e.user_id===userId),days=0;for(let x=new Date(from+'T12:00');fmtDate(x)<=to;x.setDate(x.getDate()+1))if(activeDay(fmtDate(x),userId))days++;return {wk,pts:pointsBetween(userId,from,to),steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),days}}
 function weeklyReviewHTML(){let w=previousWeekSummary();return `<div class="card pad"><div class="challengeTop"><h3>📅 Deine letzte Woche</h3><span class="pill">KW ${isoWeek(new Date(w.wk+'T12:00'))}</span></div><div class="grid kpis section"><div class="kpi"><b>${w.pts}</b><div class="tiny muted">Punkte</div></div><div class="kpi"><b>${w.steps.toLocaleString('de-DE')}</b><div class="tiny muted">Schritte</div></div><div class="kpi"><b>${w.minutes}</b><div class="tiny muted">Aktivmin.</div></div></div></div>`}
 function crewMomentHTML(){let es=currentWeekEntries(),steps=es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),mins=es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),activeUsers=profiles.filter(p=>p.approved&&es.some(e=>e.user_id===p.id&&(+e.points||0)>0)).length;let text=steps>=100000?`Ihr habt diese Woche schon ${steps.toLocaleString('de-DE')} Schritte gesammelt.`:mins>=300?`Die Crew kommt diese Woche auf ${mins} aktive Minuten.`:`${activeUsers} von ${profiles.filter(p=>p.approved).length} sind diese Woche bereits im Streak aktiv.`;return `<div class="card crewMoment"><span>❤️</span><div><small>CREW-MOMENT DER WOCHE</small><b>${text}</b></div></div>`}
 
@@ -507,14 +557,17 @@ async function render(){
 function ranking(list){
  return profiles.map(p=>({p,pts:pointsOf(p.id,list)})).sort((a,b)=>b.pts-a.pts||firstName(a.p).localeCompare(firstName(b.p)))
 }
-async function rankingHTML(list){
- let r=ranking(list),out='';
+function rankingBetween(from,to){
+ return profiles.map(p=>({p,pts:pointsBetween(p.id,from,to)})).sort((a,b)=>b.pts-a.pts||firstName(a.p).localeCompare(firstName(b.p)))
+}
+async function rankingHTML(list,from=null,to=null){
+ let r=(from&&to)?rankingBetween(from,to):ranking(list),out='';
  for(let i=0;i<r.length;i++){let av=await avatarHTML(r[i].p,34);out+=`<div class="rankRow ${r[i].p.id===me.id?'rankMe':''}"><b>${i+1}.</b><div style="display:flex;align-items:center;gap:9px">${av}<b>${escapeHtml(firstName(r[i].p))}</b></div><b>${r[i].pts} P</b></div>`}
  return out||'<div class="muted">Noch keine Teilnehmer.</div>'
 }
 function todayEntry(kind){return entries.find(e=>e.user_id===me.id&&e.entry_date===fmtDate()&&e.kind===kind)}
 function todayActivityMinutes(){return entries.filter(e=>e.user_id===me.id&&e.entry_date===fmtDate()&&e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0)}
-function monthPoints(){return pointsOf(me.id,currentMonthEntries())}
+function monthPoints(){let mk=monthKey();return pointsBetween(me.id,mk+'-01',mk+'-31')}
 function nextMilestone(p){return MILESTONES.find(x=>x>p)||MILESTONES.at(-1)}
 function pointsCollectedOnDate(date,userId=me.id){
  let base=entries.filter(e=>e.user_id===userId&&e.entry_date===date).reduce((s,e)=>s+(+e.points||0),0);
@@ -633,7 +686,7 @@ function achievementDefinitions(userId){
  return defs.filter(x=>x[3])
 }
 async function syncAchievements(){if(!me?.id)return;let existing=new Set(achievements.filter(a=>a.user_id===me.id).map(a=>a.achievement_key));for(let [key,emoji,title,date] of achievementDefinitions(me.id)){if(existing.has(key))continue;let {data,error}=await sb.from('achievements').insert({user_id:me.id,achievement_key:key,title,emoji,achieved_on:date}).select().single();if(!error&&data){achievements.push(data);existing.add(key)}}}
-function monthlyReviewData(userId,mk){let list=entries.filter(e=>e.user_id===userId&&e.entry_date.startsWith(mk));return {pts:pointsOf(userId,list),steps:list.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:list.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),distance:list.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.distance||0),0),maxSteps:Math.max(0,...list.filter(e=>e.kind==='steps').map(e=>+e.steps||0)),foodDays:list.filter(e=>e.kind==='food').length}}
+function monthlyReviewData(userId,mk){let list=entries.filter(e=>e.user_id===userId&&e.entry_date.startsWith(mk));return {pts:pointsBetween(userId,mk+'-01',mk+'-31'),steps:list.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:list.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),distance:list.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.distance||0),0),maxSteps:Math.max(0,...list.filter(e=>e.kind==='steps').map(e=>+e.steps||0)),foodDays:list.filter(e=>e.kind==='food').length}}
 function hallOfFame(mk){
  let rows=allApprovedUsers().map(p=>({p,d:monthlyReviewData(p.id,mk),streak:streak(p.id),outdoor:entries.filter(e=>e.user_id===p.id&&e.entry_date.startsWith(mk)&&e.kind==='activity'&&['walk','hike'].includes(e.activity)).length,daily:dailyCompletions.filter(x=>x.user_id===p.id&&x.challenge_date.startsWith(mk)).length}));
  if(!rows.length||rows.every(x=>x.d.pts===0&&x.d.steps===0&&x.streak===0&&x.d.foodDays===0&&x.outdoor===0&&x.daily===0))return{};
@@ -650,7 +703,7 @@ function todaySuggestions(){
  let next=thresholds.find(x=>x>st);
  if(next)items.push({icon:'👟',title:`Noch ${(next-st).toLocaleString('de-DE')} Schritte`,desc:`Dann erreichst du die nächste Schritt-Punktestufe (${next.toLocaleString('de-DE')}).`});
  else {let nextX=20000+Math.max(0,Math.floor((st-15000)/5000))*5000;if(nextX>st)items.push({icon:'👟',title:`Noch ${(nextX-st).toLocaleString('de-DE')} Schritte`,desc:'Damit gibt es einen weiteren Schrittpunkt.'})}
- if(min<30)items.push({icon:'🔥',title:`Noch ${30-min} aktive Minuten`,desc:'Damit zählt heute als aktiver Tag für deinen Streak.'});
+ if(!activeDay(fmtDate(),me.id))items.push({icon:'🔥',title:'Noch 1 Punkt für deinen Streak',desc:'Jeder positive Fit4Us-Punkt reicht heute aus, damit dein Streak weiterläuft.'});
  if(!food)items.push({icon:'🥗',title:'Ernährung noch nicht eingetragen',desc:'Tages-Check-in öffnen und bis zu 7 positive Ziele abhaken.'});
  let ch=currentChallenge();
  if(ch){let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());if(a<b)items.push({icon:ch.icon,title:`Wochenchallenge: ${a}/${b}`,desc:ch.desc})}
@@ -658,6 +711,10 @@ function todaySuggestions(){
 }
 function bonusSummary(userId,list){
  let base=basePointsOf(userId,list),bonus=bonusPointsOf(userId,list);
+ return `<div class="bonusBreakdown"><span class="bonusPill">Aktivitäten & Alltag: ${base} P</span>${bonus?`<span class="bonusPill">Bonuspunkte: +${bonus} P</span>`:''}</div>`
+}
+function bonusSummaryBetween(userId,from,to){
+ let base=basePointsBetween(userId,from,to),bonus=bonusPointsBetween(userId,from,to);
  return `<div class="bonusBreakdown"><span class="bonusPill">Aktivitäten & Alltag: ${base} P</span>${bonus?`<span class="bonusPill">Bonuspunkte: +${bonus} P</span>`:''}</div>`
 }
 function compactChallengeHTML(){
@@ -675,11 +732,11 @@ function compactGroupChallengeHTML(){
 let historyMode='month',historyMonth=null;
 function monthLabel(m){return new Date(m+'-01T12:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'})}
 function entriesForMonth(m){return entries.filter(e=>e.entry_date?.startsWith(m))}
-function completedMonths(){let cur=monthKey();return [...new Set(entries.map(e=>e.entry_date?.slice(0,7)).filter(m=>m&&m<cur))].sort().reverse()}
-function monthRank(m){let es=entriesForMonth(m);return profiles.filter(p=>p.approved).map(p=>({p,pts:pointsOf(p.id,es)})).sort((a,b)=>b.pts-a.pts)}
+function completedMonths(){let cur=monthKey();return [...new Set([...entries.map(e=>e.entry_date?.slice(0,7)),...dailyCompletions.map(d=>d.challenge_date?.slice(0,7))].filter(m=>m&&m<cur))].sort().reverse()}
+function monthRank(m){return profiles.filter(p=>p.approved).map(p=>({p,pts:pointsBetween(p.id,m+'-01',m+'-31')})).sort((a,b)=>b.pts-a.pts)}
 function mStats(id,m){let es=entriesForMonth(m).filter(e=>e.user_id===id);return {steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),km:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.distance||0),0),acts:es.filter(e=>e.kind==='activity').length,food:es.filter(e=>e.kind==='food').length}}
 function isoWeek(d){let x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));x.setUTCDate(x.getUTCDate()+4-(x.getUTCDay()||7));let y=new Date(Date.UTC(x.getUTCFullYear(),0,1));return Math.ceil((((x-y)/86400000)+1)/7)}
-function weekChamp(wk){let es=entriesForWeek(wk),r=profiles.filter(p=>p.approved).map(p=>({p,pts:pointsOf(p.id,es)})).sort((a,b)=>b.pts-a.pts);return r[0]?.pts>0?r[0]:null}
+function weekChamp(wk){let to=new Date(wk+'T12:00');to.setDate(to.getDate()+6);let r=profiles.filter(p=>p.approved).map(p=>({p,pts:pointsBetween(p.id,wk,fmtDate(to))})).sort((a,b)=>b.pts-a.pts);return r[0]?.pts>0?r[0]:null}
 function monthWeeks(m){let d=startOfWeek(new Date(m+'-01T12:00')),end=new Date(m+'-01T12:00');end.setMonth(end.getMonth()+1);end.setDate(0);let a=[];while(d<=end){let wk=weekKey(d);if(fmtDate(endOfWeek(d))>=m+'-01')a.push(wk);d.setDate(d.getDate()+7)}return [...new Set(a)]}
 function setHistoryMode(x){historyMode=x;render()} function setHistoryMonth(x){historyMonth=x;render()}
 function shiftHistory(n){let ms=completedMonths(),i=ms.indexOf(historyMonth);let ni=i+n;if(ni>=0&&ni<ms.length){historyMonth=ms[ni];render()}}
@@ -838,12 +895,12 @@ async function chooseChallenge(id){let champ=prevChampion();if(!me.is_admin&&cha
 
 function statsFor(userId,from,to){
  let es=entries.filter(e=>e.user_id===userId&&e.entry_date>=from&&e.entry_date<=to);
- return {points:pointsOf(userId,es),steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),foodDays:es.filter(e=>e.kind==='food').length}
+ return {points:pointsBetween(userId,from,to),steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),foodDays:es.filter(e=>e.kind==='food').length}
 }
 
 function monthView(m){let rank=monthRank(m),team=profiles.filter(p=>p.approved).map(p=>({p,s:mStats(p.id,m)})),tot={steps:team.reduce((s,x)=>s+x.s.steps,0),min:team.reduce((s,x)=>s+x.s.minutes,0),km:team.reduce((s,x)=>s+x.s.km,0),acts:team.reduce((s,x)=>s+x.s.acts,0)};return `<div class="historyHero"><div><small>🏆 CHAMPION ${monthLabel(m).toUpperCase()}</small><h2>${rank[0]?.pts?escapeHtml(firstName(rank[0].p)):'–'}</h2><b>${rank[0]?.pts||0} Punkte</b></div><span>👑</span></div><div class="card pad section"><h3>Endstand</h3>${rank.map((x,i)=>`<div class="rankRow"><span>${['🥇','🥈','🥉'][i]||i+1+'.'}</span><b>${escapeHtml(firstName(x.p))}</b><b>${x.pts} P</b></div>`).join('')}</div><div class="grid kpis section"><div class="kpi"><b>${tot.steps.toLocaleString('de-DE')}</b><small>Crew-Schritte</small></div><div class="kpi"><b>${tot.min}</b><small>Aktivminuten</small></div><div class="kpi"><b>${tot.km.toFixed(1)}</b><small>km</small></div><div class="kpi"><b>${tot.acts}</b><small>Aktivitäten</small></div></div><div class="grid grid2 section"><div class="card pad"><h3>👑 Wochenchampions</h3>${monthWeeks(m).map(w=>{let c=weekChamp(w),sel=selectionForWeek(w),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;return `<div class="histWeek"><div><b>KW ${isoWeek(new Date(w+'T12:00'))}</b><small>${ch?ch.icon+' '+ch.title:'–'}</small></div><div>${c?'👑 '+escapeHtml(firstName(c.p))+' · '+c.pts+' P':'–'}</div></div>`}).join('')}</div><div class="card pad"><h3>🏅 Monatsrekorde</h3>${[['👟','Schritte','steps'],['⏱️','Aktivminuten','minutes'],['🥗','Ernährungstage','food']].map(([ic,l,k])=>{let x=[...team].sort((a,b)=>b.s[k]-a.s[k])[0];return `<div class="histWeek"><div>${ic} <b>${l}</b></div><div>${x?escapeHtml(firstName(x.p))+' · '+(k==='steps'?x.s[k].toLocaleString('de-DE'):x.s[k]):'–'}</div></div>`}).join('')}</div></div><h2 class="section">Persönliche Monatswerte</h2><div class="grid grid2">${team.map(x=>`<div class="card pad"><h3>${escapeHtml(firstName(x.p))}</h3><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span><span>🥗 ${x.s.food} Ernährungstage</span></div></div>`).join('')}</div>`}
 
-function allTimeView(){let u=profiles.filter(p=>p.approved).map(p=>{let es=entries.filter(e=>e.user_id===p.id);return {p,pts:pointsOf(p.id,es),s:mStats(p.id,'')}}).sort((a,b)=>b.pts-a.pts);return `<div class="historyHero"><div><small>∞ FIT4US ALL-TIME</small><h2>${u[0]?escapeHtml(firstName(u[0].p)):'–'}</h2><b>${u[0]?.pts||0} Gesamtpunkte</b></div><span>🏛️</span></div><div class="grid grid2 section">${u.map((x,i)=>`<div class="card pad"><div class="challengeTop"><h3>${['🥇','🥈','🥉'][i]||i+1+'.'} ${escapeHtml(firstName(x.p))}</h3><b>${x.pts} P</b></div><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span></div></div>`).join('')}</div>`}
+function allTimeView(){let u=profiles.filter(p=>p.approved).map(p=>{let es=entries.filter(e=>e.user_id===p.id);return {p,pts:lifetimePoints(p.id),s:mStats(p.id,'')}}).sort((a,b)=>b.pts-a.pts);return `<div class="historyHero"><div><small>∞ FIT4US ALL-TIME</small><h2>${u[0]?escapeHtml(firstName(u[0].p)):'–'}</h2><b>${u[0]?.pts||0} Gesamtpunkte</b></div><span>🏛️</span></div><div class="grid grid2 section">${u.map((x,i)=>`<div class="card pad"><div class="challengeTop"><h3>${['🥇','🥈','🥉'][i]||i+1+'.'} ${escapeHtml(firstName(x.p))}</h3><b>${x.pts} P</b></div><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span></div></div>`).join('')}</div>`}
 
 function entryEditControls(e){
  if(!canEditEntryAnywhere(e))return '';
@@ -928,8 +985,8 @@ function groupChallengeValueMonth(mk){
 
 function groupChallengeHTML(){let ch=groupChallengeForPeriod(monthKey()),v=groupChallengeValueMonth(monthKey());return `<div class="progress"><i style="width:${Math.min(100,v/ch.target*100)}%"></i></div>`}
 
-async function homeHTML(){let pts=monthPoints(),st=streak();return `<div class="homeHead"><div><small>FIT4US · ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'})}</small><h1>Hallo ${escapeHtml(firstName(me))} 👋</h1></div><div><b>${pts} P</b><span>🔥 ${st} Tage</span></div></div>${todaySummary()}${todayEnoughHTML()}${outboxHTML()}${pendingWitnessHTML()}<div class="sectionTitle"><h2>Deine Aufgaben</h2><button class="react" onclick="go('challenges')">Alle Challenges</button></div><div class="card pad">${taskSummary()}</div>${almostThereHTML()}${quickTemplatesHTML()}<div class="sectionTitle"><h2>Deine Punkte & Belohnungen</h2></div>${wishCreditMiniHTML()}${rewardsOverviewHTML()}<details class="card pad section"><summary><b>📝 Meine heutigen Einträge bearbeiten</b></summary><div class="section">${await todayOwnEntriesHTML()}</div></details><div class="quickAdd"><button class="cta" onclick="openEntry()">＋ Eintrag hinzufügen</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="sectionTitle"><h2>Diese Woche</h2><button class="react" onclick="go('group')">Zur Gruppe</button></div><div class="card pad">${await rankingHTML(currentWeekEntries())}</div><div class="sectionTitle"><h2>Feed</h2><span class="pill">Crew</span></div><div class="grid">${await feedHTML(35)}</div>`}
-async function groupHTML(){let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk);return `<h1>Gruppe</h1>${crewMomentHTML()}${c?`<div class="weekRecap section"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="grid grid2 section"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries())}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries())}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
+async function homeHTML(){let pts=monthPoints(),st=streak();return `<div class="homeHead"><div><small>FIT4US · ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'})}</small><h1>Hallo ${escapeHtml(firstName(me))} 👋</h1></div><div><b>${pts} P</b><span>🔥 ${st} Tage</span></div></div>${todaySummary()}${todayEnoughHTML()}${outboxHTML()}${pendingWitnessHTML()}<div class="sectionTitle"><h2>Deine Aufgaben</h2><button class="react" onclick="go('challenges')">Alle Challenges</button></div><div class="card pad">${taskSummary()}</div>${almostThereHTML()}${quickTemplatesHTML()}<div class="sectionTitle"><h2>Deine Punkte & Belohnungen</h2></div>${wishCreditMiniHTML()}${rewardsOverviewHTML()}<details class="card pad section"><summary><b>📝 Meine heutigen Einträge bearbeiten</b></summary><div class="section">${await todayOwnEntriesHTML()}</div></details><div class="quickAdd"><button class="cta" onclick="openEntry()">＋ Eintrag hinzufügen</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="sectionTitle"><h2>Diese Woche</h2><button class="react" onclick="go('group')">Zur Gruppe</button></div><div class="card pad">${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</div><div class="sectionTitle"><h2>Feed</h2><span class="pill">Crew</span></div><div class="grid">${await feedHTML(35)}</div>`}
+async function groupHTML(){let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk);return `<h1>Gruppe</h1>${crewMomentHTML()}${c?`<div class="weekRecap section"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}<div class="grid grid2 section"><div><h2>Wochenranking</h2><div class="card pad">${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</div></div><div><h2>Monatsranking</h2><div class="card pad">${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</div></div></div><h2 class="section">Feed</h2><div class="grid">${await feedHTML(100)}</div>`}
 function feedDateTime(item){
  let date=item?.created_at?new Date(item.created_at):null;
  if(date&&!Number.isNaN(date.getTime())){
@@ -974,7 +1031,7 @@ async function toggleReaction(entryId,emoji){
 function lastWeek(){let s=startOfWeek();s.setDate(s.getDate()-7);let e=new Date(s);e.setDate(e.getDate()+6);return entries.filter(x=>x.entry_date>=fmtDate(s)&&x.entry_date<=fmtDate(e))}
 function weeklyOptions(key=weekKey()){let seed=[...key].reduce((s,c)=>s+c.charCodeAt(0),0);return [0,1,2].map(i=>WEEKLY[(seed+i*2)%WEEKLY.length])}
 function currentSelection(){return selectionForWeek(weekKey())}
-function prevChampion(){let r=ranking(lastWeek());if(!r.length||r[0].pts===0)return null;return r[0].p}
+function prevChampion(){let s=startOfWeek();s.setDate(s.getDate()-7);let from=fmtDate(s),to=fmtDate(endOfWeek(s)),r=rankingBetween(from,to);if(!r.length||r[0].pts===0)return null;return r[0].p}
 function challengeProgress(ch,userId=me.id){return challengeProgressForWeek(ch,userId,weekKey())}
 async function challengesHTML(){let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,champ=prevChampion(),choose=(!sel&&champ?.id===me.id)||(!sel&&me.is_admin),gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey()),gp=Math.min(100,gv/gc.target*100),dc=dailyChallengeFor(),done=dc&&dailyCompletions.some(x=>x.user_id===me.id&&x.challenge_date===fmtDate());let w=ch?challengeProgressForWeek(ch,me.id,weekKey()):[0,1],wp=Math.min(100,w[0]/w[1]*100),pick='';if(choose)pick=`<div class="sectionTitle"><h2>👑 Du darfst die nächste Challenge wählen</h2></div><div class="grid choiceGrid">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${c.title}</b><div class="tiny muted">${c.desc}</div></button>`).join('')}</div>`;return `<h1>Challenges</h1><div class="challengeCurrent">${dc?`<div class="nowCard daily"><small>☀️ HEUTE${dc.targetUser?` · FÜR ${escapeHtml(firstName(dc.targetUser)).toUpperCase()}`:''}</small><h2>${escapeHtml(dc.emoji)} ${escapeHtml(dc.name)}</h2><p>${escapeHtml(dc.description)}</p>${done?'<span class="chip">✓ Erledigt</span>':`<button class="cta" onclick="openDailyComplete()">Erledigt</button>`}</div>`:''}<div class="nowCard weekly"><small>🎯 DIESE WOCHE</small><h2>${ch?ch.icon+' '+ch.title:'Noch keine Challenge gewählt'}</h2>${ch?`<p>${ch.desc}</p><div class="progress"><i style="width:${wp}%"></i></div><b>${w[0]} / ${w[1]}</b>`:''}</div><div class="nowCard monthly"><small>👥 DIESEN MONAT</small><h2>${gc.icon} ${gc.title}</h2><p>${gc.desc}</p><div class="progress"><i style="width:${gp}%"></i></div><b>${Math.round(gp)} %</b></div></div>${pick}<div class="sectionTitle"><h2>Challenge-Pool</h2><button class="cta" onclick="openProposal()">＋ Neue Challenge</button></div><details class="card pad"><summary><b>📚 Alle verfügbaren Challenges (${challengePool.filter(poolAvailable).length})</b></summary><div class="section">${challengePoolHTML()}</div></details>`}
 function challengePoolHTML(){return ['weekly','group','daily'].map(type=>{let title=type==='weekly'?'🎯 Wochenchallenges':type==='group'?'👥 Gruppen-Monatschallenges':'☀️ Tageschallenges',list=challengePool.filter(c=>c.challenge_type===type);return `<h3>${title}</h3><div class="grid grid2">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by);return `<button class="choice ${!poolAvailable(c)?'disabled':''}" onclick="openChallengeDetail('${c.id}')"><div><b>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</b>${!poolAvailable(c)?' 🔒':''}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?' 👥':''}</div><div class="tiny muted">${escapeHtml(dailyTemplateText(c.description,null))}</div><div class="tiny muted" style="margin-top:5px">+${c.points} P · 👍 ${r.filter(x=>x.rating==='again').length} · 😐 ${r.filter(x=>x.rating==='okay').length} · 👎 ${r.filter(x=>x.rating==='never').length}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</div></button>`}).join('')}</div>`}).join('')}
@@ -1013,12 +1070,12 @@ async function submitProposal(e){
  if(vote.error)return toast('Vorschlag gespeichert, aber Stimme fehlgeschlagen: '+vote.error.message);
  closeModal();await loadData();await render();toast('Vorschlag ist jetzt im Feed angepinnt 📌')
 }
-function trend4(id){let ws=[];for(let i=3;i>=0;i--){let d=startOfWeek();d.setDate(d.getDate()-i*7);let es=entriesForWeek(weekKey(d)).filter(e=>e.user_id===id);ws.push({d,pts:pointsOf(id,es)})}let mx=Math.max(1,...ws.map(x=>x.pts));return `<div class="card pad section"><h3>📈 Deine letzten 4 Wochen</h3><div class="trend">${ws.map(x=>`<div><i style="height:${Math.max(5,x.pts/mx*64)}px"></i><b>${x.pts}</b><small>KW${isoWeek(x.d)}</small></div>`).join('')}</div></div>`}
+function trend4(id){let ws=[];for(let i=3;i>=0;i--){let d=startOfWeek();d.setDate(d.getDate()-i*7);let from=weekKey(d),to=fmtDate(endOfWeek(d));ws.push({d,pts:pointsBetween(id,from,to)})}let mx=Math.max(1,...ws.map(x=>x.pts));return `<div class="card pad section"><h3>📈 Deine letzten 4 Wochen</h3><div class="trend">${ws.map(x=>`<div><i style="height:${Math.max(5,x.pts/mx*64)}px"></i><b>${x.pts}</b><small>KW${isoWeek(x.d)}</small></div>`).join('')}</div></div>`}
 async function rewardGroupCardHTML(p){
  let av=await avatarHTML(p,48),
      balance=wishCreditBalanceCents(p.id),
      open=openRewardChoicesFor(p.id),
-     pts=pointsOf(p.id,currentMonthEntries()),
+     pts=pointsBetween(p.id,monthKey()+'-01',monthKey()+'-31'),
      unchosen=MILESTONES.filter(m=>pts>=m&&!rewardChoices.some(r=>r.user_id===p.id&&r.month_key===monthKey()&&r.milestone===m)),
      names=open.slice(0,3).map(r=>rewardName(r.reward_key));
  return `<div class="card pad rewardPersonCard ${p.id===me.id?'rewardPersonMe':''}">
@@ -1058,7 +1115,7 @@ async function rewardsHTML(){
 async function meHTML(){
  let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);
  let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=monthPoints(),rewards=MILESTONES.filter(m=>pts>=m);
- return `<h1>Mein Profil</h1><div class="grid grid2"><div><div class="card statBig">${av}<h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h2><div class="muted">@${escapeHtml(me.username)}</div><strong>${pts} P</strong><div class="muted">diesen Monat</div>${bonusSummary(me.id,currentMonthEntries())}<button class="secondary section" onclick="openProfile()">Profil bearbeiten</button></div><div class="card pad section"><h3>Diese Woche vs. Vorwoche</h3>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div>${trend4(me.id)}${weeklyReviewHTML()}</div><div><div class="card pad"><div class="challengeTop"><h3>🔥 Dein Streak</h3><span class="pill">Rekord ${maxStreakEver()} Tage</span></div><div class="big">${streak()} Tage</div><div class="muted">${(()=>{let n=streakNext(streak());return `Noch ${Math.max(0,n[0]-streak())} aktive Tage bis +${n[1]} Bonuspunkte`;})()}</div><div class="section">${streakHeatmapHTML()}</div></div><div class="card pad section"><h3>🏅 Persönliche Rekorde</h3>${personalRecordsHTML()}</div><div class="card pad section rewardProfileLink"><div><h3>🎁 Belohnungen</h3><div class="muted small">Wunsch-Guthaben: <b>${euro(wishCreditBalanceCents(me.id))}</b> · ${openRewardChoices().length} normale Belohnung${openRewardChoices().length===1?'':'en'} offen</div></div><button class="react" onclick="go('rewards')">Öffnen</button></div>${settingsHTML()}</div></div><h2 class="section">Achievements</h2><div class="card pad">${achievementHTML()}</div><h2 class="section">Monatsrückblick</h2>${monthlyReviewHTML()}<h2 class="section">Hall of Fame</h2>${hallOfFameHTML()}<h2 class="section">Meine Einträge – aktueller Monat</h2><div class="grid">${await ownEntriesHTML()}</div>`
+ return `<h1>Mein Profil</h1><div class="grid grid2"><div><div class="card statBig">${av}<h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h2><div class="muted">@${escapeHtml(me.username)}</div><strong>${pts} P</strong><div class="muted">diesen Monat</div>${bonusSummaryBetween(me.id,monthKey()+'-01',monthKey()+'-31')}<button class="secondary section" onclick="openProfile()">Profil bearbeiten</button></div><div class="card pad section"><h3>Diese Woche vs. Vorwoche</h3>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div>${trend4(me.id)}${weeklyReviewHTML()}</div><div><div class="card pad"><div class="challengeTop"><h3>🔥 Dein Streak</h3><span class="pill">Rekord ${maxStreakEver()} Tage</span></div><div class="big">${streak()} Tage</div><div class="muted">${(()=>{let n=streakNext(streak());return `Noch ${Math.max(0,n[0]-streak())} aktive Tage bis +${n[1]} Bonuspunkte`;})()}</div><div class="section">${streakHeatmapHTML()}</div></div><div class="card pad section"><h3>🏅 Persönliche Rekorde</h3>${personalRecordsHTML()}</div><div class="card pad section rewardProfileLink"><div><h3>🎁 Belohnungen</h3><div class="muted small">Wunsch-Guthaben: <b>${euro(wishCreditBalanceCents(me.id))}</b> · ${openRewardChoices().length} normale Belohnung${openRewardChoices().length===1?'':'en'} offen</div></div><button class="react" onclick="go('rewards')">Öffnen</button></div>${settingsHTML()}</div></div><h2 class="section">Achievements</h2><div class="card pad">${achievementHTML()}</div><h2 class="section">Monatsrückblick</h2>${monthlyReviewHTML()}<h2 class="section">Hall of Fame</h2>${hallOfFameHTML()}<h2 class="section">Meine Einträge – aktueller Monat</h2><div class="grid">${await ownEntriesHTML()}</div>`
 }
 
 function achievementHTML(){let list=achievements.filter(a=>a.user_id===me.id);if(!list.length)return '<div class="muted">Noch keine Achievements.</div>';return `<div class="grid grid2">${list.map(a=>`<div class="choice"><b>${escapeHtml(a.emoji)} ${escapeHtml(a.title)}</b><div class="tiny muted">Erreicht am ${new Date(a.achieved_on+'T12:00').toLocaleDateString('de-DE')}</div></div>`).join('')}</div>`}
@@ -1361,8 +1418,8 @@ async function saveActivity(ev,id=''){
  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before);toast('Gespeichert ✓')
  }catch(err){if(likelyOffline(err)&&!photo){let payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity:a,minutes:min,distance:dist,witness:witnessName,witness_user_id:witnessId,points:calcCappedActivityPoints(me.id,entryDate,a,min,dist,id||null)};queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}
 }
-async function saveSteps(ev,id=''){ev.preventDefault();let before=celebrationSnapshot(),steps=Math.floor(+$('#sSteps').value/100)*100,payload={user_id:me.id,entry_date:id?entries.find(x=>x.id===id).entry_date:fmtDate(),kind:'steps',steps,points:stepPoints(steps)};try{let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===payload.entry_date&&e.kind==='steps'),res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);if(res.error)throw res.error;closeModal();await loadData();await render();maybeCelebrate(before);toast('Schritte gespeichert ✓')}catch(err){if(likelyOffline(err)){queueEntry(payload,id?'update':'insert',id||null);closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}}
-async function saveFood(ev,id=''){ev.preventDefault();let before=celebrationSnapshot(),items=$$('input[name=food]:checked').map(x=>x.value),photo=null,entryDate=id?entries.find(x=>x.id===id).entry_date:fmtDate();try{if(pendingProof)photo=await uploadProof(pendingProof);let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};if(photo)payload.photo_path=photo;let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='food'),res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);if(res.error)throw res.error;pendingProof=null;closeModal();await loadData();await render();maybeCelebrate(before);toast('Ernährung gespeichert ✓')}catch(err){if(likelyOffline(err)&&!photo){let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}}
+async function saveSteps(ev,id=''){ev.preventDefault();let before=celebrationSnapshot(),steps=Math.floor(+$('#sSteps').value/100)*100,payload={user_id:me.id,entry_date:id?entries.find(x=>x.id===id).entry_date:fmtDate(),kind:'steps',steps,points:stepPoints(steps)};try{let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===payload.entry_date&&e.kind==='steps'),res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);if(res.error)throw res.error;closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before);toast('Schritte gespeichert ✓')}catch(err){if(likelyOffline(err)){queueEntry(payload,id?'update':'insert',id||null);closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}}
+async function saveFood(ev,id=''){ev.preventDefault();let before=celebrationSnapshot(),items=$$('input[name=food]:checked').map(x=>x.value),photo=null,entryDate=id?entries.find(x=>x.id===id).entry_date:fmtDate();try{if(pendingProof)photo=await uploadProof(pendingProof);let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};if(photo)payload.photo_path=photo;let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='food'),res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);if(res.error)throw res.error;pendingProof=null;closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before);toast('Ernährung gespeichert ✓')}catch(err){if(likelyOffline(err)&&!photo){let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}}
 function closeModal(){pendingProof=null;$('#modalRoot').innerHTML=''}
 
 async function openProfile(){
@@ -1385,7 +1442,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.14.0';
+const FIT4US_VERSION='1.14.1';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
