@@ -3,6 +3,7 @@ const CFG=window.FIT4US_CONFIG||{};
 const configured=CFG.supabaseUrl && !CFG.supabaseUrl.startsWith('DEINE_') && CFG.supabaseKey && !CFG.supabaseKey.startsWith('DEIN_');
 let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
 let realtimeRefreshTimer=null,realtimeRefreshRunning=false,realtimeRefreshPending=false;
+let bootInFlight=null,bootUserId=null,authReady=false;
 let realtimeChannels=[];
 let feedVisibleCount=8,feedCommentOpen=new Set();
 
@@ -323,10 +324,16 @@ const fit4usAuthStorage={
 async function init(){
  if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/fit4us-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:fit4usAuthStorage}});
- const {data}=await sb.auth.getSession(); session=data.session;
- sb.auth.onAuthStateChange(async(evt,s)=>{session=s;if(!s){stopRealtime();showAuth()}else{await bootApp()}});
- if(session)await bootApp(); else showAuth();
- 
+ sb.auth.onAuthStateChange((evt,s)=>{
+  session=s;
+  if(evt==='SIGNED_OUT'||!s){authReady=true;bootInFlight=null;bootUserId=null;me=null;stopRealtime();showAuth();return}
+  if(evt==='TOKEN_REFRESHED'){authReady=true;return}
+  if(evt==='SIGNED_IN'||evt==='USER_UPDATED'||evt==='INITIAL_SESSION'){authReady=true;setTimeout(()=>safeBootApp(evt),0)}
+ });
+ const {data,error}=await sb.auth.getSession();
+ if(error)console.warn('Session restore:',error);
+ session=data?.session||null;authReady=true;
+ if(session)await safeBootApp('startup');else showAuth();
 }
 function showAuth(){
  $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/fit4us-logo.png">
@@ -355,8 +362,13 @@ async function login(e){
  e.preventDefault();
  let user=$('#loginUser').value.trim().toLowerCase(),pass=$('#loginPass').value,remember=$('#rememberLogin')?.checked!==false;
  setRememberLogin(remember);
- let {error}=await sb.auth.signInWithPassword({email:syntheticEmail(user),password:pass});
- if(error)showError($('#authErr'),'Benutzername oder Passwort ist nicht korrekt.');
+ let btn=e.submitter||e.target.querySelector('button[type=submit],button.cta');
+ if(btn)btn.disabled=true;
+ try{
+  let {data,error}=await sb.auth.signInWithPassword({email:syntheticEmail(user),password:pass});
+  if(error)return showError($('#authErr'),'Benutzername oder Passwort ist nicht korrekt.');
+  if(data?.session){session=data.session;await safeBootApp('login')}
+ }finally{if(btn)btn.disabled=false}
 }
 async function register(e){
  e.preventDefault();let username=$('#regUser').value.trim().toLowerCase(),first=$('#regFirst').value.trim(),last=$('#regLast').value.trim(),p=$('#regPass').value,p2=$('#regPass2').value;
@@ -366,22 +378,56 @@ async function register(e){
  if(!data.session)return showError($('#authErr'),'Konto angelegt, aber Supabase verlangt noch eine E-Mail-Bestätigung. Deaktiviere in Supabase Authentication → Providers → Email die E-Mail-Bestätigung, da Fit4Us technische Login-Adressen verwendet.');
  toast('Konto erstellt – wartet auf Admin-Freigabe ✓')
 }
-async function bootApp(){
- // Erst eigenes Profil laden: Pending-Nutzer dürfen per RLS nur dieses lesen.
- const {data:ownProfile,error}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
- if(error||!ownProfile){await sb.auth.signOut();return}
- me=ownProfile;
 
- if(!me.approved){
-   stopRealtime();
-   showPendingApproval();
-   return;
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+async function loadOwnProfileWithRetry(userId,attempts=3){
+ let lastError=null;
+ for(let i=0;i<attempts;i++){
+  try{
+   let {data,error}=await sb.from('profiles').select('*').eq('id',userId).maybeSingle();
+   if(!error&&data)return {data,error:null};
+   lastError=error||new Error('Profil nicht gefunden');
+  }catch(err){lastError=err}
+  if(i<attempts-1)await delay([300,800,1500][i]||1500);
  }
+ return {data:null,error:lastError};
+}
+function showLoadProblem(message='Fit4Us konnte deine Daten gerade nicht vollständig laden.'){
+ stopRealtime();
+ $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
+  <img class="authLogo" src="assets/fit4us-logo.png"><div style="font-size:44px">📡</div>
+  <h2>Verbindung kurz unterbrochen</h2><p>${escapeHtml(message)}</p>
+  <div class="notice small" style="text-align:left"><b>Du bleibst angemeldet.</b><br>Fit4Us zeigt bei einem kurzen Ladefehler keine leeren Ersatzdaten mehr an.</div>
+  <div class="grid" style="margin-top:18px"><button class="cta" onclick="safeBootApp('manual-retry',true)">Erneut laden</button><button class="secondary" onclick="logout()">Abmelden</button></div>
+ </div></div>`;
+}
+async function safeBootApp(reason='unknown',force=false){
+ if(!session?.user?.id)return;
+ let uid=session.user.id;
+ if(bootInFlight&&!force&&bootUserId===uid)return bootInFlight;
+ bootUserId=uid;
+ bootInFlight=(async()=>{
+  try{return await bootApp(reason)}
+  catch(err){console.error('Fit4Us boot failed:',reason,err);showLoadProblem('Deine Sitzung ist weiterhin gültig, aber die Fit4Us-Daten konnten gerade nicht vollständig geladen werden. Bitte erneut versuchen.')}
+  finally{bootInFlight=null}
+ })();
+ return bootInFlight;
+}
+
+async function bootApp(reason='unknown'){
+ if(!session?.user?.id)return;
+ let uid=session.user.id;
+ const {data:ownProfile,error}=await loadOwnProfileWithRetry(uid,3);
+ if(error||!ownProfile)throw error||new Error('Eigenes Profil konnte nicht geladen werden');
+ me=ownProfile;
+ if(!me.approved){stopRealtime();showPendingApproval();return}
  await loadData();
- try{let ps=await currentPushSubscription();if(ps)await sb.from('push_subscriptions').update({last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('endpoint',ps.endpoint).eq('user_id',me.id)}catch{}
- renderShell();
- await render();
- startRealtime();
+ if(!session?.user?.id||session.user.id!==uid)return;
+ try{
+  let ps=await currentPushSubscription();
+  if(ps)await sb.from('push_subscriptions').update({last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('endpoint',ps.endpoint).eq('user_id',me.id)
+ }catch(err){console.warn('Push subscription refresh:',err)}
+ renderShell();await render();startRealtime();
  setTimeout(()=>{flushOutbox(false);maybeShowOnboarding()},250);
 }
 function showPendingApproval(){
@@ -404,7 +450,8 @@ async function checkApproval(){
  else toast('Noch nicht freigeschaltet.');
 }
 async function loadData(){
- let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dua,dc,ach,cc,audit,rpool,rprop,rvotes,rpoolvotes,fc,wc,prefs,wish,fr,ww]=await Promise.all([
+ let names=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows'];
+ let results=await Promise.all([
   sb.from('profiles').select('*').order('created_at'),
   sb.from('entries').select('*').order('entry_date',{ascending:false}).order('created_at',{ascending:false}),
   sb.from('reactions').select('*'),sb.from('weekly_challenges').select('*'),sb.from('reward_choices').select('*'),
@@ -416,8 +463,17 @@ async function loadData(){
   sb.from('wish_credit_transactions').select('*').order('created_at',{ascending:false}),
   sb.from('feed_reactions').select('*'),sb.from('weekly_choice_windows').select('*')
  ]);
- if(p.error)throw p.error;
- profiles=(p.data||[]).filter(x=>x.approved || x.id===session.user.id || me?.is_admin);me=profiles.find(x=>x.id===session.user.id)||me;
+ let failed=results.map((r,i)=>r?.error?{name:names[i],error:r.error}:null).filter(Boolean);
+ if(failed.length){
+  console.warn('loadData incomplete:',failed.map(x=>x.name));
+  let err=new Error(`Daten konnten nicht vollständig geladen werden (${failed[0].name}).`);
+  err.cause=failed[0].error;throw err;
+ }
+ let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dua,dc,ach,cc,audit,rpool,rprop,rvotes,rpoolvotes,fc,wc,prefs,wish,fr,ww]=results;
+ let nextProfiles=(p.data||[]).filter(x=>x.approved||x.id===session.user.id||me?.is_admin);
+ let nextMe=nextProfiles.find(x=>x.id===session.user.id);
+ if(!nextMe)throw new Error('Eigenes Profil fehlt im vollständigen Datenabruf.');
+ profiles=nextProfiles;me=nextMe;
  entries=e.data||[];reactions=r.data||[];window.weekSelections=w.data||[];rewardChoices=reward.data||[];challengePool=cp.data||[];proposals=pr.data||[];proposalVotes=pv.data||[];ratings=cr.data||[];groupAssignments=ga.data||[];dailyAssignments=da.data||[];dailyUserAssignments=dua.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];adminAudit=audit.data||[];rewardPool=rpool.data||[];rewardProposals=rprop.data||[];rewardProposalVotes=rvotes.data||[];rewardPoolVotes=rpoolvotes.data||[];feedComments=fc.data||[];witnessConfirmations=wc.data||[];userPreferences=prefs.data||[];wishCreditTransactions=wish.data||[];feedReactions=fr.data||[];weeklyChoiceWindows=ww.data||[];
  await ensureAssignments();await syncAchievements();await syncWishCredit();applyTheme();
 }
@@ -425,9 +481,10 @@ function scheduleRealtimeRefresh(){
  clearTimeout(realtimeRefreshTimer);
  realtimeRefreshTimer=setTimeout(async()=>{
   if(realtimeRefreshRunning){realtimeRefreshPending=true;return}
+  if(!session?.user?.id||!me?.id)return;
   realtimeRefreshRunning=true;
-  try{await loadData();await render()}
-  catch(err){console.warn('Realtime refresh:',err)}
+  try{await loadData();await render();await navs()}
+  catch(err){console.warn('Realtime refresh retained previous data:',err)}
   finally{
    realtimeRefreshRunning=false;
    if(realtimeRefreshPending){realtimeRefreshPending=false;scheduleRealtimeRefresh()}
@@ -642,7 +699,11 @@ function closeMobileMenu(e){if(e&&e.target!==e.currentTarget)return;let r=$('#mo
 async function mobileGo(v){closeMobileMenu();await go(v)}
 
 async function go(v){if(v==='group'&&currentView!=='group')feedVisibleCount=8;if(v==='admin'&&!me?.is_admin){toast('Kein Admin-Zugriff.');v='home'}currentView=v;navs();await render()}
-async function logout(){await sb.auth.signOut()}
+async function logout(){
+ stopRealtime();bootInFlight=null;bootUserId=null;me=null;
+ try{await sb.auth.signOut({scope:'local'})}
+ catch(err){console.warn('Logout:',err);showAuth()}
+}
 async function render(){
  let c=$('#content'); if(!c)return;
  if(currentView==='home')c.innerHTML=await homeHTML();
@@ -1759,7 +1820,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.16.3';
+const FIT4US_VERSION='1.16.4';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
