@@ -1,0 +1,29 @@
+Fit4Us V1.17.0 – Rückwirkende Einträge
+=========================================
+Keine Supabase-Migration nötig.
+Keine Edge Function neu deployen.
+
+NEU
+- Aktivitäten, Schritte und Ernährung können jetzt rückwirkend eingetragen werden.
+- Zulässig: aktueller Tag sowie bis zu 3 Kalendertage zurück.
+- Standardmäßig ist immer der aktuelle Tag vorausgewählt.
+- Native HTML-Date-Eingabe:
+  iOS/iPadOS nutzt den systemeigenen Date-Picker,
+  Android entsprechend den nativen Browser-/System-Date-Picker.
+- Zukunft und ältere Tage als 3 Tage zurück sind nicht auswählbar.
+- Zusätzlich prüft die App den Datumsbereich vor dem Speichern.
+- Auch Aktivitäts-Schnellvorlagen fragen jetzt nach dem Datum.
+- Beim Bearbeiten bestehender Einträge bleibt deren ursprüngliches Datum unverändert.
+
+PUNKTE / CHALLENGES
+- Rückwirkende Einträge werden dem ausgewählten Kalendertag zugerechnet.
+- Schritte, Ernährung und Aktivitätspunkte landen dadurch korrekt in Woche/Monat/Streak.
+- Challenge-Erkennung prüft nach einem rückwirkenden Eintrag gezielt die betroffene Woche
+  und den betroffenen Monat statt nur die aktuelle Periode.
+- Haus-/Garten-Tageslimit wird anhand des ausgewählten Datums berechnet.
+
+UPDATE
+1. UPDATE-Dateien nach GitHub übernehmen.
+2. config.js NICHT überschreiben.
+3. Keine SQL-Migration.
+4. Keine Edge Function neu deployen.

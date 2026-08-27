@@ -563,8 +563,27 @@ function personalRecordsHTML(){let r=personalRecords();return `<div class="grid 
 
 function quickTemplates(){let cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);let from=fmtDate(cutoff),map=new Map();entries.filter(e=>e.user_id===me.id&&e.kind==='activity'&&e.entry_date>=from).forEach(e=>{let min=Math.max(5,Math.round((+e.minutes||0)/5)*5),dist=e.distance?Math.round(+e.distance*10)/10:null,key=`${e.activity}|${min}|${dist||''}`,x=map.get(key)||{activity:e.activity,minutes:min,distance:dist,count:0};x.count++;map.set(key,x)});return [...map.values()].sort((a,b)=>b.count-a.count).slice(0,3)}
 function quickTemplatesHTML(){let q=quickTemplates();if(!q.length)return '';return `<div class="sectionTitle"><h2>⚡ Schnell eintragen</h2><span class="pill">aus deinen letzten 30 Tagen</span></div><div class="quickTemplates">${q.map(x=>`<button class="quickTemplate" onclick="openQuickTemplate('${x.activity}',${x.minutes},${x.distance??'null'})"><span>${ACTIVITIES[x.activity]?.icon||'⚡'}</span><b>${escapeHtml(ACTIVITIES[x.activity]?.name||'Aktivität')}</b><small>${x.minutes} Min.${x.distance?` · ${x.distance} km`:''}</small></button>`).join('')}</div>`}
-function openQuickTemplate(activity,minutes,distance){let a=ACTIVITIES[activity];$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${a?.icon||'⚡'} Schnell eintragen</h2><button class="x" onclick="closeModal()">×</button></div><p><b>${escapeHtml(a?.name||'Aktivität')}</b> · ${minutes} Min.${distance?` · ${distance} km`:''}</p><div class="notice small">Zeuge: <b>Ehrenkodex</b> – dafür ist keine Bestätigung nötig.</div><button class="cta section" onclick="saveQuickActivity('${activity}',${minutes},${distance??'null'})">Jetzt eintragen</button></div></div>`}
-async function saveQuickActivity(activity,minutes,distance){let before=celebrationSnapshot(),payload={user_id:me.id,entry_date:fmtDate(),kind:'activity',activity,minutes,distance,witness:'Ehrenkodex',witness_user_id:null,points:calcCappedActivityPoints(me.id,fmtDate(),activity,minutes,distance,null)};let {error}=await sb.from('entries').insert(payload);if(error){if(likelyOffline(error)){queueEntry(payload);closeModal();toast('Offline gespeichert – wird später synchronisiert.');return}return toast(error.message)}closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before)}
+function openQuickTemplate(activity,minutes,distance){
+ let a=ACTIVITIES[activity],b=entryDateBounds();
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard">
+  <div class="modalHead"><h2>${a?.icon||'⚡'} Schnell eintragen</h2><button class="x" onclick="closeModal()">×</button></div>
+  <p><b>${escapeHtml(a?.name||'Aktivität')}</b> · ${minutes} Min.${distance?` · ${distance} km`:''}</p>
+  <div class="field"><label>Datum</label><input id="quickEntryDate" type="date" min="${b.min}" max="${b.max}" value="${b.max}" required><div class="tiny muted">Heute oder bis zu 3 Tage rückwirkend.</div></div>
+  <div class="notice small">Zeuge: <b>Ehrenkodex</b> – dafür ist keine Bestätigung nötig.</div>
+  <button class="cta section" onclick="saveQuickActivity('${activity}',${minutes},${distance??'null'})">Jetzt eintragen</button>
+ </div></div>`;
+}
+async function saveQuickActivity(activity,minutes,distance){
+ let before=celebrationSnapshot(),entryDate=selectedEntryDate('quickEntryDate'),
+     payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity,minutes,distance,witness:'Ehrenkodex',witness_user_id:null,points:calcCappedActivityPoints(me.id,entryDate,activity,minutes,distance,null)};
+ let {error}=await sb.from('entries').insert(payload);
+ if(error){
+  if(likelyOffline(error)){queueEntry(payload);closeModal();toast('Offline gespeichert – wird später synchronisiert.');return}
+  return toast(error.message);
+ }
+ closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);
+ toast(entryDate===fmtDate()?'Aktivität gespeichert ✓':'Aktivität rückwirkend gespeichert ✓');
+}
 
 function almostThereHTML(){let items=[],sel=currentSelection(),c=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;if(c){let [a,b]=challengeProgressForWeek(c,me.id,weekKey()),left=Math.max(0,b-a);if(left>0&&left<=Math.max(1,b*.34))items.push(`🎯 Noch <b>${left}</b> bis „${escapeHtml(c.title)}“`)}let gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey()),gl=Math.max(0,gc.target-gv),pct=gv/gc.target;if(gl>0&&pct>=.7)items.push(`👥 Crew fast am Ziel: noch <b>${Number(gl.toFixed?.(1)??gl).toLocaleString('de-DE')} ${escapeHtml(gc.unit||'')}</b>`);let pts=monthPoints(),next=MILESTONES.find(m=>m>pts);if(next&&next-pts<=10)items.push(`🎁 Noch <b>${next-pts} P</b> bis zur nächsten Belohnung`);return items.length?`<div class="card pad almostThere"><b>✨ Fast geschafft</b>${items.map(x=>`<div>${x}</div>`).join('')}</div>`:''}
 function todayEnoughHTML(){let p=pointsCollectedOnDate(fmtDate()),dc=dailyCompletedBy(me.id);if(p>=8||((todayEntry('steps')?.steps||0)>=10000&&todayActivityMinutes()>=30))return `<div class="todayEnough"><b>🌿 Starker Tag.</b><span>Dein Streak ist gesichert und du hast heute ${p} Punkt${p===1?'':'e'} gesammelt. Alles Weitere ist Bonus.</span></div>`;return ''}
@@ -1058,12 +1077,18 @@ async function completeDaily(e){
 
 function dailyPinnedHTML(){let c=dailyChallengeFor(),done=dailyCompletedBy(me.id),count=dailyCompletions.filter(x=>x.challenge_date===fmtDate()).length;if(!c)return '';return `<div class="card pad section dailyPinnedCard"><div class="challengeTop"><span class="pill">☀️ Tageschallenge</span><span class="points">+1 P</span></div><h3>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h3><div class="small muted">${escapeHtml(c.description)}</div>${done?`<div class="notice small" style="margin-top:10px">✓ Heute erledigt: „${escapeHtml(done.completion_text)}“</div>`:`<button class="cta" style="margin-top:10px" onclick="openDailyComplete()">Als erledigt markieren</button>`}</div>`}
 
-async function detectChallengeCompletions(){
+async function detectChallengeCompletions(entryDate=fmtDate()){
  if(!me?.id)return;
- let sel=currentSelection(),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;
- if(ch){let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());if(a>=b)await recordChallengeCompletion('weekly',ch.id,ch.title,ch.icon,ch.points,weekKey())}
- let gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey());
- if(gc&&gv>=gc.target)await recordChallengeCompletion('group',gc.dbId||gc.id,gc.title,gc.icon,gc.points,monthKey());
+ let affected=new Date(entryDate+'T12:00'),wk=weekKey(affected),mk=monthKey(affected);
+
+ let sel=selectionForWeek(wk),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;
+ if(ch){
+  let [a,b]=challengeProgressForWeek(ch,me.id,wk);
+  if(a>=b)await recordChallengeCompletion('weekly',ch.id,ch.title,ch.icon,ch.points,wk);
+ }
+
+ let gc=groupChallengeForPeriod(mk),gv=groupChallengeValueMonth(mk);
+ if(gc&&gv>=gc.target)await recordChallengeCompletion('group',gc.dbId||gc.id,gc.title,gc.icon,gc.points,mk);
 }
 
 async function adminSuspendChallenge(id){let opt=prompt('Sperrdauer in Tagen eingeben. Leer lassen = unbegrenzt bis zur Entsperrung.');if(opt===null)return;let permanent=opt.trim()==='',until=permanent?null:new Date(Date.now()+(Math.max(1,+opt)||1)*86400000).toISOString(),{error}=await sb.rpc('admin_set_challenge_disabled',{target_challenge:id,disabled_state:true,until_time:until,permanent_state:permanent});if(error)return toast(error.message);await logAdmin('challenge_suspended',{challenge_id:id,permanent,until});closeModal();await loadData();await render();toast(permanent?'Challenge unbegrenzt gesperrt':'Challenge temporär gesperrt')}
@@ -1776,10 +1801,51 @@ function entryTab(kind,btn){
  $('#entryForm').innerHTML=entryForm(kind);
  wireDynamic();
 }
+
+function entryDateBounds(){
+ let max=fmtDate(),d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-3);
+ return {min:fmtDate(d),max};
+}
+function entryDateField(e=null,id='entryDate'){
+ let b=entryDateBounds(),value=e?.entry_date||b.max;
+ if(e){
+  return `<div class="field"><label>Datum</label><input type="date" value="${escapeHtml(value)}" disabled><div class="tiny muted">Das Datum bestehender Einträge bleibt beim Bearbeiten unverändert.</div></div>`;
+ }
+ return `<div class="field"><label>Datum</label><input id="${id}" type="date" min="${b.min}" max="${b.max}" value="${b.max}" required><div class="tiny muted">Heute oder bis zu 3 Tage rückwirkend.</div></div>`;
+}
+function selectedEntryDate(id='entryDate'){
+ let b=entryDateBounds(),value=$('#'+id)?.value||b.max;
+ if(value<b.min||value>b.max)throw new Error('Einträge sind nur für heute oder bis zu 3 Tage rückwirkend möglich.');
+ return value;
+}
+
 function entryForm(kind,e=null){
- if(kind==='activity'){let a=e?.activity||'walk';return `<form class="form twoMobile" onsubmit="saveActivity(event,'${e?.id||''}')"><div class="field"><label>Aktivität</label><select id="aType" onchange="wireDynamic()">${Object.entries(ACTIVITIES).map(([k,x])=>`<option value="${k}" ${k===a?'selected':''}>${x.icon} ${x.name}</option>`).join('')}</select></div><div class="field"><label>Dauer (Min.)</label><input id="aMinutes" type="number" min="0" value="${e?.minutes||30}" oninput="livePts()"></div><div class="field" id="distWrap"><label>Distanz (km)</label><input id="aDistance" type="number" step=".1" min="0" value="${e?.distance||''}" oninput="livePts()"></div><div class="field"><label>Zeuge</label><select id="aWitness"><option value="honor" ${!e?.witness_user_id?'selected':''}>🤝 Ehrenkodex</option>${profiles.filter(p=>p.id!==me.id).map(p=>`<option value="${p.id}" ${e?.witness_user_id===p.id?'selected':''}>${escapeHtml(p.first_name)}</option>`).join('')}</select><div class="tiny muted">Ehrenkodex braucht keine Bestätigung. Bei einer Person erscheint eine freiwillige Zeugenanfrage.</div></div><div class="full"><label class="strong small">Optionaler Bildnachweis</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div><div id="livePts" class="notice full"></div><button class="cta full">${e?'Speichern':'Aktivität speichern'}</button></form>`}
- if(kind==='steps')return `<form class="form" onsubmit="saveSteps(event,'${e?.id||''}')"><div class="field"><label>Schritte</label><input id="sSteps" type="number" min="0" value="${e?.steps||''}" oninput="stepHint()" required></div><div id="stepHint" class="notice">Wird automatisch auf volle 100 abgerundet.</div><button class="cta">Schritte speichern</button></form>`;
- return `<form class="form" onsubmit="saveFood(event,'${e?.id||''}')"><div class="notice"><b>Ein Tages-Check-in.</b> Hake nur Ziele ab, die du vollständig erfüllt hast.</div><div class="toggleGrid">${FOOD.map(f=>`<label class="toggle"><input type="checkbox" name="food" value="${f.id}" ${(e?.food_items||[]).includes(f.id)?'checked':''}><span><b>${f.icon} ${f.title}</b><br><span class="tiny muted">${f.desc}</span></span></label>`).join('')}</div><div><label class="strong small">Optionales Foto für den Feed</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div><button class="cta">Ernährung speichern</button></form>`
+ if(kind==='activity'){
+  let a=e?.activity||'walk';
+  return `<form class="form twoMobile" onsubmit="saveActivity(event,'${e?.id||''}')">
+   ${entryDateField(e)}
+   <div class="field"><label>Aktivität</label><select id="aType" onchange="wireDynamic()">${Object.entries(ACTIVITIES).map(([k,x])=>`<option value="${k}" ${k===a?'selected':''}>${x.icon} ${x.name}</option>`).join('')}</select></div>
+   <div class="field"><label>Dauer (Min.)</label><input id="aMinutes" type="number" min="0" value="${e?.minutes||30}" oninput="livePts()"></div>
+   <div class="field" id="distWrap"><label>Distanz (km)</label><input id="aDistance" type="number" step=".1" min="0" value="${e?.distance||''}" oninput="livePts()"></div>
+   <div class="field"><label>Zeuge</label><select id="aWitness"><option value="honor" ${!e?.witness_user_id?'selected':''}>🤝 Ehrenkodex</option>${profiles.filter(p=>p.id!==me.id).map(p=>`<option value="${p.id}" ${e?.witness_user_id===p.id?'selected':''}>${escapeHtml(p.first_name)}</option>`).join('')}</select><div class="tiny muted">Ehrenkodex braucht keine Bestätigung. Bei einer Person erscheint eine freiwillige Zeugenanfrage.</div></div>
+   <div class="full"><label class="strong small">Optionaler Bildnachweis</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div>
+   <div id="livePts" class="notice full"></div>
+   <button class="cta full">${e?'Speichern':'Aktivität speichern'}</button>
+  </form>`;
+ }
+ if(kind==='steps')return `<form class="form" onsubmit="saveSteps(event,'${e?.id||''}')">
+  ${entryDateField(e)}
+  <div class="field"><label>Schritte</label><input id="sSteps" type="number" min="0" value="${e?.steps||''}" oninput="stepHint()" required></div>
+  <div id="stepHint" class="notice">Wird automatisch auf volle 100 abgerundet.</div>
+  <button class="cta">Schritte speichern</button>
+ </form>`;
+ return `<form class="form" onsubmit="saveFood(event,'${e?.id||''}')">
+  ${entryDateField(e)}
+  <div class="notice"><b>Ein Tages-Check-in.</b> Hake nur Ziele ab, die du vollständig erfüllt hast.</div>
+  <div class="toggleGrid">${FOOD.map(f=>`<label class="toggle"><input type="checkbox" name="food" value="${f.id}" ${(e?.food_items||[]).includes(f.id)?'checked':''}><span><b>${f.icon} ${f.title}</b><br><span class="tiny muted">${f.desc}</span></span></label>`).join('')}</div>
+  <div><label class="strong small">Optionales Foto für den Feed</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div>
+  <button class="cta">Ernährung speichern</button>
+ </form>`;
 }
 function wireDynamic(edit){let a=$('#aType');if(!a)return;let x=ACTIVITIES[a.value];$('#distWrap')?.classList.toggle('hidden',!x.distance);livePts()}
 function livePts(){let a=$('#aType')?.value,min=+($('#aMinutes')?.value||0),dist=+($('#aDistance')?.value||0),p=activityPoints(a,min,dist);if($('#livePts'))$('#livePts').innerHTML=`Diese Aktivität bringt aktuell <b>+${p} Punkte</b>.`}
@@ -1787,15 +1853,70 @@ function stepHint(){let raw=+($('#sSteps')?.value||0),rounded=Math.floor(raw/100
 function proofFile(input){let f=input.files?.[0];pendingProof=f||null;if(f){let url=URL.createObjectURL(f),img=$('#proofPreview');if(img){img.src=url;img.classList.remove('hidden')}}}
 async function uploadProof(file){if(!file)return null;let ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=`${me.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;let {error}=await sb.storage.from('proofs').upload(path,file,{upsert:false});if(error)throw error;return path}
 async function saveActivity(ev,id=''){
- ev.preventDefault();let before=celebrationSnapshot(),a=$('#aType').value,min=+$('#aMinutes').value,dist=$('#aDistance')&&!$('#distWrap').classList.contains('hidden')?+$('#aDistance').value:null,rawW=$('#aWitness').value,witnessId=rawW==='honor'?null:rawW,witnessName=witnessId?firstName(profileById(witnessId)):'Ehrenkodex',photo=null,entryDate=id?entries.find(x=>x.id===id).entry_date:fmtDate();
- try{if(pendingProof)photo=await uploadProof(pendingProof);let payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity:a,minutes:min,distance:dist,witness:witnessName,witness_user_id:witnessId,points:calcCappedActivityPoints(me.id,entryDate,a,min,dist,id||null)};if(photo)payload.photo_path=photo;
- let res=id?await sb.from('entries').update(payload).eq('id',id).eq('user_id',me.id).select().single():await sb.from('entries').insert(payload).select().single();if(res.error)throw res.error;let entry=res.data;
- if(witnessId){let wr=await sb.from('witness_confirmations').upsert({entry_id:entry.id,entry_owner_id:me.id,witness_user_id:witnessId,status:'pending',responded_at:null},{onConflict:'entry_id'});if(wr.error)console.warn(wr.error);if(prefFor(witnessId).notify_witness)notifyUser(witnessId,`${firstName(me)} nennt dich als Zeuge 👀`,`${ACTIVITIES[a]?.name||'Aktivität'} · ${min} Min.`,'witness')}else await sb.from('witness_confirmations').delete().eq('entry_id',entry.id).eq('entry_owner_id',me.id);
- pendingProof=null;closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before);toast('Gespeichert ✓')
- }catch(err){if(likelyOffline(err)&&!photo){let payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity:a,minutes:min,distance:dist,witness:witnessName,witness_user_id:witnessId,points:calcCappedActivityPoints(me.id,entryDate,a,min,dist,id||null)};queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}
+ ev.preventDefault();
+ let before=celebrationSnapshot(),a=$('#aType').value,min=+$('#aMinutes').value,
+     dist=$('#aDistance')&&!$('#distWrap').classList.contains('hidden')?+$('#aDistance').value:null,
+     rawW=$('#aWitness').value,witnessId=rawW==='honor'?null:rawW,
+     witnessName=witnessId?firstName(profileById(witnessId)):'Ehrenkodex',photo=null,
+     entryDate=id?entries.find(x=>x.id===id).entry_date:selectedEntryDate();
+ try{
+  if(pendingProof)photo=await uploadProof(pendingProof);
+  let payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity:a,minutes:min,distance:dist,witness:witnessName,witness_user_id:witnessId,points:calcCappedActivityPoints(me.id,entryDate,a,min,dist,id||null)};
+  if(photo)payload.photo_path=photo;
+  let res=id?await sb.from('entries').update(payload).eq('id',id).eq('user_id',me.id).select().single():await sb.from('entries').insert(payload).select().single();
+  if(res.error)throw res.error;
+  let entry=res.data;
+  if(witnessId){
+   let wr=await sb.from('witness_confirmations').upsert({entry_id:entry.id,entry_owner_id:me.id,witness_user_id:witnessId,status:'pending',responded_at:null},{onConflict:'entry_id'});
+   if(wr.error)console.warn(wr.error);
+   if(prefFor(witnessId).notify_witness)notifyUser(witnessId,`${firstName(me)} nennt dich als Zeuge 👀`,`${ACTIVITIES[a]?.name||'Aktivität'} · ${min} Min. · ${new Date(entryDate+'T12:00').toLocaleDateString('de-DE')}`,'witness')
+  }else await sb.from('witness_confirmations').delete().eq('entry_id',entry.id).eq('entry_owner_id',me.id);
+  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);toast(entryDate===fmtDate()?'Gespeichert ✓':'Rückwirkend gespeichert ✓');
+ }catch(err){
+  if(likelyOffline(err)&&!photo){
+   let payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity:a,minutes:min,distance:dist,witness:witnessName,witness_user_id:witnessId,points:calcCappedActivityPoints(me.id,entryDate,a,min,dist,id||null)};
+   queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.');
+  }
+  toast(err.message);
+ }
 }
-async function saveSteps(ev,id=''){ev.preventDefault();let before=celebrationSnapshot(),steps=Math.floor(+$('#sSteps').value/100)*100,payload={user_id:me.id,entry_date:id?entries.find(x=>x.id===id).entry_date:fmtDate(),kind:'steps',steps,points:stepPoints(steps)};try{let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===payload.entry_date&&e.kind==='steps'),res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);if(res.error)throw res.error;closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before);toast('Schritte gespeichert ✓')}catch(err){if(likelyOffline(err)){queueEntry(payload,id?'update':'insert',id||null);closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}}
-async function saveFood(ev,id=''){ev.preventDefault();let before=celebrationSnapshot(),items=$$('input[name=food]:checked').map(x=>x.value),photo=null,entryDate=id?entries.find(x=>x.id===id).entry_date:fmtDate();try{if(pendingProof)photo=await uploadProof(pendingProof);let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};if(photo)payload.photo_path=photo;let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='food'),res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);if(res.error)throw res.error;pendingProof=null;closeModal();await loadData();await detectChallengeCompletions();await render();maybeCelebrate(before);toast('Ernährung gespeichert ✓')}catch(err){if(likelyOffline(err)&&!photo){let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}toast(err.message)}}
+async function saveSteps(ev,id=''){
+ ev.preventDefault();
+ let before=celebrationSnapshot(),steps=Math.floor(+$('#sSteps').value/100)*100,
+     entryDate=id?entries.find(x=>x.id===id).entry_date:selectedEntryDate(),
+     payload={user_id:me.id,entry_date:entryDate,kind:'steps',steps,points:stepPoints(steps)};
+ try{
+  let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='steps'),
+      res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);
+  if(res.error)throw res.error;
+  closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);
+  toast(entryDate===fmtDate()?'Schritte gespeichert ✓':'Schritte rückwirkend gespeichert ✓');
+ }catch(err){
+  if(likelyOffline(err)){queueEntry(payload,id?'update':'insert',id||null);closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}
+  toast(err.message);
+ }
+}
+async function saveFood(ev,id=''){
+ ev.preventDefault();
+ let before=celebrationSnapshot(),items=$$('input[name=food]:checked').map(x=>x.value),photo=null,
+     entryDate=id?entries.find(x=>x.id===id).entry_date:selectedEntryDate();
+ try{
+  if(pendingProof)photo=await uploadProof(pendingProof);
+  let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};
+  if(photo)payload.photo_path=photo;
+  let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='food'),
+      res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);
+  if(res.error)throw res.error;
+  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);
+  toast(entryDate===fmtDate()?'Ernährung gespeichert ✓':'Ernährung rückwirkend gespeichert ✓');
+ }catch(err){
+  if(likelyOffline(err)&&!photo){
+   let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};
+   queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.');
+  }
+  toast(err.message);
+ }
+}
 function closeModal(){pendingProof=null;$('#modalRoot').innerHTML=''}
 
 async function openProfile(){
@@ -1820,7 +1941,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.16.4';
+const FIT4US_VERSION='1.17.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
