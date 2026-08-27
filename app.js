@@ -1,7 +1,7 @@
 
 const CFG=window.FIT4US_CONFIG||{};
 const configured=CFG.supabaseUrl && !CFG.supabaseUrl.startsWith('DEINE_') && CFG.supabaseKey && !CFG.supabaseKey.startsWith('DEIN_');
-let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
+let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], feedDayPosts=[], currentView='home', pendingProof=null, pendingAvatar=null, signedCache={};
 let realtimeRefreshTimer=null,realtimeRefreshRunning=false,realtimeRefreshPending=false;
 let bootInFlight=null,bootUserId=null,authReady=false;
 let realtimeChannels=[];
@@ -450,7 +450,7 @@ async function checkApproval(){
  else toast('Noch nicht freigeschaltet.');
 }
 async function loadData(){
- let names=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows'];
+ let names=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows','feed_day_posts'];
  let results=await Promise.all([
   sb.from('profiles').select('*').order('created_at'),
   sb.from('entries').select('*').order('entry_date',{ascending:false}).order('created_at',{ascending:false}),
@@ -461,7 +461,7 @@ async function loadData(){
   sb.from('reward_pool').select('*').order('points_required'),sb.from('reward_proposals').select('*').order('created_at',{ascending:false}),sb.from('reward_proposal_votes').select('*'),sb.from('reward_pool_votes').select('*'),
   sb.from('feed_comments').select('*').order('created_at'),sb.from('witness_confirmations').select('*'),sb.from('user_preferences').select('*'),
   sb.from('wish_credit_transactions').select('*').order('created_at',{ascending:false}),
-  sb.from('feed_reactions').select('*'),sb.from('weekly_choice_windows').select('*')
+  sb.from('feed_reactions').select('*'),sb.from('weekly_choice_windows').select('*'),sb.from('feed_day_posts').select('*').order('post_date',{ascending:false}).order('updated_at',{ascending:false})
  ]);
  let failed=results.map((r,i)=>r?.error?{name:names[i],error:r.error}:null).filter(Boolean);
  if(failed.length){
@@ -469,12 +469,12 @@ async function loadData(){
   let err=new Error(`Daten konnten nicht vollständig geladen werden (${failed[0].name}).`);
   err.cause=failed[0].error;throw err;
  }
- let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dua,dc,ach,cc,audit,rpool,rprop,rvotes,rpoolvotes,fc,wc,prefs,wish,fr,ww]=results;
+ let [p,e,r,w,reward,cp,pr,pv,cr,ga,da,dua,dc,ach,cc,audit,rpool,rprop,rvotes,rpoolvotes,fc,wc,prefs,wish,fr,ww,fdp]=results;
  let nextProfiles=(p.data||[]).filter(x=>x.approved||x.id===session.user.id||me?.is_admin);
  let nextMe=nextProfiles.find(x=>x.id===session.user.id);
  if(!nextMe)throw new Error('Eigenes Profil fehlt im vollständigen Datenabruf.');
  profiles=nextProfiles;me=nextMe;
- entries=e.data||[];reactions=r.data||[];window.weekSelections=w.data||[];rewardChoices=reward.data||[];challengePool=cp.data||[];proposals=pr.data||[];proposalVotes=pv.data||[];ratings=cr.data||[];groupAssignments=ga.data||[];dailyAssignments=da.data||[];dailyUserAssignments=dua.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];adminAudit=audit.data||[];rewardPool=rpool.data||[];rewardProposals=rprop.data||[];rewardProposalVotes=rvotes.data||[];rewardPoolVotes=rpoolvotes.data||[];feedComments=fc.data||[];witnessConfirmations=wc.data||[];userPreferences=prefs.data||[];wishCreditTransactions=wish.data||[];feedReactions=fr.data||[];weeklyChoiceWindows=ww.data||[];
+ entries=e.data||[];reactions=r.data||[];window.weekSelections=w.data||[];rewardChoices=reward.data||[];challengePool=cp.data||[];proposals=pr.data||[];proposalVotes=pv.data||[];ratings=cr.data||[];groupAssignments=ga.data||[];dailyAssignments=da.data||[];dailyUserAssignments=dua.data||[];dailyCompletions=dc.data||[];achievements=ach.data||[];challengeCompletions=cc.data||[];adminAudit=audit.data||[];rewardPool=rpool.data||[];rewardProposals=rprop.data||[];rewardProposalVotes=rvotes.data||[];rewardPoolVotes=rpoolvotes.data||[];feedComments=fc.data||[];witnessConfirmations=wc.data||[];userPreferences=prefs.data||[];wishCreditTransactions=wish.data||[];feedReactions=fr.data||[];weeklyChoiceWindows=ww.data||[];feedDayPosts=fdp.data||[];
  await ensureAssignments();await syncAchievements();await syncWishCredit();applyTheme();
 }
 function scheduleRealtimeRefresh(){
@@ -622,13 +622,45 @@ async function currentPushSubscription(){
  if(!pushSupported())return null;
  try{let reg=await navigator.serviceWorker.ready;return await reg.pushManager.getSubscription()}catch{return null}
 }
+
+function pushPlatformLabel(){
+ if(isIOS())return 'iPhone / iPad';
+ if(/Android/i.test(navigator.userAgent))return 'Android';
+ if(/Windows/i.test(navigator.userAgent))return 'Windows';
+ if(/Macintosh|Mac OS X/i.test(navigator.userAgent))return 'macOS';
+ return 'Browser';
+}
+function pushBrowserLabel(){
+ let ua=navigator.userAgent;
+ if(/EdgA|Edg\//.test(ua))return 'Edge';
+ if(/CriOS|Chrome\//.test(ua))return 'Chrome';
+ if(/FxiOS|Firefox\//.test(ua))return 'Firefox';
+ if(/Safari\//.test(ua)&&!/Chrome|CriOS|Edg/.test(ua))return 'Safari';
+ return 'Webbrowser';
+}
+async function pushDiagnostics(){
+ let supported=pushSupported(),perm=supported?Notification.permission:'unavailable',reg=null,sub=null;
+ if(supported){
+  try{reg=await navigator.serviceWorker.getRegistration();sub=reg?await reg.pushManager.getSubscription():null}catch{}
+ }
+ return {supported,perm,reg,sub,platform:pushPlatformLabel(),browser:pushBrowserLabel(),standalone:isStandalonePWA()};
+}
+
 async function pushDeviceStatusHTML(){
- let hint=pushInstallHint();
- if(hint)return `<div class="pushStatus warning"><b>🔔 Push noch nicht verfügbar</b><span>${escapeHtml(hint)}</span></div>`;
- let sub=await currentPushSubscription(),perm=Notification.permission;
- if(sub&&perm==='granted')return `<div class="pushStatus success"><b>✅ Push auf diesem Gerät aktiv</b><span>Fit4Us darf echte System-Benachrichtigungen senden.</span><div class="uploadBtns"><button class="secondary" onclick="sendTestPush()">Test-Push senden</button><button class="secondary danger" onclick="disablePushNotifications()">Auf diesem Gerät deaktivieren</button></div></div>`;
- if(perm==='denied')return `<div class="pushStatus error"><b>🔕 Benachrichtigungen blockiert</b><span>Erlaube Mitteilungen in den System-/Browser-Einstellungen und öffne Fit4Us danach erneut.</span></div>`;
- return `<div class="pushStatus"><b>🔔 Push auf diesem Gerät</b><span>Aktiviere echte Benachrichtigungen für Kommentare, Challenges, Zeugenanfragen und Erinnerungen.</span><button class="cta" onclick="enablePushNotifications()">Push-Benachrichtigungen aktivieren</button></div>`;
+ let hint=pushInstallHint(),d=await pushDiagnostics(),
+     ok=d.supported&&d.perm==='granted'&&!!d.reg?.active&&!!d.sub,
+     rows=`<div class="pushDiagGrid">
+      <div><span>Gerät</span><b>${escapeHtml(d.platform)}</b></div>
+      <div><span>Browser</span><b>${escapeHtml(d.browser)}</b></div>
+      <div><span>Berechtigung</span><b>${d.perm==='granted'?'✅ erlaubt':d.perm==='denied'?'⛔ blockiert':d.perm==='default'?'○ offen':'—'}</b></div>
+      <div><span>Service Worker</span><b>${d.reg?.active?'✅ aktiv':'○ nicht aktiv'}</b></div>
+      <div><span>Push-Abo</span><b>${d.sub?'✅ aktiv':'○ nicht aktiv'}</b></div>
+      <div><span>WebApp</span><b>${d.standalone?'✅ installiert':'Browser'}</b></div>
+     </div>`;
+ if(hint)return `<div class="pushStatus warning"><b>🔔 Push noch nicht verfügbar</b><span>${escapeHtml(hint)}</span>${rows}</div>`;
+ if(ok)return `<div class="pushStatus success"><b>✅ Push auf diesem Gerät technisch aktiv</b><span>${d.platform==='Android'?'Android Web Push ist korrekt registriert. Mit dem Test-Push prüfst du zusätzlich die tatsächliche Zustellung.':'Fit4Us darf echte System-Benachrichtigungen senden.'}</span>${rows}<div class="uploadBtns"><button class="secondary" onclick="sendTestPush()">Test-Push senden</button><button class="secondary danger" onclick="disablePushNotifications()">Auf diesem Gerät deaktivieren</button></div></div>`;
+ if(d.perm==='denied')return `<div class="pushStatus error"><b>🔕 Benachrichtigungen blockiert</b><span>Erlaube Mitteilungen in den System-/Browser-Einstellungen und öffne Fit4Us danach erneut.</span>${rows}</div>`;
+ return `<div class="pushStatus"><b>🔔 Push auf diesem Gerät</b><span>Web Push wird auf iOS und Android unterstützt. Die Diagnose unten zeigt, welcher Teil auf diesem Gerät noch fehlt.</span>${rows}<button class="cta" onclick="enablePushNotifications()">Push-Benachrichtigungen aktivieren</button></div>`;
 }
 async function enablePushNotifications(){
  let hint=pushInstallHint();if(hint)return toast(hint);
@@ -681,7 +713,7 @@ async function finishOnboarding(){await savePreferencePatch({onboarded:true});cl
 
 function startRealtime(){
  stopRealtime();
- ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows'].forEach(table=>{
+ ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows','feed_day_posts'].forEach(table=>{
   let ch=sb.channel('fit4us-'+table).on('postgres_changes',{event:'*',schema:'public',table},scheduleRealtimeRefresh).subscribe();
   realtimeChannels.push(ch)
  })
@@ -1229,10 +1261,38 @@ function currentWeekSnapshotHTML(){
  return `<div class="weekSnapshot card pad"><div><small>DEINE WOCHE</small><b>${s.points} P</b></div><div><span>Rang</span><b>#${pos}</b></div><div><span>Aktive Tage</span><b>${active}</b></div><div><span>Aktivitäten</span><b>${s.activities||entries.filter(e=>e.user_id===me.id&&e.entry_date>=weekKey()&&e.entry_date<=fmtDate(endOfWeek())&&e.kind==='activity').length}</b></div><button class="textLink" onclick="go('me')">Details →</button></div>`;
 }
 
+
+function nextStepTarget(steps){
+ steps=Math.floor((+steps||0)/100)*100;
+ if(steps<5000)return 5000;
+ if(steps<7500)return 7500;
+ if(steps<10000)return 10000;
+ if(steps<12500)return 12500;
+ if(steps<15000)return 15000;
+ return 15000+(Math.floor((steps-15000)/5000)+1)*5000;
+}
+function todayNudgeHTML(){
+ let ds=fmtDate(),stepEntry=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='steps').sort((a,b)=>(+b.steps||0)-(+a.steps||0))[0],
+     steps=+stepEntry?.steps||0,next=nextStepTarget(steps),remain=Math.max(0,next-steps),
+     food=entries.find(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='food'),foodCount=(food?.food_items||[]).length,
+     dailyDone=!!dailyCompletedBy(me.id,ds),secured=activeDay(ds,me.id),
+     currentStepPts=stepPoints(steps),nextStepPts=stepPoints(next);
+ let stepText=remain>0?`Noch ${remain.toLocaleString('de-DE')} bis ${nextStepPts>currentStepPts?`+${nextStepPts} P`: 'zum nächsten Ziel'}`:'Nächstes Schrittziel erreicht';
+ return `<section class="todayNudge card">
+  <div class="todayNudgeHead"><div><small>DEIN HEUTE</small><h2>Was fehlt noch?</h2></div><span class="streakSecure ${secured?'done':''}">${secured?'✓ Streak gesichert':'🔥 Streak noch offen'}</span></div>
+  <div class="todayNudgeGrid">
+   <button onclick="openEntry('steps')"><span>👟</span><div><b>${steps.toLocaleString('de-DE')} Schritte</b><small>${escapeHtml(stepText)}</small></div><strong>›</strong></button>
+   <button onclick="openEntry('food')"><span>🥗</span><div><b>${foodCount}/${FOOD.length} Ernährungsziele</b><small>${foodCount===FOOD.length?'Alles geschafft ✓':`${FOOD.length-foodCount} Ziele noch offen`}</small></div><strong>›</strong></button>
+   <button onclick="${dailyDone?`go('challenges')`:`openDailyComplete()`}"><span>☀️</span><div><b>Tageschallenge</b><small>${dailyDone?'Erledigt ✓':'Noch offen · +1 P'}</small></div><strong>›</strong></button>
+  </div>
+ </section>`;
+}
+
 async function homeHTML(){
  resetFeedCount();
  return `<div class="homeHero"><div><small>FIT4US · ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'})}</small><h1>Hallo ${escapeHtml(firstName(me))} 👋</h1><p>Heute zählt, was dir gut tut.</p></div><div class="homeHeroMark">✦</div></div>
  ${homeMetricsHTML()}
+ ${todayNudgeHTML()}
  ${outboxHTML()}${pendingWitnessHTML()}
  ${votingBannerHTML()}
  <div class="sectionTitle compactTitle"><h2>Heute</h2><button class="textLink" onclick="go('challenges')">Challenges →</button></div>
@@ -1243,7 +1303,7 @@ async function homeHTML(){
  ${currentWeekSnapshotHTML()}
  ${almostThereHTML()}
  <details class="card pad section disclosureCard"><summary><b>📝 Meine Einträge heute</b><span class="tiny muted">bearbeiten oder löschen</span></summary><div class="section">${await todayOwnEntriesHTML()}</div></details>
- <div class="sectionTitle compactTitle"><h2>Neu in deiner Crew</h2><button class="textLink" onclick="go('group')">Alle Aktivitäten →</button></div>
+ <div class="sectionTitle compactTitle"><h2>Neu in deiner Crew</h2><button class="textLink" onclick="go('group')">Zum Crew Feed →</button></div>
  <div class="homeFeed">${await feedHTML(3)}</div>`;
 }
 
@@ -1304,55 +1364,128 @@ async function groupHTML(){
  ${crewMomentHTML()}
  ${c?`<div class="weekRecap section"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}
  <div class="grid grid2 section rankingGrid"><div><div class="sectionTitle compactTitle"><h2>Wochenranking</h2></div><div class="card pad">${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</div></div><div><div class="sectionTitle compactTitle"><h2>Monatsranking</h2></div><div class="card pad">${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</div></div></div>
- <div class="sectionTitle compactTitle"><h2>Crew Feed</h2><span class="pill">Neueste zuerst</span></div>
+ <div class="sectionTitle compactTitle"><h2>Crew Feed</h2><span class="pill">1 Person · 1 Tag · 1 Block</span></div>
  <div class="groupFeed">${await feedHTML(feedVisibleCount)}</div>`;
 }
+
 function feedDateTime(item){
  let date=item?.created_at?new Date(item.created_at):null;
- if(date&&!Number.isNaN(date.getTime())){
-  return date.toLocaleDateString('de-DE')+' · '+date.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
- }
+ if(date&&!Number.isNaN(date.getTime()))return date.toLocaleDateString('de-DE')+' · '+date.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
  return item?.entry_date?new Date(item.entry_date+'T12:00:00').toLocaleDateString('de-DE'):'';
+}
+function localDateFromISO(value){
+ if(!value)return '';
+ try{
+  return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
+ }catch{return String(value).slice(0,10)}
 }
 function loadMoreFeed(){feedVisibleCount+=8;render()}
 function resetFeedCount(){feedVisibleCount=8}
 function openPhotoLightbox(url){$('#modalRoot').innerHTML=`<div class="modal photoLightbox" onclick="if(event.target===this)closeModal()"><div class="photoLightboxInner"><button class="x photoClose" onclick="closeModal()">×</button><img src="${url}" alt="Foto groß"></div></div>`}
-
-async function feedHTML(limit=feedVisibleCount){
- let items=[
-  ...entries.filter(e=>(e.kind==='activity'&&feedAllowed(e.user_id,'activity'))||(e.kind==='food'&&feedAllowed(e.user_id,'food'))||(e.kind==='steps'&&feedAllowed(e.user_id,'steps'))).map(e=>({type:'entry',date:e.created_at||e.entry_date,obj:e})),
-  ...dailyCompletions.filter(d=>feedAllowed(d.user_id,'daily')).map(d=>({type:'daily',date:d.created_at,obj:d})),
-  ...challengeCompletions.filter(x=>x.challenge_kind!=='daily').map(c=>({type:'challenge',date:c.created_at,obj:c})),
-  ...achievements.filter(a=>feedAllowed(a.user_id,'achievement')).map(a=>({type:'achievement',date:a.created_at||a.achieved_on,obj:a}))
- ].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
- let total=items.length;items=items.slice(0,limit);
- if(!items.length)return `<div class="card pad muted">Noch keine Feed-Einträge.</div>`;
- let out='';
- for(let item of items){
-  if(item.type==='achievement'){
-   let a=item.obj,p=profileById(a.user_id),av=await avatarHTML(p);
-   out+=`<article class="card feedItem specialFeed achievementFeed"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">Achievement · ${new Date(a.achieved_on+'T12:00').toLocaleDateString('de-DE')}</div></div></div><div class="feedText"><b>${escapeHtml(a.emoji)} ${escapeHtml(a.title)}</b></div><div class="feedActions">${feedReactionBar('achievement',a.id,a.user_id)}${commentsHTML('achievement',a.id,a.user_id)}</div></article>`;continue
-  }
-  if(item.type==='challenge'){
-   let c=item.obj,p=profileById(c.user_id),av=await avatarHTML(p);
-   out+=`<article class="card feedItem specialFeed challengeFeed"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">Challenge geschafft · ${new Date(c.created_at).toLocaleDateString('de-DE')}</div></div><span class="points">+${c.points} P</span></div><div class="feedText"><b>${escapeHtml(c.emoji||'🎯')} ${escapeHtml(c.title)}</b><div class="small muted">${c.challenge_kind==='group'?'Gemeinsame Monatschallenge erfüllt 🎉':'Persönliche Wochenchallenge erfüllt 🎉'}</div></div><div class="feedActions">${feedReactionBar('challenge',c.id,c.user_id)}${commentsHTML('challenge',c.id,c.user_id)}</div></article>`;continue
-  }
-  if(item.type==='daily'){
-   let d=item.obj,p=profileById(d.user_id),av=await avatarHTML(p),c=challengePool.find(x=>x.id===d.challenge_pool_id),
-       target=d.target_user_id?profileById(d.target_user_id):null,desc=dailyTemplateText(c?.description||'',target),
-       photo=d.photo_path?await signed('proofs',d.photo_path):null;
-   out+=`<article class="card feedItem dailyFeed ${photo?'hasMedia':''}"><div class="feedContent"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">${new Date(d.challenge_date+'T12:00').toLocaleDateString('de-DE')} · Tageschallenge</div></div><span class="points">+1 P</span></div><div class="feedText"><b>${escapeHtml(c?.emoji||'☀️')} ${escapeHtml(dailyTemplateText(c?.name||'Tageschallenge',target))}</b><div class="muted small">${escapeHtml(desc)}</div>${target?`<div class="tiny muted">👥 Bezug: ${escapeHtml(firstName(target))}</div>`:''}<blockquote>„${escapeHtml(d.completion_text)}“</blockquote></div>${d.user_id===me.id&&d.challenge_date.startsWith(monthKey())?`<div class="entryActions"><button class="react danger" onclick="undoDailyCompletion('${d.id}')">↩ Zurücknehmen</button></div>`:''}<div class="feedActions">${feedReactionBar('daily',d.id,d.user_id)}${commentsHTML('daily',d.id,d.user_id)}</div></div>${photo?`<button class="feedMediaButton" onclick="openPhotoLightbox('${photo}')"><img class="feedPhoto" src="${photo}" alt="Foto zur Tageschallenge"></button>`:''}</article>`;continue
-  }
-  let e=item.obj,p=profileById(e.user_id),av=await avatarHTML(p),photo=e.photo_path?await signed('proofs',e.photo_path):null,content='';
+function dayLabel(ds){
+ if(ds===fmtDate())return 'Heute';
+ let y=new Date();y.setDate(y.getDate()-1);if(ds===fmtDate(y))return 'Gestern';
+ return new Date(ds+'T12:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'});
+}
+function streakOnDate(userId,ds){
+ if(!activeDay(ds,userId))return 0;
+ let n=0,d=new Date(ds+'T12:00');
+ while(activeDay(fmtDate(d),userId)){n++;d.setDate(d.getDate()-1)}
+ return n;
+}
+function dayPostParts(post){
+ let uid=post.user_id,ds=post.post_date;
+ let es=entries.filter(e=>e.user_id===uid&&e.entry_date===ds&&(
+   (e.kind==='activity'&&feedAllowed(uid,'activity'))||
+   (e.kind==='food'&&feedAllowed(uid,'food'))||
+   (e.kind==='steps'&&feedAllowed(uid,'steps'))
+ ));
+ let dailies=dailyCompletions.filter(d=>d.user_id===uid&&d.challenge_date===ds&&feedAllowed(uid,'daily'));
+ let ch=challengeCompletions.filter(c=>c.user_id===uid&&c.challenge_kind!=='daily'&&localDateFromISO(c.created_at)===ds);
+ let ach=achievements.filter(a=>a.user_id===uid&&a.achieved_on===ds&&feedAllowed(uid,'achievement'));
+ let streakEvent=streakBonusEvents(uid).find(x=>x.date===ds)||null;
+ return {es,dailies,ch,ach,streakEvent};
+}
+function daySummaryRowHTML(row){
+ if(row.type==='entry'){
+  let e=row.obj;
   if(e.kind==='food'){
    let selected=(e.food_items||[]).map(id=>FOOD.find(f=>f.id===id)).filter(Boolean);
-   content=`<b>🥗 Ernährung · ${selected.length}/${FOOD.length}</b><div class="foodChips">${selected.map(f=>`<span class="foodGoalChip">${f.icon} ${escapeHtml(f.title)}</span>`).join('')}</div>`
-  }else if(e.kind==='steps')content=`<b>👟 ${(+e.steps||0).toLocaleString('de-DE')} Schritte</b>`;
-  else content=`<b>${ACTIVITIES[e.activity]?.icon||'⚡'} ${escapeHtml(ACTIVITIES[e.activity]?.name||e.activity)} · ${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}</b>${witnessBadge(e)}`;
-  out+=`<article class="card feedItem ${photo?'hasMedia':''}"><div class="feedContent"><div class="feedHead">${av}<div><b>${escapeHtml(firstName(p))}</b><div class="tiny muted">${feedDateTime(e)}</div></div><span class="points">+${e.points} P</span></div><div class="feedText">${content}</div>${entryEditControls(e)}<div class="feedActions">${feedReactionBar('entry',e.id,e.user_id)}${commentsHTML('entry',e.id,e.user_id)}</div></div>${photo?`<button class="feedMediaButton" onclick="openPhotoLightbox('${photo}')"><img class="feedPhoto" src="${photo}" alt="Feed-Foto"></button>`:''}</article>`;
+   return `<div class="dayFeedRow"><span class="dayFeedIcon">🥗</span><div><b>Ernährung · ${selected.length}/${FOOD.length}</b><small>${selected.map(f=>f.icon).join(' ')||'Check-in ohne Ziel'}</small></div><strong>+${+e.points||0} P</strong></div>`;
+  }
+  if(e.kind==='steps')return `<div class="dayFeedRow"><span class="dayFeedIcon">👟</span><div><b>${(+e.steps||0).toLocaleString('de-DE')} Schritte</b><small>Schrittziel des Tages</small></div><strong>+${+e.points||0} P</strong></div>`;
+  let a=ACTIVITIES[e.activity];
+  return `<div class="dayFeedRow"><span class="dayFeedIcon">${a?.icon||'⚡'}</span><div><b>${escapeHtml(a?.name||e.activity)}</b><small>${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}${e.witness?` · ${escapeHtml(e.witness)}`:''}</small></div><strong>+${+e.points||0} P</strong></div>`;
  }
- return out+`${total>limit?`<div class="feedMore"><button class="secondary" onclick="loadMoreFeed()">Weitere Aktivitäten laden</button><span class="tiny muted">${Math.min(limit,total)} von ${total}</span></div>`:''}`;
+ if(row.type==='daily'){
+  let d=row.obj,c=challengePool.find(x=>x.id===d.challenge_pool_id),target=d.target_user_id?profileById(d.target_user_id):null;
+  return `<div class="dayFeedRow accentDaily"><span class="dayFeedIcon">${escapeHtml(c?.emoji||'☀️')}</span><div><b>${escapeHtml(dailyTemplateText(c?.name||'Tageschallenge',target))}</b><small>☀️ Tageschallenge · „${escapeHtml(d.completion_text)}“</small></div><strong>+${+d.points||1} P</strong></div>`;
+ }
+ if(row.type==='challenge'){
+  let c=row.obj;
+  return `<div class="dayFeedRow accentChallenge"><span class="dayFeedIcon">${escapeHtml(c.emoji||'🎯')}</span><div><b>${escapeHtml(c.title)}</b><small>${c.challenge_kind==='group'?'Crew-Mission geschafft':'Wochenchallenge geschafft'}</small></div><strong>+${+c.points||0} P</strong></div>`;
+ }
+ if(row.type==='achievement'){
+  let a=row.obj;
+  return `<div class="dayFeedRow accentAchievement"><span class="dayFeedIcon">${escapeHtml(a.emoji||'🏅')}</span><div><b>${escapeHtml(a.title)}</b><small>Achievement erreicht</small></div><strong>🏅</strong></div>`;
+ }
+ let s=row.obj;
+ return `<div class="dayFeedRow accentStreak"><span class="dayFeedIcon">🔥</span><div><b>${s.days}-Tage-Streak</b><small>Streak-Meilenstein erreicht</small></div><strong>+${s.points} P</strong></div>`;
 }
+async function dayPhotoGalleryHTML(parts){
+ let paths=[
+  ...parts.es.filter(e=>e.photo_path).map(e=>e.photo_path),
+  ...parts.dailies.filter(d=>d.photo_path).map(d=>d.photo_path)
+ ];
+ let uniq=[...new Set(paths)].slice(0,6);
+ if(!uniq.length)return '';
+ let urls=[];
+ for(let path of uniq){let u=await signed('proofs',path);if(u)urls.push(u)}
+ if(!urls.length)return '';
+ return `<div class="dayPhotoStrip">${urls.map((u,i)=>`<button onclick="openPhotoLightbox('${u}')" aria-label="Foto ${i+1} öffnen"><img src="${u}" alt="Tagesfoto"></button>`).join('')}</div>`;
+}
+async function feedHTML(limit=feedVisibleCount){
+ let posts=feedDayPosts.slice().filter(post=>{
+  let p=profileById(post.user_id);if(!p?.approved)return false;
+  let parts=dayPostParts(post);
+  return parts.es.length||parts.dailies.length||parts.ch.length||parts.ach.length||parts.streakEvent;
+ }).sort((a,b)=>String(b.post_date).localeCompare(String(a.post_date))||String(b.updated_at||'').localeCompare(String(a.updated_at||'')));
+ let total=posts.length;posts=posts.slice(0,limit);
+ if(!posts.length)return `<div class="card pad muted">Noch keine Feed-Tage.</div>`;
+ let out='';
+ for(let post of posts){
+  let p=profileById(post.user_id),av=await avatarHTML(p),parts=dayPostParts(post),rows=[
+   ...parts.es.map(x=>({type:'entry',obj:x})),
+   ...parts.dailies.map(x=>({type:'daily',obj:x})),
+   ...parts.ch.map(x=>({type:'challenge',obj:x})),
+   ...parts.ach.map(x=>({type:'achievement',obj:x})),
+   ...(parts.streakEvent?[{type:'streak',obj:parts.streakEvent}]:[])
+  ];
+  rows.sort((a,b)=>{
+   let rank={entry:1,daily:2,challenge:3,achievement:4,streak:5};
+   return rank[a.type]-rank[b.type];
+  });
+  let visible=rows.slice(0,4),hidden=rows.slice(4),
+      pts=pointsBetween(post.user_id,post.post_date,post.post_date),
+      run=streakOnDate(post.user_id,post.post_date),
+      photos=await dayPhotoGalleryHTML(parts),
+      dateText=dayLabel(post.post_date),
+      details=hidden.length?`<details class="dayFeedMore"><summary>+ ${hidden.length} weitere ${hidden.length===1?'Aktivität':'Einträge'}</summary><div class="dayFeedRows">${hidden.map(daySummaryRowHTML).join('')}</div></details>`:'';
+  out+=`<article class="card feedItem dayFeedCard">
+   <div class="feedContent">
+    <div class="dayFeedHead">${av}<div class="dayFeedWho"><b>${escapeHtml(firstName(p))}</b><small>${escapeHtml(dateText)} · ${new Date(post.post_date+'T12:00').toLocaleDateString('de-DE')}</small></div>
+     <div class="dayFeedScore"><span class="dayStreak">🔥 ${run} ${run===1?'Tag':'Tage'}</span><strong>+${pts} P</strong></div>
+    </div>
+    <div class="dayFeedRows">${visible.map(daySummaryRowHTML).join('')}</div>
+    ${details}
+    ${photos}
+    <div class="feedActions">${feedReactionBar('day',post.id,post.user_id)}${commentsHTML('day',post.id,post.user_id)}</div>
+   </div>
+  </article>`;
+ }
+ return out+`${total>limit?`<div class="feedMore"><button class="secondary" onclick="loadMoreFeed()">Weitere Tage laden</button><span class="tiny muted">${Math.min(limit,total)} von ${total} Tagesblöcken</span></div>`:''}`;
+}
+
 async function toggleFeedReaction(type,itemId,emoji,ownerId){
  let old=feedReactions.find(r=>r.item_type===type&&r.item_id===itemId&&r.user_id===me.id&&r.emoji===emoji);
  let q=old
@@ -1681,7 +1814,7 @@ async function logAdmin(action,details={}){
  }
 }
 async function buildBackup(){
- let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows'],backup={format:'Fit4Us Backup',version:FIT4US_VERSION,created_at:new Date().toISOString(),tables:{}};
+ let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows','feed_day_posts'],backup={format:'Fit4Us Backup',version:FIT4US_VERSION,created_at:new Date().toISOString(),tables:{}};
  for(let t of tables){let {data,error}=await sb.from(t).select('*');if(error)throw new Error('Backup-Fehler bei '+t+': '+error.message);backup.tables[t]=data||[]}
  return backup
 }
@@ -1703,7 +1836,7 @@ async function restoreBackup(){
  try{
   let current=await buildBackup();downloadBackupObject(current,'pre-restore');
   await logAdmin('restore_started',{source_version:data.version||'unknown'});
-  let order=['weekly_choice_windows','feed_reactions','wish_credit_transactions','feed_comments','witness_confirmations','challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','daily_user_challenge_assignments','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','achievements','challenge_proposals','challenge_pool','user_preferences'];
+  let order=['weekly_choice_windows','feed_day_posts','feed_reactions','wish_credit_transactions','feed_comments','witness_confirmations','challenge_completions','daily_challenge_completions','challenge_proposal_votes','challenge_ratings','reactions','reward_choices','entries','daily_user_challenge_assignments','daily_challenge_assignments','group_challenge_assignments','weekly_challenges','achievements','challenge_proposals','challenge_pool','user_preferences'];
   for(let t of order){if(data.tables[t]){await clearTable(t); if(data.tables[t].length){let {error}=await sb.from(t).insert(data.tables[t]);if(error)throw new Error(t+': '+error.message)}}}
   await logAdmin('restore_completed',{source_version:data.version||'unknown'});
   closeModal();await loadData();await render();toast('Restore abgeschlossen ✓')
@@ -1941,7 +2074,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.17.0';
+const FIT4US_VERSION='1.18.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){

@@ -1,65 +1,79 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import webpush from 'npm:web-push@3.6.7'
 
-const cors={
- 'Access-Control-Allow-Origin':'*',
- 'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type',
- 'Access-Control-Allow-Methods':'POST, OPTIONS',
-}
-
-function json(body:unknown,status=200){
- return new Response(JSON.stringify(body),{status,headers:{...cors,'content-type':'application/json'}})
+const tz='Europe/Berlin'
+function localParts(now=new Date()){
+ const p=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hour12:false}).formatToParts(now)
+ const get=(t:string)=>p.find(x=>x.type===t)?.value||''
+ return {date:`${get('year')}-${get('month')}-${get('day')}`,hour:Number(get('hour'))}
 }
 
 Deno.serve(async req=>{
- if(req.method==='OPTIONS')return new Response('ok',{headers:cors})
- if(req.method!=='POST')return json({error:'Method not allowed'},405)
  try{
-  const url=Deno.env.get('SUPABASE_URL')!,anon=Deno.env.get('SUPABASE_ANON_KEY')!,service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const vapidPublic=Deno.env.get('VAPID_PUBLIC_KEY'),vapidPrivate=Deno.env.get('VAPID_PRIVATE_KEY')
-  if(!vapidPublic||!vapidPrivate)return json({error:'VAPID secrets missing'},500)
+  if(req.headers.get('x-cron-secret')!==Deno.env.get('CRON_SECRET'))return new Response('Unauthorized',{status:401})
+  const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}})
+  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:fit4us@example.invalid',Deno.env.get('VAPID_PUBLIC_KEY')!,Deno.env.get('VAPID_PRIVATE_KEY')!)
+  const {date,hour}=localParts()
 
-  const auth=req.headers.get('Authorization')||''
-  const userClient=createClient(url,anon,{global:{headers:{Authorization:auth}},auth:{persistSession:false}})
-  const {data:{user},error:userError}=await userClient.auth.getUser()
-  if(userError||!user)return json({error:'Unauthorized'},401)
+  const {data:profiles}=await admin.from('profiles').select('id,first_name').eq('approved',true)
+  const {data:prefs}=await admin.from('user_preferences').select('*')
+  const {data:subs}=await admin.from('push_subscriptions').select('*')
+  let sentCount=0,removedCount=0
 
-  const {data:caller}=await userClient.from('profiles').select('id,approved').eq('id',user.id).maybeSingle()
-  if(!caller?.approved)return json({error:'Approved user required'},403)
-
-  const {target_user_id,title,body,category='challenges',url:targetUrl,tag}=await req.json()
-  if(!target_user_id||!title)return json({error:'Bad request'},400)
-
-  const admin=createClient(url,service,{auth:{persistSession:false}})
-  const {data:target}=await admin.from('profiles').select('id,approved').eq('id',target_user_id).maybeSingle()
-  if(!target?.approved)return json({error:'Target user not found'},404)
-
-  const {data:pref}=await admin.from('user_preferences').select('*').eq('user_id',target_user_id).maybeSingle()
-  const prefMap:Record<string,string>={
-   reactions:'notify_reactions',witness:'notify_witness',streak:'notify_streak',
-   votes:'notify_votes',rewards:'notify_rewards',challenges:'notify_challenges'
-  }
-  const prefKey=prefMap[category]||'notify_challenges'
-  if(pref&&pref[prefKey]===false)return json({sent:0,disabled:true})
-
-  const {data:subs}=await admin.from('push_subscriptions').select('*').eq('user_id',target_user_id)
-  if(!subs?.length)return json({sent:0,no_subscriptions:true})
-
-  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:fit4us@example.invalid',vapidPublic,vapidPrivate)
-  let sent=0,removed=0,failed=0
-  for(const s of subs){
-   try{
-    await webpush.sendNotification(
-     {endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},
-     JSON.stringify({title,body,url:targetUrl||'https://banditosjar.github.io/Fit4Us/',tag:tag||category})
-    )
-    sent++
-   }catch(e){
-    const status=(e as any)?.statusCode
-    if(status===404||status===410){await admin.from('push_subscriptions').delete().eq('id',s.id);removed++}
-    else{console.error('push failed',status,(e as any)?.message);failed++}
+  async function send(uid:string,title:string,body:string,tag:string){
+   for(const s of (subs||[]).filter(x=>x.user_id===uid)){
+    try{
+     await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body,url:'https://banditosjar.github.io/Fit4Us/',tag}))
+     sentCount++
+    }catch(e){
+     const status=(e as any)?.statusCode
+     if(status===404||status===410){await admin.from('push_subscriptions').delete().eq('id',s.id);removedCount++}
+     else console.error('push failed',status,(e as any)?.message)
+    }
    }
   }
-  return json({sent,removed,failed})
- }catch(e){console.error(e);return json({error:String((e as any)?.message||e)},500)}
+
+  // Automatisch gewählte Wochenchallenge: Der Cron läuft stündlich. Nur eine
+  // Auswahl aus dem letzten 70-Minuten-Fenster wird gemeldet, damit derselbe
+  // Auto-Pick beim nächsten Stundenlauf nicht erneut gepusht wird.
+  const cutoff=new Date(Date.now()-70*60*1000).toISOString()
+  const {data:autoRows}=await admin.from('weekly_choice_windows')
+   .select('week_key,auto_selected_at')
+   .eq('auto_selected',true).gte('auto_selected_at',cutoff)
+  for(const row of autoRows||[]){
+   const {data:wc}=await admin.from('weekly_challenges').select('challenge_id').eq('week_key',row.week_key).maybeSingle()
+   let title='Wochenchallenge'
+   if(wc?.challenge_id){
+    const {data:pool}=await admin.from('challenge_pool').select('name').eq('slug',wc.challenge_id).maybeSingle()
+    if(pool?.name)title=pool.name
+   }
+   for(const p of profiles||[]){
+    const pr=(prefs||[]).find(x=>x.user_id===p.id)
+    if(pr?.notify_challenges!==false)await send(p.id,'🎲 Wochenchallenge automatisch gewählt',`Fit4Us hat „${title}“ aus den drei Optionen ausgewählt.`,'weekly-auto-'+row.week_key)
+   }
+  }
+
+  // 08:00: nur erinnern, wenn die persönliche Tageschallenge noch NICHT erledigt ist.
+  if(hour===8){
+   const {data:done}=await admin.from('daily_challenge_completions').select('user_id').eq('challenge_date',date)
+   const completed=new Set((done||[]).map(x=>x.user_id))
+   for(const p of profiles||[]){
+    const pr=(prefs||[]).find(x=>x.user_id===p.id)
+    if(pr?.notify_challenges!==false&&!completed.has(p.id))await send(p.id,'☀️ Deine Fit4Us-Challenge wartet',`Guten Morgen ${p.first_name} – deine persönliche Tageschallenge ist noch offen.`,'daily-'+date)
+   }
+  }
+
+  // 19:00: nur wenn heute noch kein positiver Punkt gesammelt wurde.
+  if(hour===19){
+   const {data:entries}=await admin.from('entries').select('user_id,points').eq('entry_date',date).gt('points',0)
+   const {data:daily}=await admin.from('daily_challenge_completions').select('user_id,points').eq('challenge_date',date)
+   const active=new Set([...(entries||[]).map(x=>x.user_id),...(daily||[]).filter(x=>(x.points||1)>0).map(x=>x.user_id)])
+   for(const p of profiles||[]){
+    const pr=(prefs||[]).find(x=>x.user_id===p.id)
+    if(pr?.notify_streak!==false&&!active.has(p.id))await send(p.id,'🔥 Dein Streak ist heute noch offen',`Ein einziger Punkt reicht heute, ${p.first_name}.`,'streak-'+date)
+   }
+  }
+
+  return Response.json({ok:true,hour,date,sent:sentCount,removed:removedCount,auto_weekly:(autoRows||[]).length})
+ }catch(e){console.error(e);return new Response(String((e as any)?.message||e),{status:500})}
 })

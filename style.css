@@ -634,3 +634,94 @@ input[type="date"]{
 html[data-theme="dark"] input[type="date"]{
  color-scheme:dark;
 }
+
+
+/* =========================================================
+   V1.18.0 – Daily Crew Feed, Home Nudges & card spacing audit
+   ========================================================= */
+
+/* Saubere vertikale Rhythmik: direkte Karten kleben nicht mehr aneinander. */
+#content > .card + .card,
+#content > .card + details.card,
+#content > details.card + .card{margin-top:14px}
+.grid > .card,.rankingGrid .card,.challengeStack > *, .homeChallengeGrid > *, .crewSnapshot > *{min-width:0}
+.card{overflow:visible}
+.feedItem{overflow:hidden}
+
+/* Home: Was fehlt mir heute noch? */
+.todayNudge{margin-top:14px;padding:17px}
+.todayNudgeHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.todayNudgeHead small{font-weight:900;letter-spacing:.08em;color:var(--muted)}
+.todayNudgeHead h2{margin:3px 0 0;font-size:19px}
+.streakSecure{white-space:nowrap;font-size:12px;font-weight:900;padding:7px 10px;border-radius:999px;background:#fff4e4;color:#9a5b00;border:1px solid #f1d4a7}
+.streakSecure.done{background:#ecf9f3;color:#187353;border-color:#bfe6d5}
+.todayNudgeGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}
+.todayNudgeGrid button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);border-radius:15px;background:var(--surface-2);color:inherit;padding:11px 12px;font:inherit;cursor:pointer;min-width:0}
+.todayNudgeGrid button>span{font-size:22px}
+.todayNudgeGrid button b,.todayNudgeGrid button small{display:block}
+.todayNudgeGrid button b{font-size:13px}
+.todayNudgeGrid button small{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.35}
+.todayNudgeGrid button>strong{color:var(--muted);font-size:18px}
+
+/* Neuer Tagesfeed */
+.dayFeedCard{border-radius:22px}
+.dayFeedHead{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center}
+.dayFeedWho b,.dayFeedWho small{display:block}
+.dayFeedWho small{font-size:11px;color:var(--muted);margin-top:2px}
+.dayFeedScore{display:flex;align-items:center;gap:9px;justify-self:end}
+.dayFeedScore>strong{font-size:19px;color:var(--teal);white-space:nowrap}
+.dayStreak{display:inline-flex;align-items:center;white-space:nowrap;padding:6px 9px;border-radius:999px;background:#fff4e8;border:1px solid #f0d8b9;color:#8f5609;font-size:11px;font-weight:900;line-height:1.1}
+.dayFeedRows{display:grid;gap:7px;margin-top:13px}
+.dayFeedRow{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px 10px;border:1px solid var(--line);background:var(--surface-2);border-radius:14px;min-width:0}
+.dayFeedIcon{width:34px;height:34px;border-radius:11px;background:var(--surface-1);display:grid;place-items:center;font-size:19px}
+.dayFeedRow b,.dayFeedRow small{display:block;min-width:0}
+.dayFeedRow b{font-size:13px;line-height:1.25}
+.dayFeedRow small{font-size:10px;line-height:1.35;color:var(--muted);margin-top:2px;white-space:normal;overflow-wrap:anywhere}
+.dayFeedRow>strong{font-size:12px;color:var(--teal);white-space:nowrap}
+.dayFeedRow.accentDaily{background:linear-gradient(135deg,#fff9e9,var(--surface-2))}
+.dayFeedRow.accentChallenge{background:linear-gradient(135deg,#f4efff,var(--surface-2))}
+.dayFeedRow.accentAchievement{background:linear-gradient(135deg,#fffbea,var(--surface-2))}
+.dayFeedRow.accentStreak{background:linear-gradient(135deg,#fff2e8,var(--surface-2))}
+.dayFeedMore{margin-top:8px}
+.dayFeedMore>summary{cursor:pointer;color:var(--teal);font-weight:900;font-size:12px;padding:6px 2px;list-style:none}
+.dayFeedMore>summary::-webkit-details-marker{display:none}
+.dayFeedMore>summary:after{content:' ↓'}
+.dayFeedMore[open]>summary:after{content:' ↑'}
+.dayFeedMore .dayFeedRows{margin-top:5px}
+.dayPhotoStrip{display:flex;gap:7px;overflow-x:auto;overscroll-behavior-inline:contain;margin-top:11px;padding-bottom:2px}
+.dayPhotoStrip button{border:0;padding:0;background:transparent;flex:0 0 92px;height:78px;border-radius:13px;overflow:hidden;cursor:zoom-in}
+.dayPhotoStrip img{width:100%;height:100%;object-fit:cover;display:block}
+.dayFeedCard .feedActions{margin-top:13px}
+
+/* Push Diagnose */
+.pushDiagGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:11px 0}
+.pushDiagGrid>div{padding:8px 9px;border-radius:11px;background:rgba(255,255,255,.55);border:1px solid var(--line);min-width:0}
+.pushDiagGrid span,.pushDiagGrid b{display:block}
+.pushDiagGrid span{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.pushDiagGrid b{font-size:11px;margin-top:2px;overflow-wrap:anywhere}
+
+/* Dunkelmodus: alle neuen Karten und Streak-Badges sauber. */
+html[data-theme="dark"] .todayNudgeGrid button,
+html[data-theme="dark"] .dayFeedRow,
+html[data-theme="dark"] .dayFeedIcon{background:#101b24;border-color:#30414e}
+html[data-theme="dark"] .dayFeedRow.accentDaily{background:linear-gradient(135deg,#302a1c,#101b24)}
+html[data-theme="dark"] .dayFeedRow.accentChallenge{background:linear-gradient(135deg,#272137,#101b24)}
+html[data-theme="dark"] .dayFeedRow.accentAchievement{background:linear-gradient(135deg,#302c1a,#101b24)}
+html[data-theme="dark"] .dayFeedRow.accentStreak{background:linear-gradient(135deg,#35251c,#101b24)}
+html[data-theme="dark"] .dayStreak{background:#34271e;border-color:#60452e;color:#f3bc78}
+html[data-theme="dark"] .streakSecure{background:#35291d;border-color:#655038;color:#efbd7b}
+html[data-theme="dark"] .streakSecure.done{background:#17352c;border-color:#2d6856;color:#8ed9ba}
+html[data-theme="dark"] .pushDiagGrid>div{background:#101b24;border-color:#30414e}
+
+@media(max-width:760px){
+ .todayNudgeGrid{grid-template-columns:1fr}
+ .dayFeedHead{grid-template-columns:auto 1fr}
+ .dayFeedScore{grid-column:1/-1;justify-self:stretch;justify-content:space-between;padding-top:7px;border-top:1px solid var(--line)}
+ .pushDiagGrid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:420px){
+ .todayNudgeHead{flex-direction:column}
+ .dayFeedRow{grid-template-columns:32px minmax(0,1fr) auto;padding:8px}
+ .dayFeedIcon{width:32px;height:32px}
+ .pushDiagGrid{grid-template-columns:1fr}
+}
