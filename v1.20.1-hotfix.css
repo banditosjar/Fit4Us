@@ -1,0 +1,37 @@
+/* Movo V1.20.1 visual hotfix */
+/* Always-visible branding, independent from missing raster logo assets */
+.topBrandBtn{display:inline-flex!important;align-items:center;gap:10px!important;min-height:44px!important;border:0!important;background:transparent!important;color:inherit!important;position:relative!important;padding-left:48px!important}
+.topBrandBtn img{display:none!important}
+.topBrandBtn:before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:40px;height:40px;background:url('./assets/movo-symbol.svg') center/contain no-repeat}
+.topBrandBtn:after{content:"Movo";font-size:24px;font-weight:950;letter-spacing:-.055em;color:var(--ink)}
+.movoTop{display:flex!important;min-height:62px!important;height:auto!important;padding:6px 0 10px!important}
+.sideBrand{display:none!important}
+.movoSide:before{content:"Movo";display:block;padding:2px 10px 0 62px;margin:0 0 2px;min-height:48px;background:url('./assets/movo-symbol.svg') 8px center/45px 45px no-repeat;font-size:29px;font-weight:950;line-height:48px;letter-spacing:-.055em;color:#fff}
+.movoSide .sideClaim{margin-top:4px!important}
+.authLogo{display:none!important}.authCard:before{content:"Movo";display:block;margin:0 auto 18px;padding-top:78px;background:url('./assets/movo-symbol.svg') top center/74px 74px no-repeat;text-align:center;font-size:34px;font-weight:950;letter-spacing:-.055em;color:var(--ink)}
+
+/* Missing component styling: browser defaults were visible as white rectangles */
+.quickTemplates{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+.quickTemplate{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:9px 12px;box-shadow:var(--shadow-sm);font:inherit;text-align:left;transition:transform .18s ease,background .18s ease,border-color .18s ease}
+.quickTemplate:hover{transform:translateY(-1px);border-color:rgba(32,201,151,.35)}
+.quickTemplate span{font-size:15px}.quickTemplate b{font-size:11px}.quickTemplate small{font-size:10px;color:var(--muted);white-space:nowrap}
+.socialAction{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;font:inherit;font-size:11px;font-weight:900;transition:.18s ease}
+.socialAction span{font-size:11px}.socialAction.active{background:#dff7ee;border-color:#8bd9bf;color:#087d62}
+.weekSnapshot>div{background:var(--surface-2)!important;border:1px solid var(--line)}
+.secondary,.react,.uploadBtn,.choice,.rewardPreviewItem,.mobileMenuSheet,.modalCard,.tabs button.active{background:var(--surface);color:var(--ink)}
+.pill,.chip,.bonusPill{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.feedMore .secondary{background:var(--surface);color:var(--ink)}
+
+html[data-theme="dark"] .quickTemplate,html[data-theme="dark"] .socialAction,html[data-theme="dark"] .secondary,html[data-theme="dark"] .react,html[data-theme="dark"] .uploadBtn,html[data-theme="dark"] .choice,html[data-theme="dark"] .weekSnapshot>div,html[data-theme="dark"] .rewardPreviewItem,html[data-theme="dark"] .mobileMenuSheet,html[data-theme="dark"] .modalCard,html[data-theme="dark"] .tabs button.active{background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important}
+html[data-theme="dark"] .pill,html[data-theme="dark"] .chip,html[data-theme="dark"] .bonusPill{background:#15322f!important;color:#a9bbb6!important;border-color:rgba(255,255,255,.08)!important}
+html[data-theme="dark"] .socialAction.active,html[data-theme="dark"] .react.active{background:#173c34!important;color:#79e2bf!important;border-color:#2e715f!important}
+html[data-theme="dark"] .topBrandBtn:after,html[data-theme="dark"] .authCard:before{color:#f3fbf7!important}
+html[data-theme="dark"] .quickTemplate small,html[data-theme="dark"] .weekSnapshot small,html[data-theme="dark"] .weekSnapshot span{color:#91a5a0!important}
+
+/* Consistent vertical rhythm */
+.movoSection + .movoSection,.homeFlow>.movoSection + .movoSection,.crewFlow>* + *,.challengeFlow>* + *,.profileFlow>* + *{margin-top:24px!important}
+.crewStage + .crewFlow,.homeStage + .homeFlow,.challengeStage + .challengeFlow,.profileStage + .profileFlow{margin-top:24px!important}
+.crewMomentCard{margin-top:18px!important}
+
+@media(min-width:1080px){.movoTop{display:flex!important;margin-bottom:18px!important;padding:0 2px 10px!important;border-bottom:1px solid var(--line)}.topBrandBtn:after{font-size:24px}}
+@media(max-width:520px){.quickTemplates{display:grid;grid-template-columns:1fr}.quickTemplate{border-radius:16px;grid-template-columns:auto 1fr auto}.topBrandBtn:after{font-size:21px}.topBrandBtn{padding-left:43px!important}.topBrandBtn:before{width:36px;height:36px}}
