@@ -1,0 +1,107 @@
+from pathlib import Path
+import re, json
+
+V='1.20.2'
+
+p=Path('app.js')
+s=p.read_text()
+s=re.sub(r"const FIT4US_VERSION='[^']+';", "const FIT4US_VERSION='1.20.2';", s, count=1)
+s=s.replace('<div class="card pad section" style="border-color:#ffd4d4;background:#fffafa"><h3>⚠️ Daten zurücksetzen</h3>', '<div class="card pad section resetDangerCard"><h3>⚠️ Daten zurücksetzen</h3>')
+s=s.replace('assets/movo-logo.png','assets/movo-wordmark-dark.svg')
+p.write_text(s)
+
+p=Path('sw.js')
+s=p.read_text()
+s=re.sub(r"const VERSION='[^']+'", "const VERSION='1.20.2'", s, count=1)
+s=re.sub(r"const CACHE='[^']+'", "const CACHE='fit4us-v1.20.2'", s, count=1)
+s=s.replace("'./assets/movo-logo.png'", "'./assets/movo-wordmark-dark.svg'")
+s=s.replace("'./assets/movo-icon.png'", "'./assets/movo-symbol.svg'")
+p.write_text(s)
+
+p=Path('index.html')
+s=p.read_text()
+s=re.sub(r'Movo · V[\d.]+','Movo · V1.20.2',s)
+s=re.sub(r'\?v=[\d.]+','?v=1.20.2',s)
+s=re.sub(r'<link rel="stylesheet" href="\./v1\.20\.1-hotfix\.css\?v=[^"]+">','',s)
+s=s.replace('assets/movo-logo-dark.png','assets/movo-wordmark-dark.svg')
+s=s.replace('<link rel="icon" href="./assets/favicon.ico">','<link rel="icon" type="image/svg+xml" href="./assets/movo-symbol.svg">')
+p.write_text(s)
+
+Path('version.json').write_text(json.dumps({'version':'1.20.2','build':'Movo V1.20.2 (intern Fit4Us)','cache':'fit4us-v1.20.2'},indent=2,ensure_ascii=False))
+
+css=Path('style.css').read_text()
+old=Path('v1.20.1-hotfix.css')
+if old.exists(): css += '\n\n' + old.read_text()
+css += r'''
+
+/* =========================================================
+   V1.20.2 – Full UI consistency & dark-mode audit
+   ========================================================= */
+button,select,input,textarea{color:var(--ink)}
+select,input,textarea{background:var(--surface);border-color:var(--line)}
+.rankMe{background:linear-gradient(135deg,#e5f8f0,#f5fbf8)!important;border:1px solid rgba(32,201,151,.22)}
+.rankRow{min-height:52px}.rankRow>div{min-width:0}.rankRow b{color:inherit}
+.focusChallenge{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.focusChallenge.daily{background:linear-gradient(145deg,#fffaf0,#fff)}
+.focusChallenge.weekly{background:linear-gradient(145deg,#eef8fb,#fff)}
+.focusChallenge.monthly{background:linear-gradient(145deg,#eaf9f3,#fff)}
+.focusChallenge p{color:var(--muted)}.focusChallenge b{color:var(--ink)}.challengeBadge{color:var(--muted)}
+.notice{color:#123b31}.rulesIntro{display:grid;gap:5px}.rulesIntro .muted{line-height:1.55}
+.disclosureCard .choice{min-height:52px;display:flex;align-items:center;line-height:1.4}
+.historyTop{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px;padding:6px 0 4px}
+.historyTop small{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--muted)}.historyTop h1{margin:3px 0 0}
+.segmented{display:inline-grid;grid-auto-flow:column;gap:3px;padding:4px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px}
+.segmented button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:8px 13px;font-weight:900;font-size:11px}
+.segmented button.active{background:var(--surface);color:#087d62;box-shadow:var(--shadow-sm)}
+.monthNav{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;gap:10px;margin:10px 0 18px;padding:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:18px}
+.monthNav>button{width:42px;height:42px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:24px;line-height:1}
+.monthNav>div{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
+.monthNav select{max-width:210px;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:var(--surface);color:var(--ink)}
+.historyHero,.monthHero,.statBig{display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(125deg,#dff7ee,#f8fcfa);border:1px solid rgba(32,201,151,.18);color:#123a31;box-shadow:var(--shadow-sm)}
+.historyHero small{font-size:10px;font-weight:900;letter-spacing:.08em;color:#638179}.historyHero h2{font-size:30px;margin:5px 0;color:#0c4034}.historyHero>span{font-size:44px;filter:drop-shadow(0 8px 18px rgba(9,44,42,.12))}
+.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:15px;border-radius:17px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-sm);display:grid;gap:2px}.kpi b{font-size:22px;color:var(--ink)}.kpi small{font-size:10px;color:var(--muted)}
+.histWeek{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.histWeek:last-child{border-bottom:0}.histWeek small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.personalMonth span{border:1px solid var(--line)}
+.adminOnly{border-color:rgba(255,202,128,.42);background:linear-gradient(145deg,#fffaf1,var(--surface))}
+.resetDangerCard{border-color:rgba(224,91,91,.34)!important;background:linear-gradient(145deg,#fff4f4,var(--surface))!important}.resetDangerCard h3{color:#a64040}.resetDangerCard .grid{gap:9px}.resetDangerCard .secondary{width:100%;justify-content:center}
+.dayFeedRow.accentStreak{border:1px solid rgba(255,154,80,.14)}.dayFeedRow.accentDaily{border:1px solid rgba(255,202,128,.12)}.dayFeedCard,.dayFeedRows{min-width:0}
+.recordsGrid,.rewardPeopleGrid,.onboardingGrid{display:grid;gap:10px}
+.recordMini,.rewardPersonCard,.settingsCard,.proposalVotingCard,.rewardProposalVotingCard,.rewardPoolCard,.rewardMilestoneCard,.dailyPinnedCard,.votingBanner,.outboxNotice,.witnessRequest{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow-sm)}
+.settingToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.settingToggle:last-child{border-bottom:0}
+.heatmap{display:grid;grid-template-columns:repeat(14,minmax(12px,1fr));gap:4px;overflow:auto;padding:4px 0}.heatCell{aspect-ratio:1;border-radius:4px;background:var(--surface-2);border:1px solid var(--line)}.heatLegend{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;margin-top:8px}
+.rewardPersonHead,.rewardNextHead,.wishHistoryRow,.rewardPersonStats,.bonusBreakdown,.crewBreakdown{display:flex;align-items:center;justify-content:space-between;gap:10px}
+html[data-theme="dark"] .rankMe{background:linear-gradient(135deg,#153b32,#102b27)!important;border-color:#286452!important;color:#f0fbf6!important}
+html[data-theme="dark"] .focusChallenge{border-color:rgba(255,255,255,.09)!important;color:#eef7f3!important}
+html[data-theme="dark"] .focusChallenge.daily{background:linear-gradient(145deg,#2c2a1e,#112724)!important}
+html[data-theme="dark"] .focusChallenge.weekly{background:linear-gradient(145deg,#172c33,#112724)!important}
+html[data-theme="dark"] .focusChallenge.monthly{background:linear-gradient(145deg,#15342c,#112724)!important}
+html[data-theme="dark"] .focusChallenge h2,html[data-theme="dark"] .focusChallenge b{color:#eef7f3!important}
+html[data-theme="dark"] .focusChallenge p,html[data-theme="dark"] .challengeBadge{color:#a6b8b3!important}
+html[data-theme="dark"] .progress{background:#243b37}
+html[data-theme="dark"] .notice{background:#12332c!important;color:#c9eee1!important;border-color:#285e50!important}
+html[data-theme="dark"] .error{background:#3a2022!important;color:#ffd0d0!important;border-color:#6c3539!important}
+html[data-theme="dark"] .crewMoment{background:linear-gradient(135deg,#2c291e,#122724)!important;color:#f4f8f5!important;border-color:rgba(255,202,128,.16)!important}
+html[data-theme="dark"] .crewMoment>span{background:#42351f!important}html[data-theme="dark"] .crewMoment small{color:#d7b477!important}
+html[data-theme="dark"] .streakSecure,html[data-theme="dark"] .dayStreak{background:#382b1f!important;color:#f1bd78!important}
+html[data-theme="dark"] .streakSecure.done{background:#17382f!important;color:#8ce1c0!important}html[data-theme="dark"] .dayFeedIcon{background:#183b34!important}
+html[data-theme="dark"] .historyTop small{color:#91a5a0}html[data-theme="dark"] .segmented{background:#102825;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .segmented button{color:#91a5a0}html[data-theme="dark"] .segmented button.active{background:#183430!important;color:#77dfbd!important;box-shadow:none}
+html[data-theme="dark"] .monthNav{background:#0e2422;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .monthNav>button,html[data-theme="dark"] .monthNav select{background:#112b28;color:#eef7f3;border-color:rgba(255,255,255,.10)}
+html[data-theme="dark"] .historyHero,html[data-theme="dark"] .monthHero,html[data-theme="dark"] .statBig{background:linear-gradient(125deg,#143a32,#102824)!important;border-color:#285c50!important;color:#eef7f3!important}html[data-theme="dark"] .historyHero small{color:#8fb4aa!important}html[data-theme="dark"] .historyHero h2{color:#f1fbf7!important}
+html[data-theme="dark"] .kpi{background:#0e2422;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .personalMonth span{background:#112b28!important;color:#d8e7e2!important;border-color:rgba(255,255,255,.09)!important}
+html[data-theme="dark"] .adminOnly{background:linear-gradient(145deg,#2b291e,#0e2422)!important;border-color:#6d5b39!important}html[data-theme="dark"] .resetDangerCard{background:linear-gradient(145deg,#341f22,#0e2422)!important;border-color:#6c3439!important}html[data-theme="dark"] .resetDangerCard h3{color:#ffb3b3!important}
+html[data-theme="dark"] .pushDiagGrid>div,html[data-theme="dark"] .pushStatus{background:#112b28!important;color:#eef7f3!important;border:1px solid rgba(255,255,255,.08)}html[data-theme="dark"] .pushStatus.success{background:#15372f!important}html[data-theme="dark"] .pushStatus.warning{background:#392f1f!important}html[data-theme="dark"] .pushStatus.error{background:#392123!important}
+html[data-theme="dark"] .mobileMenuGrid button{background:#112b28!important;color:#eef7f3!important}html[data-theme="dark"] .mobileMenuHandle{background:#35504b!important}html[data-theme="dark"] .tabs{background:#102825!important}html[data-theme="dark"] .x{background:#183430!important;color:#eef7f3!important}
+html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] textarea{background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important;color-scheme:dark}
+html[data-theme="dark"] .rewardNode span{background:#183430!important}html[data-theme="dark"] .rewardNode.done span{background:#185440!important}html[data-theme="dark"] .challengeWaiting{background:#112b28!important;color:#eef7f3!important}
+html[data-theme="dark"] .recordMini,html[data-theme="dark"] .rewardPersonCard,html[data-theme="dark"] .settingsCard,html[data-theme="dark"] .proposalVotingCard,html[data-theme="dark"] .rewardProposalVotingCard,html[data-theme="dark"] .rewardPoolCard,html[data-theme="dark"] .rewardMilestoneCard,html[data-theme="dark"] .dailyPinnedCard,html[data-theme="dark"] .votingBanner,html[data-theme="dark"] .outboxNotice,html[data-theme="dark"] .witnessRequest{background:#0e2422!important;color:#eef7f3!important;border-color:rgba(255,255,255,.09)!important}
+@media(min-width:720px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.recordsGrid,.rewardPeopleGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.historyTop{align-items:flex-start;flex-direction:column}.segmented{width:100%;grid-template-columns:1fr 1fr}.monthNav>div{flex-direction:column;gap:5px}.monthNav select{max-width:100%;width:100%}}
+'''
+Path('style.css').write_text(css)
+if old.exists(): old.unlink()
+
+for q in list(Path('.').glob('MIGRATION_*.sql'))+list(Path('.').glob('UPDATE_*.txt'))+list(Path('.').glob('HOTFIX_*.txt')):
+    q.unlink(missing_ok=True)
+for name in ['ANLEITUNG_ONLINE.txt','UPDATE_ANLEITUNG.txt','UPDATE_ANLEITUNG_V1_4.txt','UPDATE_ANLEITUNG_V1_5.txt','UPDATE_ANLEITUNG_V1_6.txt','PUSH_SETUP_V1_16_0.md','SECURITY_AUDIT_V1_16_1.md','README.txt','DEPLOY_TMP.txt']:
+    Path(name).unlink(missing_ok=True)
+for name in ['fit4us-icon-192.png','fit4us-icon.png','fit4us-logo.png','movo-logo-dark.png','movo-logo.png','movo-icon.png']:
+    Path('assets',name).unlink(missing_ok=True)
