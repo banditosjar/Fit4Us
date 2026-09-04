@@ -23,3 +23,105 @@ details.disclosureCard{overflow:hidden}details.disclosureCard>summary{display:fl
 @media(min-width:1080px){.shell{display:grid;grid-template-columns:250px 1fr}.side{display:flex;position:sticky;top:0;height:100vh;flex-direction:column;padding:28px 18px;background:linear-gradient(180deg,#082e2c,#071f1f);color:#fff}.sideBrand{width:190px}.sideClaim{font-size:11px;color:rgba(255,255,255,.55);margin:4px 9px 28px}.sideNav{display:grid;gap:5px}.sideNav button{border:0;background:transparent;color:rgba(255,255,255,.62);text-align:left;padding:12px 14px;border-radius:13px;font-weight:900}.sideNav button.active,.sideNav button:hover{background:rgba(99,230,190,.12);color:#fff}.sideBottom{margin-top:auto}.sideBottom .secondary{width:100%;background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.12)}.main{padding:30px 32px 54px}.top{display:none}.homeStage,.crewStage,.challengeStage,.profileStage{border-radius:34px;padding:40px}.crewSnapshot{gap:12px}.crewPerson{padding:14px 8px}.profileHeroStats{max-width:680px}.challengeStack{grid-template-columns:1.05fr 1fr 1fr}.focusChallenge{display:flex;flex-direction:column;align-items:stretch}.focusChallenge .cta{margin-top:auto}.rankingGrid{grid-template-columns:1fr 1fr}.movoSection,.crewFlow,.challengeFlow,.profileFlow,.homeFlow{--gap:26px}.dayFeedCard{padding:18px}.groupFeed{grid-template-columns:1fr 1fr}.groupFeed .feedMore{grid-column:1/-1}.homeFeed{grid-template-columns:repeat(3,1fr)}.homeFeed .dayFeedCard .dayFeedRow:nth-child(n+3){display:none}.homeFeed .dayFeedScore{display:block;text-align:right}.homeFeed .dayStreak{display:block;margin-bottom:5px}}
 html[data-theme="dark"]{--bg:#071817;--surface:#0e2422;--surface-2:#112b28;--ink:#eef7f3;--muted:#91a5a0;--line:rgba(255,255,255,.09);background:#071817;color:var(--ink)}html[data-theme="dark"] body{background:radial-gradient(circle at 10% -10%,rgba(32,201,151,.12),transparent 30%),#071817}.dark .card,html[data-theme="dark"] .card,html[data-theme="dark"] .homeChallengeTile,html[data-theme="dark"] .quickAddModern button,html[data-theme="dark"] .choice,html[data-theme="dark"] .modalCard{background:#0e2422;color:var(--ink)}html[data-theme="dark"] .todayNudgeGrid button,html[data-theme="dark"] .dayFeedRow,html[data-theme="dark"] .rewardPreviewItem,html[data-theme="dark"] .rankingPanel .card{background:#112b28;color:var(--ink)}html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3{color:var(--ink)}html[data-theme="dark"] .brandMini{filter:brightness(0) invert(1)}
 @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes pulseRing{0%,100%{filter:drop-shadow(0 0 0 rgba(99,230,190,0))}50%{filter:drop-shadow(0 0 13px rgba(99,230,190,.38))}}.movoProgressRing{animation:pulseRing 3.2s ease-in-out infinite}.react:active,.quickAddModern button:active,.homeChallengeTile:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+
+/* Movo V1.20.1 visual hotfix */
+/* Always-visible branding, independent from missing raster logo assets */
+.topBrandBtn{display:inline-flex!important;align-items:center;gap:10px!important;min-height:44px!important;border:0!important;background:transparent!important;color:inherit!important;position:relative!important;padding-left:48px!important}
+.topBrandBtn img{display:none!important}
+.topBrandBtn:before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:40px;height:40px;background:url('./assets/movo-symbol.svg') center/contain no-repeat}
+.topBrandBtn:after{content:"Movo";font-size:24px;font-weight:950;letter-spacing:-.055em;color:var(--ink)}
+.movoTop{display:flex!important;min-height:62px!important;height:auto!important;padding:6px 0 10px!important}
+.sideBrand{display:none!important}
+.movoSide:before{content:"Movo";display:block;padding:2px 10px 0 62px;margin:0 0 2px;min-height:48px;background:url('./assets/movo-symbol.svg') 8px center/45px 45px no-repeat;font-size:29px;font-weight:950;line-height:48px;letter-spacing:-.055em;color:#fff}
+.movoSide .sideClaim{margin-top:4px!important}
+.authLogo{display:none!important}.authCard:before{content:"Movo";display:block;margin:0 auto 18px;padding-top:78px;background:url('./assets/movo-symbol.svg') top center/74px 74px no-repeat;text-align:center;font-size:34px;font-weight:950;letter-spacing:-.055em;color:var(--ink)}
+
+/* Missing component styling: browser defaults were visible as white rectangles */
+.quickTemplates{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+.quickTemplate{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:9px 12px;box-shadow:var(--shadow-sm);font:inherit;text-align:left;transition:transform .18s ease,background .18s ease,border-color .18s ease}
+.quickTemplate:hover{transform:translateY(-1px);border-color:rgba(32,201,151,.35)}
+.quickTemplate span{font-size:15px}.quickTemplate b{font-size:11px}.quickTemplate small{font-size:10px;color:var(--muted);white-space:nowrap}
+.socialAction{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;font:inherit;font-size:11px;font-weight:900;transition:.18s ease}
+.socialAction span{font-size:11px}.socialAction.active{background:#dff7ee;border-color:#8bd9bf;color:#087d62}
+.weekSnapshot>div{background:var(--surface-2)!important;border:1px solid var(--line)}
+.secondary,.react,.uploadBtn,.choice,.rewardPreviewItem,.mobileMenuSheet,.modalCard,.tabs button.active{background:var(--surface);color:var(--ink)}
+.pill,.chip,.bonusPill{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.feedMore .secondary{background:var(--surface);color:var(--ink)}
+
+html[data-theme="dark"] .quickTemplate,html[data-theme="dark"] .socialAction,html[data-theme="dark"] .secondary,html[data-theme="dark"] .react,html[data-theme="dark"] .uploadBtn,html[data-theme="dark"] .choice,html[data-theme="dark"] .weekSnapshot>div,html[data-theme="dark"] .rewardPreviewItem,html[data-theme="dark"] .mobileMenuSheet,html[data-theme="dark"] .modalCard,html[data-theme="dark"] .tabs button.active{background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important}
+html[data-theme="dark"] .pill,html[data-theme="dark"] .chip,html[data-theme="dark"] .bonusPill{background:#15322f!important;color:#a9bbb6!important;border-color:rgba(255,255,255,.08)!important}
+html[data-theme="dark"] .socialAction.active,html[data-theme="dark"] .react.active{background:#173c34!important;color:#79e2bf!important;border-color:#2e715f!important}
+html[data-theme="dark"] .topBrandBtn:after,html[data-theme="dark"] .authCard:before{color:#f3fbf7!important}
+html[data-theme="dark"] .quickTemplate small,html[data-theme="dark"] .weekSnapshot small,html[data-theme="dark"] .weekSnapshot span{color:#91a5a0!important}
+
+/* Consistent vertical rhythm */
+.movoSection + .movoSection,.homeFlow>.movoSection + .movoSection,.crewFlow>* + *,.challengeFlow>* + *,.profileFlow>* + *{margin-top:24px!important}
+.crewStage + .crewFlow,.homeStage + .homeFlow,.challengeStage + .challengeFlow,.profileStage + .profileFlow{margin-top:24px!important}
+.crewMomentCard{margin-top:18px!important}
+
+@media(min-width:1080px){.movoTop{display:flex!important;margin-bottom:18px!important;padding:0 2px 10px!important;border-bottom:1px solid var(--line)}.topBrandBtn:after{font-size:24px}}
+@media(max-width:520px){.quickTemplates{display:grid;grid-template-columns:1fr}.quickTemplate{border-radius:16px;grid-template-columns:auto 1fr auto}.topBrandBtn:after{font-size:21px}.topBrandBtn{padding-left:43px!important}.topBrandBtn:before{width:36px;height:36px}}
+
+
+/* =========================================================
+   V1.20.2 – Full UI consistency & dark-mode audit
+   ========================================================= */
+button,select,input,textarea{color:var(--ink)}
+select,input,textarea{background:var(--surface);border-color:var(--line)}
+.rankMe{background:linear-gradient(135deg,#e5f8f0,#f5fbf8)!important;border:1px solid rgba(32,201,151,.22)}
+.rankRow{min-height:52px}.rankRow>div{min-width:0}.rankRow b{color:inherit}
+.focusChallenge{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.focusChallenge.daily{background:linear-gradient(145deg,#fffaf0,#fff)}
+.focusChallenge.weekly{background:linear-gradient(145deg,#eef8fb,#fff)}
+.focusChallenge.monthly{background:linear-gradient(145deg,#eaf9f3,#fff)}
+.focusChallenge p{color:var(--muted)}.focusChallenge b{color:var(--ink)}.challengeBadge{color:var(--muted)}
+.notice{color:#123b31}.rulesIntro{display:grid;gap:5px}.rulesIntro .muted{line-height:1.55}
+.disclosureCard .choice{min-height:52px;display:flex;align-items:center;line-height:1.4}
+.historyTop{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px;padding:6px 0 4px}
+.historyTop small{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--muted)}.historyTop h1{margin:3px 0 0}
+.segmented{display:inline-grid;grid-auto-flow:column;gap:3px;padding:4px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px}
+.segmented button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:8px 13px;font-weight:900;font-size:11px}
+.segmented button.active{background:var(--surface);color:#087d62;box-shadow:var(--shadow-sm)}
+.monthNav{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;gap:10px;margin:10px 0 18px;padding:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:18px}
+.monthNav>button{width:42px;height:42px;border-radius:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:24px;line-height:1}
+.monthNav>div{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
+.monthNav select{max-width:210px;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:var(--surface);color:var(--ink)}
+.historyHero,.monthHero,.statBig{display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(125deg,#dff7ee,#f8fcfa);border:1px solid rgba(32,201,151,.18);color:#123a31;box-shadow:var(--shadow-sm)}
+.historyHero small{font-size:10px;font-weight:900;letter-spacing:.08em;color:#638179}.historyHero h2{font-size:30px;margin:5px 0;color:#0c4034}.historyHero>span{font-size:44px;filter:drop-shadow(0 8px 18px rgba(9,44,42,.12))}
+.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:15px;border-radius:17px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-sm);display:grid;gap:2px}.kpi b{font-size:22px;color:var(--ink)}.kpi small{font-size:10px;color:var(--muted)}
+.histWeek{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.histWeek:last-child{border-bottom:0}.histWeek small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.personalMonth span{border:1px solid var(--line)}
+.adminOnly{border-color:rgba(255,202,128,.42);background:linear-gradient(145deg,#fffaf1,var(--surface))}
+.resetDangerCard{border-color:rgba(224,91,91,.34)!important;background:linear-gradient(145deg,#fff4f4,var(--surface))!important}.resetDangerCard h3{color:#a64040}.resetDangerCard .grid{gap:9px}.resetDangerCard .secondary{width:100%;justify-content:center}
+.dayFeedRow.accentStreak{border:1px solid rgba(255,154,80,.14)}.dayFeedRow.accentDaily{border:1px solid rgba(255,202,128,.12)}.dayFeedCard,.dayFeedRows{min-width:0}
+.recordsGrid,.rewardPeopleGrid,.onboardingGrid{display:grid;gap:10px}
+.recordMini,.rewardPersonCard,.settingsCard,.proposalVotingCard,.rewardProposalVotingCard,.rewardPoolCard,.rewardMilestoneCard,.dailyPinnedCard,.votingBanner,.outboxNotice,.witnessRequest{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow-sm)}
+.settingToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.settingToggle:last-child{border-bottom:0}
+.heatmap{display:grid;grid-template-columns:repeat(14,minmax(12px,1fr));gap:4px;overflow:auto;padding:4px 0}.heatCell{aspect-ratio:1;border-radius:4px;background:var(--surface-2);border:1px solid var(--line)}.heatLegend{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;margin-top:8px}
+.rewardPersonHead,.rewardNextHead,.wishHistoryRow,.rewardPersonStats,.bonusBreakdown,.crewBreakdown{display:flex;align-items:center;justify-content:space-between;gap:10px}
+html[data-theme="dark"] .rankMe{background:linear-gradient(135deg,#153b32,#102b27)!important;border-color:#286452!important;color:#f0fbf6!important}
+html[data-theme="dark"] .focusChallenge{border-color:rgba(255,255,255,.09)!important;color:#eef7f3!important}
+html[data-theme="dark"] .focusChallenge.daily{background:linear-gradient(145deg,#2c2a1e,#112724)!important}
+html[data-theme="dark"] .focusChallenge.weekly{background:linear-gradient(145deg,#172c33,#112724)!important}
+html[data-theme="dark"] .focusChallenge.monthly{background:linear-gradient(145deg,#15342c,#112724)!important}
+html[data-theme="dark"] .focusChallenge h2,html[data-theme="dark"] .focusChallenge b{color:#eef7f3!important}
+html[data-theme="dark"] .focusChallenge p,html[data-theme="dark"] .challengeBadge{color:#a6b8b3!important}
+html[data-theme="dark"] .progress{background:#243b37}
+html[data-theme="dark"] .notice{background:#12332c!important;color:#c9eee1!important;border-color:#285e50!important}
+html[data-theme="dark"] .error{background:#3a2022!important;color:#ffd0d0!important;border-color:#6c3539!important}
+html[data-theme="dark"] .crewMoment{background:linear-gradient(135deg,#2c291e,#122724)!important;color:#f4f8f5!important;border-color:rgba(255,202,128,.16)!important}
+html[data-theme="dark"] .crewMoment>span{background:#42351f!important}html[data-theme="dark"] .crewMoment small{color:#d7b477!important}
+html[data-theme="dark"] .streakSecure,html[data-theme="dark"] .dayStreak{background:#382b1f!important;color:#f1bd78!important}
+html[data-theme="dark"] .streakSecure.done{background:#17382f!important;color:#8ce1c0!important}html[data-theme="dark"] .dayFeedIcon{background:#183b34!important}
+html[data-theme="dark"] .historyTop small{color:#91a5a0}html[data-theme="dark"] .segmented{background:#102825;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .segmented button{color:#91a5a0}html[data-theme="dark"] .segmented button.active{background:#183430!important;color:#77dfbd!important;box-shadow:none}
+html[data-theme="dark"] .monthNav{background:#0e2422;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .monthNav>button,html[data-theme="dark"] .monthNav select{background:#112b28;color:#eef7f3;border-color:rgba(255,255,255,.10)}
+html[data-theme="dark"] .historyHero,html[data-theme="dark"] .monthHero,html[data-theme="dark"] .statBig{background:linear-gradient(125deg,#143a32,#102824)!important;border-color:#285c50!important;color:#eef7f3!important}html[data-theme="dark"] .historyHero small{color:#8fb4aa!important}html[data-theme="dark"] .historyHero h2{color:#f1fbf7!important}
+html[data-theme="dark"] .kpi{background:#0e2422;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .personalMonth span{background:#112b28!important;color:#d8e7e2!important;border-color:rgba(255,255,255,.09)!important}
+html[data-theme="dark"] .adminOnly{background:linear-gradient(145deg,#2b291e,#0e2422)!important;border-color:#6d5b39!important}html[data-theme="dark"] .resetDangerCard{background:linear-gradient(145deg,#341f22,#0e2422)!important;border-color:#6c3439!important}html[data-theme="dark"] .resetDangerCard h3{color:#ffb3b3!important}
+html[data-theme="dark"] .pushDiagGrid>div,html[data-theme="dark"] .pushStatus{background:#112b28!important;color:#eef7f3!important;border:1px solid rgba(255,255,255,.08)}html[data-theme="dark"] .pushStatus.success{background:#15372f!important}html[data-theme="dark"] .pushStatus.warning{background:#392f1f!important}html[data-theme="dark"] .pushStatus.error{background:#392123!important}
+html[data-theme="dark"] .mobileMenuGrid button{background:#112b28!important;color:#eef7f3!important}html[data-theme="dark"] .mobileMenuHandle{background:#35504b!important}html[data-theme="dark"] .tabs{background:#102825!important}html[data-theme="dark"] .x{background:#183430!important;color:#eef7f3!important}
+html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] textarea{background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important;color-scheme:dark}
+html[data-theme="dark"] .rewardNode span{background:#183430!important}html[data-theme="dark"] .rewardNode.done span{background:#185440!important}html[data-theme="dark"] .challengeWaiting{background:#112b28!important;color:#eef7f3!important}
+html[data-theme="dark"] .recordMini,html[data-theme="dark"] .rewardPersonCard,html[data-theme="dark"] .settingsCard,html[data-theme="dark"] .proposalVotingCard,html[data-theme="dark"] .rewardProposalVotingCard,html[data-theme="dark"] .rewardPoolCard,html[data-theme="dark"] .rewardMilestoneCard,html[data-theme="dark"] .dailyPinnedCard,html[data-theme="dark"] .votingBanner,html[data-theme="dark"] .outboxNotice,html[data-theme="dark"] .witnessRequest{background:#0e2422!important;color:#eef7f3!important;border-color:rgba(255,255,255,.09)!important}
+@media(min-width:720px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.recordsGrid,.rewardPeopleGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.historyTop{align-items:flex-start;flex-direction:column}.segmented{width:100%;grid-template-columns:1fr 1fr}.monthNav>div{flex-direction:column;gap:5px}.monthNav select{max-width:100%;width:100%}}

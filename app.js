@@ -326,7 +326,7 @@ const fit4usAuthStorage={
 };
 
 async function init(){
- if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
+ if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-wordmark-dark.svg"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:fit4usAuthStorage}});
  sb.auth.onAuthStateChange((evt,s)=>{
   session=s;
@@ -340,7 +340,7 @@ async function init(){
  if(session)await safeBootApp('startup');else showAuth();
 }
 function showAuth(){
- $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png">
+ $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-wordmark-dark.svg">
  <div class="tabs"><button id="tabLogin" class="active" onclick="authTab('login')">Anmelden</button><button id="tabReg" onclick="authTab('reg')">Konto erstellen</button></div>
  <div id="authBody"></div></div></div>`; authTab('login')
 }
@@ -399,7 +399,7 @@ async function loadOwnProfileWithRetry(userId,attempts=3){
 function showLoadProblem(message='Movo konnte deine Daten gerade nicht vollständig laden.'){
  stopRealtime();
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-  <img class="authLogo" src="assets/movo-logo.png"><div style="font-size:44px">📡</div>
+  <img class="authLogo" src="assets/movo-wordmark-dark.svg"><div style="font-size:44px">📡</div>
   <h2>Verbindung kurz unterbrochen</h2><p>${escapeHtml(message)}</p>
   <div class="notice small" style="text-align:left"><b>Du bleibst angemeldet.</b><br>Movo zeigt bei einem kurzen Ladefehler keine leeren Ersatzdaten mehr an.</div>
   <div class="grid" style="margin-top:18px"><button class="cta" onclick="safeBootApp('manual-retry',true)">Erneut laden</button><button class="secondary" onclick="logout()">Abmelden</button></div>
@@ -436,7 +436,7 @@ async function bootApp(reason='unknown'){
 }
 function showPendingApproval(){
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-   <img class="authLogo" src="assets/movo-logo.png">
+   <img class="authLogo" src="assets/movo-wordmark-dark.svg">
    <div style="font-size:48px">🔒</div>
    <h2>Freischaltung ausstehend</h2>
    <p>Hallo <b>${escapeHtml(me.first_name)}</b>! Dein Movo-Konto wurde erstellt, muss aber zuerst von einem Admin freigeschaltet werden.</p>
@@ -729,7 +729,7 @@ async function settingsHTML(){
 }
 async function maybeShowOnboarding(){
  if(prefFor().onboarded)return;
- $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-logo.png"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-wordmark-dark.svg"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
 }
 async function finishOnboarding(){await savePreferencePatch({onboarded:true});closeModal()}
 
@@ -1845,7 +1845,7 @@ async function adminHTML(){
  <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div><div class="section"><h2>Belohnungsvorschläge</h2>${rewardProp}</div>
  <div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div>
  <div class="card pad section"><h3>💾 Backup & Restore</h3><div class="uploadBtns"><button class="cta" onclick="exportBackup()">Komplett-Backup herunterladen</button><button class="secondary" onclick="openRestoreDialog()">Backup wiederherstellen</button></div><div class="tiny muted" style="margin-top:8px">Backup enthält alle zentralen Movo-Daten (intern weiterhin Fit4Us-Tabellen). Bilder in Supabase Storage werden derzeit nicht in die JSON-Datei eingebettet.</div></div>
- <div class="card pad section" style="border-color:#ffd4d4;background:#fffafa"><h3>⚠️ Daten zurücksetzen</h3><p class="small muted">Jeder Reset erstellt zuerst automatisch ein Komplett-Backup und verlangt eine eindeutige Bestätigung.</p><div class="grid"><button class="secondary" onclick="openResetDialog('test')">🧪 Testdaten zurücksetzen</button><button class="secondary" onclick="openResetDialog('season')">🏁 Saison-/Wettbewerbsdaten zurücksetzen</button><button class="secondary danger" onclick="openResetDialog('full')">☢ Kompletter Datenreset</button></div></div>
+ <div class="card pad section resetDangerCard"><h3>⚠️ Daten zurücksetzen</h3><p class="small muted">Jeder Reset erstellt zuerst automatisch ein Komplett-Backup und verlangt eine eindeutige Bestätigung.</p><div class="grid"><button class="secondary" onclick="openResetDialog('test')">🧪 Testdaten zurücksetzen</button><button class="secondary" onclick="openResetDialog('season')">🏁 Saison-/Wettbewerbsdaten zurücksetzen</button><button class="secondary danger" onclick="openResetDialog('full')">☢ Kompletter Datenreset</button></div></div>
  <div class="card pad section"><h3>Datenbank</h3><div>Profile: ${active.length}</div><div>Einträge: ${entries.length}</div><div>Challenges im Pool: ${challengePool.length}</div><div>Offene Vorschläge: ${proposals.filter(p=>p.status==='voting').length}</div></div>
  <div class="card pad section"><h3>🧾 Admin-Auditlog</h3>${auditHtml}</div>`
 }
@@ -2126,7 +2126,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.20.0';
+const FIT4US_VERSION='1.20.2';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
