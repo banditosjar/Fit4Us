@@ -1271,10 +1271,10 @@ function homeMetricsHTML(){
  let today=fmtDate(),pts=pointsBetween(me.id,today,today),rewardBonus=streakBonusPointsBetween(me.id,today,today),
      steps=entries.filter(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='steps').reduce((s,e)=>Math.max(s,+e.steps||0),0),
      food=entries.find(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='food'),
-     pct=Math.min(100,Math.round(pts/12*100)),secured=activeDay(today,me.id),s=streak();
+     pct=Math.min(100,Math.round(pts/8*100)),secured=activeDay(today,me.id),s=streak();
  return `<section class="movoPulseCard card visualMomentum" style="--day-progress:${pct}%">
    <div class="momentumStreak"><span class="streakFlame">🔥</span><div><b>${s} ${s===1?'Tag':'Tage'}</b><small>Streak</small></div></div>
-   <div class="movoProgressRing" aria-label="${pts} von 12 Tagespunkten"><div><b>${pts} / 12</b><small>Punkte heute</small><span>♻</span></div></div>
+   <div class="movoProgressRing" aria-label="${pts} Punkte heute gesammelt"><div><b>${pts} P</b><small>heute gesammelt</small><span>♻</span></div></div>
    <div class="momentumToday"><strong>+${pts} P</strong><small>heute</small>${rewardBonus?`<span>✨ +${rewardBonus} Bonus</span>`:''}</div>
    <div class="momentumQuote">„Jeder Schritt zählt.<br>Für dich. Für uns.“</div>
    <div class="momentumMeta"><span>👟 ${steps.toLocaleString('de-DE')}</span><span>🥗 ${(food?.food_items||[]).length}/7</span><span>${secured?'✓ aktiver Tag':'○ Streak offen'}</span></div>
