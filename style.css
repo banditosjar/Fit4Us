@@ -725,3 +725,129 @@ html[data-theme="dark"] .pushDiagGrid>div{background:#101b24;border-color:#30414
  .dayFeedIcon{width:32px;height:32px}
  .pushDiagGrid{grid-template-columns:1fr}
 }
+
+
+/* =========================================================
+   V1.19.0 – MOVO Visual Identity + fair motivation system
+   Internal project name remains Fit4Us.
+   ========================================================= */
+:root{
+ --navy:#12322f;
+ --teal:#27a982;
+ --green:#75c97d;
+ --movo-mint:#dff5e8;
+ --movo-peach:#ffa574;
+ --movo-sun:#ffd67e;
+ --movo-ink:#17332f;
+ --bg:#f7f8f3;
+ --card:#fffefb;
+ --line:#e4e8df;
+ --shadow:0 14px 38px rgba(26,61,54,.085);
+}
+body{
+ background:
+  radial-gradient(circle at 4% 0%,rgba(117,201,125,.13),transparent 24%),
+  radial-gradient(circle at 98% 18%,rgba(255,165,116,.10),transparent 20%),
+  linear-gradient(180deg,#fbfcf8 0,#f6f7f2 100%);
+ color:var(--movo-ink);
+}
+.card{border-radius:23px;box-shadow:var(--shadow);transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease,border-color .22s ease}
+.card:hover{transform:translateY(-2px);box-shadow:0 18px 46px rgba(26,61,54,.105)}
+button,.react,.navBtn,.choice,.homeChallengeTile,.quickTemplate{transition:transform .16s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease}
+button:active,.react:active,.choice:active,.homeChallengeTile:active,.quickTemplate:active{transform:scale(.975)}
+.cta{background:linear-gradient(120deg,#178862,#4fc78f);box-shadow:0 10px 25px rgba(31,157,112,.22)}
+.progress>i{background:linear-gradient(90deg,#279e7a,#7aca79)}
+.side{background:linear-gradient(180deg,#102d2b,#173a36 62%,#102c2b)}
+.sideNav button.active,.sideNav button:hover{background:rgba(117,201,125,.14);color:#fff}
+.auth{background:radial-gradient(circle at 18% 12%,rgba(117,201,125,.18),transparent 32%),radial-gradient(circle at 86% 85%,rgba(255,165,116,.14),transparent 28%),#f6f7f1}
+.authLogo{width:min(390px,94%);border-radius:18px}
+.side img{width:195px;border-radius:15px}
+.brandMini.movoMini{border-radius:13px;box-shadow:0 6px 15px rgba(26,61,54,.14)}
+.onboardingBrand{display:block;width:min(320px,90%);margin:0 auto 10px;border-radius:15px}
+
+/* Home hero: actual motion instead of more static KPI boxes. */
+.movoPulseCard{
+ display:grid;grid-template-columns:minmax(0,1fr) 154px;align-items:center;gap:24px;padding:22px;
+ overflow:hidden;position:relative;border:0;
+ background:
+  radial-gradient(circle at 84% 18%,rgba(255,214,126,.27),transparent 27%),
+  radial-gradient(circle at 10% 100%,rgba(75,190,137,.21),transparent 34%),
+  linear-gradient(135deg,#ffffff 0%,#edf8ef 100%);
+}
+.movoPulseCard:before{content:"";position:absolute;inset:-40% auto auto 58%;width:230px;height:230px;border:1px solid rgba(40,157,117,.10);border-radius:50%;animation:movoOrbit 14s linear infinite}
+.movoPulseCopy{position:relative;z-index:2}
+.movoPulseCopy>small{font-weight:950;letter-spacing:.11em;color:#39725e}
+.movoPulseCopy h2{font-size:clamp(20px,3vw,28px);margin:6px 0 4px;max-width:720px}
+.movoPulseCopy p{margin:0;color:var(--muted);font-weight:700}
+.movoPulseChips{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.movoPulseChips span{display:inline-flex;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid rgba(53,118,93,.12);font-size:12px;font-weight:900}
+.movoPulseChips .movoBonusChip{background:#fff5df;color:#8a5b14;border-color:#f2d79c}
+.movoProgressRing{
+ --ring:calc(var(--day-progress) * 3.6deg);
+ width:138px;height:138px;border-radius:50%;display:grid;place-items:center;position:relative;z-index:2;
+ background:conic-gradient(#2aa77e 0 var(--day-progress),rgba(255,255,255,.58) var(--day-progress) 100%);
+ animation:movoRingIn .8s cubic-bezier(.2,.8,.2,1) both;
+ box-shadow:0 16px 35px rgba(39,142,106,.17);
+}
+.movoProgressRing:before{content:"";position:absolute;inset:11px;border-radius:50%;background:#fffefb;box-shadow:inset 0 0 0 1px rgba(35,94,75,.07)}
+.movoProgressRing>div{position:relative;z-index:1;text-align:center}
+.movoProgressRing b,.movoProgressRing small{display:block}
+.movoProgressRing b{font-size:34px;line-height:1;color:#167c5b}
+.movoProgressRing small{font-size:11px;color:var(--muted);font-weight:900}
+@keyframes movoRingIn{from{transform:scale(.72) rotate(-28deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes movoOrbit{to{transform:rotate(360deg)}}
+
+/* Streak qualification communicates quality. */
+.streakSecure{background:#fff1e4;color:#92531e;border-color:#f2cba8}
+.streakSecure.done{background:#e9f8ee;color:#1d7450;border-color:#b9e2c7}
+.heatCell.on{background:linear-gradient(135deg,#28a37b,#79ca7b);box-shadow:0 0 0 1px rgba(37,135,101,.08)}
+.accentStreak{position:relative;overflow:hidden}
+.accentStreak:after{content:"";position:absolute;inset:auto -20px -32px auto;width:70px;height:70px;border-radius:50%;background:rgba(255,165,116,.13)}
+
+/* Feed comes alive when it changes. */
+.dayFeedCard{animation:movoFeedIn .36s cubic-bezier(.2,.8,.2,1) both}
+.dayFeedCard:nth-child(2){animation-delay:.035s}.dayFeedCard:nth-child(3){animation-delay:.07s}
+.dayFeedRow{transition:transform .18s ease,background .18s ease}
+.dayFeedRow:hover{transform:translateX(2px)}
+@keyframes movoFeedIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+
+/* Better visual rhythm */
+.sectionTitle{margin-top:26px;margin-bottom:11px}
+#content>.sectionTitle:first-child{margin-top:0}
+#content>.card + .sectionTitle,#content>details.card + .sectionTitle{margin-top:28px}
+.homeChallengeGrid,.quickAddModern,.todayNudgeGrid,.rewardPeopleGrid{gap:12px}
+.feedMore{margin-top:16px}
+
+/* Small motion details */
+.react:hover,.quickTemplate:hover,.homeChallengeTile:hover,.todayNudgeGrid button:hover{transform:translateY(-2px)}
+.react.active{animation:movoPop .24s ease}
+@keyframes movoPop{50%{transform:scale(1.14)}}
+.celebrateEmoji{animation:movoCelebrate .6s cubic-bezier(.2,.8,.2,1)}
+@keyframes movoCelebrate{0%{transform:scale(.55) rotate(-8deg)}65%{transform:scale(1.14) rotate(4deg)}100%{transform:scale(1)}}
+
+/* Brand text / premium surfaces */
+.rulesIntro{background:linear-gradient(135deg,#e8f7ed,#fff9ed)}
+.wishHero{background:radial-gradient(circle at 88% 12%,rgba(255,214,126,.24),transparent 28%),linear-gradient(135deg,#153a35,#205344);color:#fff}
+.wishHero h1,.wishHero h2,.wishHero b{color:#fff}
+.rewardUnlocked{box-shadow:0 0 0 1px rgba(53,163,117,.17),0 15px 35px rgba(32,124,89,.11)}
+.points{color:#18805f}
+
+html[data-theme="dark"]{
+ --navy:#e9f5ee;--bg:#0d1715;--card:#15231f;--muted:#a6b8b0;--line:#2d433b;
+ --movo-ink:#e9f5ee;
+}
+html[data-theme="dark"] body{background:linear-gradient(180deg,#0b1412,#101c19)}
+html[data-theme="dark"] .movoPulseCard{background:radial-gradient(circle at 85% 15%,rgba(255,193,105,.12),transparent 28%),linear-gradient(135deg,#14251f,#17342a)}
+html[data-theme="dark"] .movoProgressRing:before{background:#14231f}
+html[data-theme="dark"] .movoPulseChips span{background:#1a322a;border-color:#315444}
+html[data-theme="dark"] .movoPulseCopy>small{color:#8fd2aa}
+
+@media(max-width:650px){
+ .movoPulseCard{grid-template-columns:1fr;padding:18px;gap:17px}
+ .movoProgressRing{width:122px;height:122px;justify-self:center}
+ .movoPulseCopy h2{font-size:21px}
+ .movoPulseChips{gap:6px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*:before,*:after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}

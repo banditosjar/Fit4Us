@@ -1,0 +1,63 @@
+Fit4Us V1.19.0 – MOVO Identity & Fair Motivation
+===================================================
+Intern bleibt das Projekt Fit4Us. Sichtbare Marke/PWA: Movo.
+
+WICHTIG: MIGRATION_V1_19_0.sql genau EINMAL im Supabase SQL Editor ausführen.
+Sie verändert KEINE aktiven Challenges und löscht keine historischen Belohnungen.
+
+NEUE MARKE / UI
+- Sichtbare Marke „Movo“ mit Claim „Move. Motivate. Together.“
+- Neues generiertes Movo-Logo und neues App-Icon direkt eingebunden.
+- Manifest/PWA-Name, iOS-Name, Browser-Titel, Service-Worker-Notification-Branding auf Movo.
+- Interne Supabase-/Backup-/Projektbezeichner bleiben Fit4Us.
+- Home-Hero komplett neu als animierter Momentum-Bereich mit Tagesring.
+- Mehr Micro-Animationen für Feed, Reaktionen, Buttons und Celebrations.
+- Abstände/Card-Rhythmus weiter vereinheitlicht, Dark Mode mitgepflegt.
+
+FAIRE PUNKTELOGIK
+Rangliste:
+- Aktivitäten, Schritte, Ernährung, Daily, Weekly, Crew-Mission.
+- Streak-Boni zählen NICHT mehr in die Rangliste.
+
+Ernährung ab V1.19:
+- 1–2 Ziele = 1 P
+- 3–4 Ziele = 2 P
+- 5–6 Ziele = 3 P
+- 7 Ziele = 4 P
+Bestehende historische Food-Einträge werden nicht rückwirkend entwertet.
+
+STREAK
+Ein Tag zählt nur, wenn mindestens eine Bedingung erfüllt ist:
+- Aktivität mit mindestens 2 Basispunkten
+- mindestens 7.500 Schritte
+- mindestens 3 Ernährungsziele
+- Daily + mindestens 1 weiterer Gesundheitspunkt
+Ein nicht qualifizierter abgeschlossener Tag beendet den aktuellen Streak.
+Der persönliche Rekord bleibt erhalten.
+
+Streak-Meilenstein-Boni:
+3 Tage +1
+7 Tage +2
+14 Tage +3
+30 Tage +5
+60 Tage +7
+100 Tage +10
+
+Diese Movo-Bonuspunkte zählen für Belohnungen/Lifetime-Fortschritt,
+aber nicht für Ranglisten.
+
+BELohnungen / ERREICHBARKEIT
+Monatsstufen:
+50 / 100 / 150 / 200 / 250 / 300
+Die frühesten Belohnungen sind bewusst leicht erreichbar, 250/300 sind Stretch-Ziele.
+Die bisherige 400-Punkte-Premiumstufe wird durch die Migration auf 300 P verschoben.
+Historische Auswahl bleibt bestehen.
+Wunsch-Guthaben bleibt: je 100 Lifetime-Belohnungspunkte +5,00 €.
+
+UPDATE
+1. Backup empfohlen.
+2. MIGRATION_V1_19_0.sql einmal ausführen.
+3. UPDATE-Dateien nach GitHub übernehmen.
+4. config.js NICHT überschreiben.
+5. Keine Edge Function neu deployen.
+6. Movo/Fit4Us-PWA komplett schließen und neu öffnen.

@@ -44,7 +44,7 @@ const GROUP_CHALLENGES=[
  {id:'healthy16',icon:'🥗',title:'Gemeinsam bewusst',desc:'Sammelt 16 Ernährungstage mit mindestens 5 erfüllten Zielen.',target:16,unit:'Ernährungstage',kind:'healthy'},
  {id:'sports14',icon:'💪',title:'Team in Bewegung',desc:'Sammelt gemeinsam 14 echte Sport-/Aktivitätseinheiten.',target:14,unit:'Aktivitäten',kind:'activities'}
 ];
-const STREAK_MARKS=[[3,2],[5,3],[7,5],[14,10],[21,15],[30,25]];
+const STREAK_MARKS=[[3,1],[7,2],[14,3],[30,5],[60,7],[100,10]];
 
 const REWARDS=[
  {key:'game',name:'🎮 Game Master',desc:'Du bestimmst das nächste Online-Spiel.'},
@@ -57,7 +57,7 @@ const REWARDS=[
  {key:'music',name:'🎧 Musikhoheit',desc:'Du bestimmst Musik/Playlist beim nächsten gemeinsamen Anlass.'},
  {key:'surprise',name:'🎁 Überraschung',desc:'Du bekommst eine kleine Überraschung.'}
 ];
-const MILESTONES=[50,100,150,200,250,300,400];
+const MILESTONES=[50,100,150,200,250,300];
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmtDate=d=>{
@@ -73,6 +73,7 @@ function weekKey(d=new Date()){return fmtDate(startOfWeek(d))}
 function endOfWeek(d=new Date()){let x=startOfWeek(d);x.setDate(x.getDate()+6);return x}
 function syntheticEmail(username){return `${username.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'')}@fit4us.local`}
 function stepPoints(s){s=Math.floor((+s||0)/100)*100;if(s<5000)return 0;if(s<7500)return 1;if(s<10000)return 2;if(s<12500)return 3;if(s<15000)return 4;return 5+Math.floor((s-15000)/5000)}
+function foodPoints(count){count=Math.max(0,Math.min(7,+count||0));if(!count)return 0;if(count<=2)return 1;if(count<=4)return 2;if(count<=6)return 3;return 4}
 function activityPoints(a,minutes,distance){let x=ACTIVITIES[a]; if(!x)return 0;let v=x.mode==='distance'?+distance:+minutes;return Math.max(0,Math.floor(v/x.step)*x.points)}
 function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function toast(msg){let t=document.createElement('div');t.textContent=msg;t.style='position:fixed;z-index:999;left:50%;bottom:95px;transform:translateX(-50%);background:#10283d;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 8px 25px #0003';document.body.append(t);setTimeout(()=>t.remove(),2500)}
@@ -198,28 +199,31 @@ function weekKeysBetween(from,to){
 function bonusPointsBetween(userId,from,to){
  if(!from||!to||from>to)return 0;
  let bonus=0;
- // Persönliche Wochenchallenge: Bonus zählt am tatsächlichen Erfüllungstag.
+ // Ranglisten-Boni: Challenges ja, Streak bewusst nein.
  for(let wk of weekKeysBetween(from,to)){
   let sel=selectionForWeek(wk),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;
   let doneDate=weeklyChallengeCompletionDate(ch,userId,wk);
   if(doneDate&&doneDate>=from&&doneDate<=to)bonus+=+ch.points||0;
  }
- // Monatsmission: +5 P für alle am tatsächlichen Tag, an dem die Crew das Ziel erreicht.
  for(let mk of monthKeysBetween(from,to)){
   let doneDate=groupChallengeCompletionDateMonth(mk);
   if(doneDate&&doneDate>=from&&doneDate<=to)bonus+=15;
  }
- bonus+=streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+x.points,0);
  bonus+=dailyCompletions.filter(x=>x.user_id===userId&&x.challenge_date>=from&&x.challenge_date<=to).reduce((s,x)=>s+(+x.points||1),0);
  return bonus;
 }
+function streakBonusPointsBetween(userId,from,to){
+ if(!from||!to||from>to)return 0;
+ return streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+x.points,0);
+}
 function pointsBetween(userId,from,to){return basePointsBetween(userId,from,to)+bonusPointsBetween(userId,from,to)}
+function rewardPointsBetween(userId,from,to){return pointsBetween(userId,from,to)+streakBonusPointsBetween(userId,from,to)}
 function bonusPointsOf(userId,list){let range=rangeOf(list);return range?bonusPointsBetween(userId,range[0],range[1]):0}
 function pointsOf(userId,list){let range=rangeOf(list);return basePointsOf(userId,list)+(range?bonusPointsBetween(userId,range[0],range[1]):0)}
 function lifetimePoints(userId){
  let dates=[...allPointDates(userId),...streakBonusEvents(userId).map(x=>x.date)].sort();
  if(!dates.length)return 0;
- return Math.max(0,pointsBetween(userId,dates[0],dates.at(-1)));
+ return Math.max(0,rewardPointsBetween(userId,dates[0],dates.at(-1)));
 }
 function wishCreditRows(userId){return wishCreditTransactions.filter(x=>x.user_id===userId)}
 function wishCreditBalanceCents(userId){
@@ -322,7 +326,7 @@ const fit4usAuthStorage={
 };
 
 async function init(){
- if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/fit4us-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
+ if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:fit4usAuthStorage}});
  sb.auth.onAuthStateChange((evt,s)=>{
   session=s;
@@ -336,7 +340,7 @@ async function init(){
  if(session)await safeBootApp('startup');else showAuth();
 }
 function showAuth(){
- $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/fit4us-logo.png">
+ $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png">
  <div class="tabs"><button id="tabLogin" class="active" onclick="authTab('login')">Anmelden</button><button id="tabReg" onclick="authTab('reg')">Konto erstellen</button></div>
  <div id="authBody"></div></div></div>`; authTab('login')
 }
@@ -347,7 +351,7 @@ function authTab(tab){
   <div class="field"><label>Passwort</label><input id="loginPass" type="password" autocomplete="current-password" required></div>
   <label class="rememberLogin"><input id="rememberLogin" type="checkbox" ${rememberLoginEnabled()?'checked':''}><span><b>Angemeldet bleiben</b><small>Auf diesem Gerät dauerhaft angemeldet bleiben.</small></span></label>
   <div id="authErr"></div><button class="cta">Anmelden</button>
-  <div class="tiny muted">Der Benutzername wird nur für den Login verwendet. In Fit4Us sehen andere deinen Vornamen.</div>
+  <div class="tiny muted">Der Benutzername wird nur für den Login verwendet. In Movo sehen andere deinen Vornamen.</div>
  </form>`:`<form class="form two" onsubmit="register(event)">
   <div class="field full"><label>Benutzername</label><input id="regUser" pattern="[A-Za-z0-9._-]{3,30}" autocomplete="username" required><div class="tiny muted">3–30 Zeichen: Buchstaben, Zahlen, Punkt, Unterstrich oder Bindestrich.</div></div>
   <div class="field"><label>Vorname</label><input id="regFirst" autocomplete="given-name" required></div>
@@ -375,7 +379,7 @@ async function register(e){
  if(p!==p2)return showError($('#authErr'),'Die Passwörter stimmen nicht überein.');
  let {data,error}=await sb.auth.signUp({email:syntheticEmail(username),password:p,options:{data:{username,first_name:first,last_name:last}}});
  if(error)return showError($('#authErr'),error.message);
- if(!data.session)return showError($('#authErr'),'Konto angelegt, aber Supabase verlangt noch eine E-Mail-Bestätigung. Deaktiviere in Supabase Authentication → Providers → Email die E-Mail-Bestätigung, da Fit4Us technische Login-Adressen verwendet.');
+ if(!data.session)return showError($('#authErr'),'Konto angelegt, aber Supabase verlangt noch eine E-Mail-Bestätigung. Deaktiviere in Supabase Authentication → Providers → Email die E-Mail-Bestätigung, da Movo intern technische Login-Adressen verwendet.');
  toast('Konto erstellt – wartet auf Admin-Freigabe ✓')
 }
 
@@ -392,12 +396,12 @@ async function loadOwnProfileWithRetry(userId,attempts=3){
  }
  return {data:null,error:lastError};
 }
-function showLoadProblem(message='Fit4Us konnte deine Daten gerade nicht vollständig laden.'){
+function showLoadProblem(message='Movo konnte deine Daten gerade nicht vollständig laden.'){
  stopRealtime();
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-  <img class="authLogo" src="assets/fit4us-logo.png"><div style="font-size:44px">📡</div>
+  <img class="authLogo" src="assets/movo-logo.png"><div style="font-size:44px">📡</div>
   <h2>Verbindung kurz unterbrochen</h2><p>${escapeHtml(message)}</p>
-  <div class="notice small" style="text-align:left"><b>Du bleibst angemeldet.</b><br>Fit4Us zeigt bei einem kurzen Ladefehler keine leeren Ersatzdaten mehr an.</div>
+  <div class="notice small" style="text-align:left"><b>Du bleibst angemeldet.</b><br>Movo zeigt bei einem kurzen Ladefehler keine leeren Ersatzdaten mehr an.</div>
   <div class="grid" style="margin-top:18px"><button class="cta" onclick="safeBootApp('manual-retry',true)">Erneut laden</button><button class="secondary" onclick="logout()">Abmelden</button></div>
  </div></div>`;
 }
@@ -408,7 +412,7 @@ async function safeBootApp(reason='unknown',force=false){
  bootUserId=uid;
  bootInFlight=(async()=>{
   try{return await bootApp(reason)}
-  catch(err){console.error('Fit4Us boot failed:',reason,err);showLoadProblem('Deine Sitzung ist weiterhin gültig, aber die Fit4Us-Daten konnten gerade nicht vollständig geladen werden. Bitte erneut versuchen.')}
+  catch(err){console.error('Fit4Us boot failed:',reason,err);showLoadProblem('Deine Sitzung ist weiterhin gültig, aber die Movo-Daten konnten gerade nicht vollständig geladen werden. Bitte erneut versuchen.')}
   finally{bootInFlight=null}
  })();
  return bootInFlight;
@@ -432,10 +436,10 @@ async function bootApp(reason='unknown'){
 }
 function showPendingApproval(){
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-   <img class="authLogo" src="assets/fit4us-logo.png">
+   <img class="authLogo" src="assets/movo-logo.png">
    <div style="font-size:48px">🔒</div>
    <h2>Freischaltung ausstehend</h2>
-   <p>Hallo <b>${escapeHtml(me.first_name)}</b>! Dein Fit4Us-Konto wurde erstellt, muss aber zuerst von einem Admin freigeschaltet werden.</p>
+   <p>Hallo <b>${escapeHtml(me.first_name)}</b>! Dein Movo-Konto wurde erstellt, muss aber zuerst von einem Admin freigeschaltet werden.</p>
    <div class="notice small" style="text-align:left"><b>Private Crew:</b> Ohne Freigabe hast du keinen Zugriff auf Feed, Rankings, Fotos oder andere Nutzerdaten.</div><div class="pendingIntro"><div>⭐ Punkte sammeln</div><div>🔥 Jeden Punktetag als Streak sichern</div><div>🎯 Individuelle Tages- & Wochenchallenges</div><div>🎁 Belohnungen freischalten</div></div>
    <div class="grid" style="margin-top:18px">
      <button class="cta" onclick="checkApproval()">Status prüfen</button>
@@ -538,7 +542,7 @@ async function flushOutbox(manual=false){
 window.addEventListener('online',()=>flushOutbox(false));
 
 function celebrationSnapshot(){
- let pts=monthPoints(),st=streak(),mine=entries.filter(e=>e.user_id===me.id),maxSteps=Math.max(0,...mine.filter(e=>e.kind==='steps').map(e=>+e.steps||0));
+ let pts=monthRewardPoints(),st=streak(),mine=entries.filter(e=>e.user_id===me.id),maxSteps=Math.max(0,...mine.filter(e=>e.kind==='steps').map(e=>+e.steps||0));
  let sel=currentSelection(),wc=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,wcDone=wc?challengeProgressForWeek(wc,me.id,weekKey())[0]>=challengeProgressForWeek(wc,me.id,weekKey())[1]:false;
  let gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey());
  return {pts,st,maxSteps,wcDone,gcDone:!!gc&&gv>=gc.target}
@@ -556,9 +560,24 @@ function maybeCelebrate(before){
  if(!before.wcDone&&after.wcDone)return celebrate('Wochenchallenge geschafft!','Stark – die Wochenchallenge ist im Ziel.','🎯');
  if(!before.gcDone&&after.gcDone){notifyGroup('Monatsmission geschafft 🎉',`${firstName(me)} hat die Crew-Mission ins Ziel gebracht.`);return celebrate('Crew-Mission geschafft!','Ihr habt die Monatsmission gemeinsam erreicht.','👥')}
 }
-function maxStreakEver(userId=me.id){let dates=[...new Set([...entries.filter(e=>e.user_id===userId&&(+e.points||0)>0).map(e=>e.entry_date),...dailyCompletions.filter(d=>d.user_id===userId).map(d=>d.challenge_date)])].sort();let best=0,run=0,last=null;for(let ds of dates){let d=new Date(ds+'T12:00');if(last){let diff=Math.round((d-last)/86400000);run=diff===1?run+1:1}else run=1;best=Math.max(best,run);last=d}return best}
+function maxStreakEver(userId=me.id){
+ let candidates=[...entries.filter(e=>e.user_id===userId).map(e=>e.entry_date),...dailyCompletions.filter(d=>d.user_id===userId).map(d=>d.challenge_date)].filter(Boolean).sort();
+ if(!candidates.length)return 0;
+ let start=new Date(candidates[0]+'T12:00'),end=new Date(candidates.at(-1)+'T12:00'),best=0,run=0;
+ for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+  if(activeDay(fmtDate(d),userId)){run++;best=Math.max(best,run)}else run=0;
+ }
+ return best
+}
 function personalRecords(userId=me.id){let es=entries.filter(e=>e.user_id===userId),acts=es.filter(e=>e.kind==='activity');return {maxSteps:Math.max(0,...es.filter(e=>e.kind==='steps').map(e=>+e.steps||0)),maxMinutes:Math.max(0,...acts.map(e=>+e.minutes||0)),maxDistance:Math.max(0,...acts.map(e=>+e.distance||0)),streak:maxStreakEver(userId),totalActivities:acts.length}}
-function streakHeatmapHTML(userId=me.id,weeks=8){let end=new Date();let start=startOfWeek(end);start.setDate(start.getDate()-(weeks-1)*7);let cells=[];for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){let ds=fmtDate(d),active=activeDay(ds,userId);cells.push(`<span class="heatCell ${active?'on':''}" title="${new Date(ds+'T12:00').toLocaleDateString('de-DE')} ${active?'· aktiv':''}"></span>`)}return `<div class="heatmap" style="--weeks:${weeks}">${cells.join('')}</div><div class="tiny muted heatLegend"><span>letzte ${weeks} Wochen</span><span>□ kein Punkt · ■ Streak-Tag</span></div>`}
+function streakHeatmapHTML(userId=me.id,weeks=8){
+ let end=new Date(),start=startOfWeek(end);start.setDate(start.getDate()-(weeks-1)*7);let cells=[];
+ for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+  let ds=fmtDate(d),active=activeDay(ds,userId);
+  cells.push(`<span class="heatCell ${active?'on':''}" title="${new Date(ds+'T12:00').toLocaleDateString('de-DE')} ${active?'· qualifizierter Streak-Tag':'· kein Streak-Tag'}"></span>`)
+ }
+ return `<div class="heatmap" style="--weeks:${weeks}">${cells.join('')}</div><div class="tiny muted heatLegend"><span>letzte ${weeks} Wochen</span><span>□ offen · ■ qualifizierter Streak-Tag</span></div>`
+}
 function personalRecordsHTML(){let r=personalRecords();return `<div class="grid grid2 recordsGrid"><div class="recordMini">👟<span>Schritt-Rekord</span><b>${r.maxSteps.toLocaleString('de-DE')}</b></div><div class="recordMini">🔥<span>Längster Streak</span><b>${r.streak} Tage</b></div><div class="recordMini">⏱️<span>Längste Aktivität</span><b>${r.maxMinutes} Min.</b></div><div class="recordMini">🗺️<span>Längste Distanz</span><b>${r.maxDistance.toFixed(1)} km</b></div></div>`}
 
 function quickTemplates(){let cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);let from=fmtDate(cutoff),map=new Map();entries.filter(e=>e.user_id===me.id&&e.kind==='activity'&&e.entry_date>=from).forEach(e=>{let min=Math.max(5,Math.round((+e.minutes||0)/5)*5),dist=e.distance?Math.round(+e.distance*10)/10:null,key=`${e.activity}|${min}|${dist||''}`,x=map.get(key)||{activity:e.activity,minutes:min,distance:dist,count:0};x.count++;map.set(key,x)});return [...map.values()].sort((a,b)=>b.count-a.count).slice(0,3)}
@@ -585,7 +604,7 @@ async function saveQuickActivity(activity,minutes,distance){
  toast(entryDate===fmtDate()?'Aktivität gespeichert ✓':'Aktivität rückwirkend gespeichert ✓');
 }
 
-function almostThereHTML(){let items=[],sel=currentSelection(),c=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;if(c){let [a,b]=challengeProgressForWeek(c,me.id,weekKey()),left=Math.max(0,b-a);if(left>0&&left<=Math.max(1,b*.34))items.push(`🎯 Noch <b>${left}</b> bis „${escapeHtml(c.title)}“`)}let gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey()),gl=Math.max(0,gc.target-gv),pct=gv/gc.target;if(gl>0&&pct>=.7)items.push(`👥 Crew fast am Ziel: noch <b>${Number(gl.toFixed?.(1)??gl).toLocaleString('de-DE')} ${escapeHtml(gc.unit||'')}</b>`);let pts=monthPoints(),next=MILESTONES.find(m=>m>pts);if(next&&next-pts<=10)items.push(`🎁 Noch <b>${next-pts} P</b> bis zur nächsten Belohnung`);return items.length?`<div class="card pad almostThere"><b>✨ Fast geschafft</b>${items.map(x=>`<div>${x}</div>`).join('')}</div>`:''}
+function almostThereHTML(){let items=[],sel=currentSelection(),c=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;if(c){let [a,b]=challengeProgressForWeek(c,me.id,weekKey()),left=Math.max(0,b-a);if(left>0&&left<=Math.max(1,b*.34))items.push(`🎯 Noch <b>${left}</b> bis „${escapeHtml(c.title)}“`)}let gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey()),gl=Math.max(0,gc.target-gv),pct=gv/gc.target;if(gl>0&&pct>=.7)items.push(`👥 Crew fast am Ziel: noch <b>${Number(gl.toFixed?.(1)??gl).toLocaleString('de-DE')} ${escapeHtml(gc.unit||'')}</b>`);let pts=monthRewardPoints(),next=MILESTONES.find(m=>m>pts);if(next&&next-pts<=10)items.push(`🎁 Noch <b>${next-pts} P</b> bis zur nächsten Belohnung`);return items.length?`<div class="card pad almostThere"><b>✨ Fast geschafft</b>${items.map(x=>`<div>${x}</div>`).join('')}</div>`:''}
 function todayEnoughHTML(){let p=pointsCollectedOnDate(fmtDate()),dc=dailyCompletedBy(me.id);if(p>=8||((todayEntry('steps')?.steps||0)>=10000&&todayActivityMinutes()>=30))return `<div class="todayEnough"><b>🌿 Starker Tag.</b><span>Dein Streak ist gesichert und du hast heute ${p} Punkt${p===1?'':'e'} gesammelt. Alles Weitere ist Bonus.</span></div>`;return ''}
 function previousWeekSummary(userId=me.id){let d=startOfWeek();d.setDate(d.getDate()-7),wk=weekKey(d),from=wk,to=fmtDate(endOfWeek(d)),es=entriesForWeek(wk).filter(e=>e.user_id===userId),days=0;for(let x=new Date(from+'T12:00');fmtDate(x)<=to;x.setDate(x.getDate()+1))if(activeDay(fmtDate(x),userId))days++;return {wk,pts:pointsBetween(userId,from,to),steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),days}}
 function weeklyReviewHTML(){let w=previousWeekSummary();return `<div class="card pad"><div class="challengeTop"><h3>📅 Deine letzte Woche</h3><span class="pill">KW ${isoWeek(new Date(w.wk+'T12:00'))}</span></div><div class="grid kpis section"><div class="kpi"><b>${w.pts}</b><div class="tiny muted">Punkte</div></div><div class="kpi"><b>${w.steps.toLocaleString('de-DE')}</b><div class="tiny muted">Schritte</div></div><div class="kpi"><b>${w.minutes}</b><div class="tiny muted">Aktivmin.</div></div></div></div>`}
@@ -614,7 +633,7 @@ function isStandalonePWA(){return window.matchMedia?.('(display-mode: standalone
 function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
 function pushSupported(){return 'Notification'in window&&'serviceWorker'in navigator&&'PushManager'in window}
 function pushInstallHint(){
- if(isIOS()&&!isStandalonePWA())return 'Auf iPhone/iPad funktioniert Web Push erst in der installierten Fit4Us-WebApp. Öffne Fit4Us in Safari → Teilen → „Zum Home-Bildschirm“ und starte Fit4Us anschließend über das App-Symbol.';
+ if(isIOS()&&!isStandalonePWA())return 'Auf iPhone/iPad funktioniert Web Push erst in der installierten Movo-WebApp. Öffne Movo in Safari → Teilen → „Zum Home-Bildschirm“ und starte Movo anschließend über das App-Symbol.';
  if(!pushSupported())return 'Dieser Browser bzw. dieses Gerät unterstützt Web Push nicht.';
  return '';
 }
@@ -658,7 +677,7 @@ async function pushDeviceStatusHTML(){
       <div><span>WebApp</span><b>${d.standalone?'✅ installiert':'Browser'}</b></div>
      </div>`;
  if(hint)return `<div class="pushStatus warning"><b>🔔 Push noch nicht verfügbar</b><span>${escapeHtml(hint)}</span>${rows}</div>`;
- if(ok)return `<div class="pushStatus success"><b>✅ Push auf diesem Gerät technisch aktiv</b><span>${d.platform==='Android'?'Android Web Push ist korrekt registriert. Mit dem Test-Push prüfst du zusätzlich die tatsächliche Zustellung.':'Fit4Us darf echte System-Benachrichtigungen senden.'}</span>${rows}<div class="uploadBtns"><button class="secondary" onclick="sendTestPush()">Test-Push senden</button><button class="secondary danger" onclick="disablePushNotifications()">Auf diesem Gerät deaktivieren</button></div></div>`;
+ if(ok)return `<div class="pushStatus success"><b>✅ Push auf diesem Gerät technisch aktiv</b><span>${d.platform==='Android'?'Android Web Push ist korrekt registriert. Mit dem Test-Push prüfst du zusätzlich die tatsächliche Zustellung.':'Movo darf echte System-Benachrichtigungen senden.'}</span>${rows}<div class="uploadBtns"><button class="secondary" onclick="sendTestPush()">Test-Push senden</button><button class="secondary danger" onclick="disablePushNotifications()">Auf diesem Gerät deaktivieren</button></div></div>`;
  if(d.perm==='denied')return `<div class="pushStatus error"><b>🔕 Benachrichtigungen blockiert</b><span>Erlaube Mitteilungen in den System-/Browser-Einstellungen und öffne Fit4Us danach erneut.</span>${rows}</div>`;
  return `<div class="pushStatus"><b>🔔 Push auf diesem Gerät</b><span>Web Push wird auf iOS und Android unterstützt. Die Diagnose unten zeigt, welcher Teil auf diesem Gerät noch fehlt.</span>${rows}<button class="cta" onclick="enablePushNotifications()">Push-Benachrichtigungen aktivieren</button></div>`;
 }
@@ -686,7 +705,7 @@ async function disablePushNotifications(){
  }catch(err){toast('Push konnte nicht deaktiviert werden: '+(err?.message||err))}
 }
 async function sendTestPush(){
- let res=await notifyUser(me.id,'✅ Fit4Us Push funktioniert','Wenn du das liest, sind echte Web-Push-Benachrichtigungen auf diesem Gerät aktiv.','challenges',true);
+ let res=await notifyUser(me.id,'✅ Movo Push funktioniert','Wenn du das liest, sind echte Web-Push-Benachrichtigungen auf diesem Gerät aktiv.','challenges',true);
  if(res!==false)toast('Test-Push wurde versendet.');
 }
 async function notifyUser(targetUserId,title,body,category='challenges',allowSelf=false){
@@ -708,7 +727,10 @@ async function settingsHTML(){
  <label class="settingToggle"><input type="checkbox" ${p.celebration_sound?'checked':''} onchange="togglePref('celebration_sound',this.checked)"><span>🔊 Sound bei großen Erfolgen</span></label>
  <button class="secondary section" onclick="logout()">Abmelden</button></div>`;
 }
-async function maybeShowOnboarding(){if(prefFor().onboarded)return;$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Fit4Us</h2><div class="onboardingGrid"><div><span>⭐</span><b>Punkte sammeln</b><p>Bewegung, Ernährung und Challenges bringen Punkte – ohne Negativpunkte.</p></div><div><span>🔥</span><b>Streak aufbauen</b><p>Schon ein einziger Punkt am Tag hält deine Serie am Leben.</p></div><div><span>🎁</span><b>Belohnungen freischalten</b><p>Deine Punkte werden nicht ausgegeben. Erreichte Belohnungen bleiben dir.</p></div></div><button class="cta" onclick="finishOnboarding()">Fit4Us starten</button></div></div>`}
+async function maybeShowOnboarding(){
+ if(prefFor().onboarded)return;
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-logo.png"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
+}
 async function finishOnboarding(){await savePreferencePatch({onboarded:true});closeModal()}
 
 function startRealtime(){
@@ -724,8 +746,8 @@ function stopRealtime(){
 }
 function renderShell(){
  $('#boot').innerHTML=`<div class="shell">
- <aside class="side"><img src="assets/fit4us-logo.png"><div class="sideNav" id="sideNav"></div><div class="sideBottom" id="sideUser"></div></aside>
- <main class="main"><header class="top"><img class="brandMini" src="assets/fit4us-icon.png"><div class="topUser" id="topUser"></div></header><div id="content"></div></main>
+ <aside class="side"><img src="assets/movo-logo.png"><div class="sideNav" id="sideNav"></div><div class="sideBottom" id="sideUser"></div></aside>
+ <main class="main"><header class="top"><img class="brandMini movoMini" src="assets/movo-icon.png"><div class="topUser" id="topUser"></div></header><div id="content"></div></main>
  <nav class="bottom" id="bottomNav"></nav><div id="mobileMenuRoot"></div></div><div id="modalRoot"></div>`;
  navs()
 }
@@ -738,7 +760,7 @@ async function navs(){
 }
 function openMobileMenu(){
  let root=$('#mobileMenuRoot');if(!root)return;
- root.innerHTML=`<div class="mobileMenuBackdrop" onclick="closeMobileMenu(event)"><div class="mobileMenuSheet" onclick="event.stopPropagation()"><div class="mobileMenuHandle"></div><div class="mobileMenuHead"><div><b>Fit4Us Menü</b><div class="tiny muted">Alle Funktionen</div></div><button class="x" onclick="closeMobileMenu()">×</button></div><div class="mobileMenuGrid">
+ root.innerHTML=`<div class="mobileMenuBackdrop" onclick="closeMobileMenu(event)"><div class="mobileMenuSheet" onclick="event.stopPropagation()"><div class="mobileMenuHandle"></div><div class="mobileMenuHead"><div><b>Movo Menü</b><div class="tiny muted">Alle Funktionen</div></div><button class="x" onclick="closeMobileMenu()">×</button></div><div class="mobileMenuGrid">
  <button onclick="mobileGo('rewards')"><span>🎁</span><b>Belohnungen</b></button>
  <button onclick="mobileGo('me')"><span>👤</span><b>Mein Profil</b></button>
  <button onclick="mobileGo('rules')"><span>📖</span><b>Punkte & Regeln</b></button>
@@ -780,6 +802,7 @@ async function rankingHTML(list,from=null,to=null){
 function todayEntry(kind){return entries.find(e=>e.user_id===me.id&&e.entry_date===fmtDate()&&e.kind===kind)}
 function todayActivityMinutes(){return entries.filter(e=>e.user_id===me.id&&e.entry_date===fmtDate()&&e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0)}
 function monthPoints(){let mk=monthKey();return pointsBetween(me.id,mk+'-01',mk+'-31')}
+function monthRewardPoints(userId=me.id){let mk=monthKey();return rewardPointsBetween(userId,mk+'-01',mk+'-31')}
 function nextMilestone(p){return MILESTONES.find(x=>x>p)||MILESTONES.at(-1)}
 function pointsCollectedOnDate(date,userId=me.id){
  let base=entries.filter(e=>e.user_id===userId&&e.entry_date===date).reduce((s,e)=>s+(+e.points||0),0);
@@ -787,14 +810,24 @@ function pointsCollectedOnDate(date,userId=me.id){
  return base+daily;
 }
 function activeDay(date,userId=me.id){
- return pointsCollectedOnDate(date,userId)>0;
+ let dayEntries=entries.filter(e=>e.user_id===userId&&e.entry_date===date),
+     activities=dayEntries.filter(e=>e.kind==='activity'),
+     stepEntry=dayEntries.filter(e=>e.kind==='steps').sort((a,b)=>(+b.steps||0)-(+a.steps||0))[0],
+     food=dayEntries.find(e=>e.kind==='food'),
+     dailyDone=!!dailyCompletions.find(e=>e.user_id===userId&&e.challenge_date===date);
+
+ let strongActivity=activities.some(e=>(+e.points||0)>=2);
+ let enoughSteps=(+stepEntry?.steps||0)>=7500;
+ let enoughFood=(food?.food_items||[]).length>=3;
+ let otherHealthPoint=dayEntries.some(e=>(+e.points||0)>0);
+ return strongActivity||enoughSteps||enoughFood||(dailyDone&&otherHealthPoint);
 }
 function streak(userId=me.id){
  let n=0,d=new Date(); if(!activeDay(fmtDate(d),userId)){d.setDate(d.getDate()-1)}
  while(activeDay(fmtDate(d),userId)){n++;d.setDate(d.getDate()-1)}
  return n
 }
-function streakNext(s){return STREAK_MARKS.find(x=>x[0]>s)||[30,25]}
+function streakNext(s){return STREAK_MARKS.find(x=>x[0]>s)||null}
 
 
 function dailyTemplateText(text,targetUser=null){
@@ -930,13 +963,12 @@ function currentChallenge(){
  return sel?WEEKLY.find(x=>x.id===sel.challenge_id):null
 }
 function todaySuggestions(){
- let st=todayEntry('steps')?.steps||0,min=todayActivityMinutes(),food=todayEntry('food'),items=[];
- let thresholds=[5000,7500,10000,12500,15000];
- let next=thresholds.find(x=>x>st);
+ let st=todayEntry('steps')?.steps||0,food=todayEntry('food'),items=[];
+ let thresholds=[5000,7500,10000,12500,15000],next=thresholds.find(x=>x>st);
  if(next)items.push({icon:'👟',title:`Noch ${(next-st).toLocaleString('de-DE')} Schritte`,desc:`Dann erreichst du die nächste Schritt-Punktestufe (${next.toLocaleString('de-DE')}).`});
  else {let nextX=20000+Math.max(0,Math.floor((st-15000)/5000))*5000;if(nextX>st)items.push({icon:'👟',title:`Noch ${(nextX-st).toLocaleString('de-DE')} Schritte`,desc:'Damit gibt es einen weiteren Schrittpunkt.'})}
- if(!activeDay(fmtDate(),me.id))items.push({icon:'🔥',title:'Noch 1 Punkt für deinen Streak',desc:'Jeder positive Fit4Us-Punkt reicht heute aus, damit dein Streak weiterläuft.'});
- if(!food)items.push({icon:'🥗',title:'Ernährung noch nicht eingetragen',desc:'Tages-Check-in öffnen und bis zu 7 positive Ziele abhaken.'});
+ if(!activeDay(fmtDate(),me.id))items.push({icon:'🔥',title:'Streak heute noch offen',desc:'Qualifiziert wird der Tag mit 7.500 Schritten, 3 Ernährungszielen, einer Aktivität ab 2 P oder Daily + einem weiteren Gesundheitspunkt.'});
+ if(!food)items.push({icon:'🥗',title:'Ernährung noch nicht eingetragen',desc:'1–2 Ziele = 1 P · 3–4 = 2 P · 5–6 = 3 P · alle 7 = 4 P.'});
  let ch=currentChallenge();
  if(ch){let [a,b]=challengeProgressForWeek(ch,me.id,weekKey());if(a<b)items.push({icon:ch.icon,title:`Wochenchallenge: ${a}/${b}`,desc:ch.desc})}
  return items.slice(0,3)
@@ -1236,8 +1268,17 @@ function groupChallengeValueMonth(mk){
 function groupChallengeHTML(){let ch=groupChallengeForPeriod(monthKey()),v=groupChallengeValueMonth(monthKey());return `<div class="progress"><i style="width:${Math.min(100,v/ch.target*100)}%"></i></div>`}
 
 function homeMetricsHTML(){
- let today=fmtDate(),pts=pointsBetween(me.id,today,today),steps=entries.filter(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0);
- return `<div class="homeMetrics"><div><small>Heute</small><b>${pts} P</b></div><div><small>Streak</small><b>🔥 ${streak()} Tage</b></div><div><small>Schritte</small><b>${steps.toLocaleString('de-DE')}</b></div><div><small>Wunsch-Guthaben</small><b>${euro(wishCreditBalanceCents(me.id))}</b></div></div>`;
+ let today=fmtDate(),pts=pointsBetween(me.id,today,today),rewardBonus=streakBonusPointsBetween(me.id,today,today),
+     steps=entries.filter(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='steps').reduce((s,e)=>Math.max(s,+e.steps||0),0),
+     food=entries.find(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='food'),
+     pct=Math.min(100,Math.round(pts/8*100)),secured=activeDay(today,me.id),s=streak();
+ return `<section class="movoPulseCard card" style="--day-progress:${pct}%">
+   <div class="movoPulseCopy"><small>DEIN MOMENTUM HEUTE</small><h2>${secured?'Du bist im Flow.':'Ein guter Schritt reicht nicht – ein echter aktiver Tag schon.'}</h2>
+    <p>${secured?`🔥 ${s} ${s===1?'Tag':'Tage'} Streak gesichert.`:'🔥 Streak noch offen – heute zählt Qualität statt irgendein einzelner Punkt.'}</p>
+    <div class="movoPulseChips"><span>👟 ${steps.toLocaleString('de-DE')}</span><span>🥗 ${(food?.food_items||[]).length}/7</span>${rewardBonus?`<span class="movoBonusChip">✨ +${rewardBonus} Movo-Bonus</span>`:''}</div>
+   </div>
+   <div class="movoProgressRing" aria-label="${pts} von 8 Tagespunkten"><div><b>${pts}</b><small>/ 8 P</small></div></div>
+  </section>`;
 }
 function homeChallengesHTML(){
  let dc=dailyChallengeFor(),dd=dailyCompletedBy(me.id),sel=currentSelection(),wc=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,
@@ -1278,12 +1319,13 @@ function todayNudgeHTML(){
      dailyDone=!!dailyCompletedBy(me.id,ds),secured=activeDay(ds,me.id),
      currentStepPts=stepPoints(steps),nextStepPts=stepPoints(next);
  let stepText=remain>0?`Noch ${remain.toLocaleString('de-DE')} bis ${nextStepPts>currentStepPts?`+${nextStepPts} P`: 'zum nächsten Ziel'}`:'Nächstes Schrittziel erreicht';
+ let foodText=foodCount===7?'Alle Ziele · 4 P':`${foodCount} Ziele · ${foodPoints(foodCount)} P`;
  return `<section class="todayNudge card">
-  <div class="todayNudgeHead"><div><small>DEIN HEUTE</small><h2>Was fehlt noch?</h2></div><span class="streakSecure ${secured?'done':''}">${secured?'✓ Streak gesichert':'🔥 Streak noch offen'}</span></div>
+  <div class="todayNudgeHead"><div><small>DEIN HEUTE</small><h2>Was fehlt noch?</h2></div><span class="streakSecure ${secured?'done':''}">${secured?'✓ Streak qualifiziert':'🔥 Streak noch offen'}</span></div>
   <div class="todayNudgeGrid">
-   <button onclick="openEntry('steps')"><span>👟</span><div><b>${steps.toLocaleString('de-DE')} Schritte</b><small>${escapeHtml(stepText)}</small></div><strong>›</strong></button>
-   <button onclick="openEntry('food')"><span>🥗</span><div><b>${foodCount}/${FOOD.length} Ernährungsziele</b><small>${foodCount===FOOD.length?'Alles geschafft ✓':`${FOOD.length-foodCount} Ziele noch offen`}</small></div><strong>›</strong></button>
-   <button onclick="${dailyDone?`go('challenges')`:`openDailyComplete()`}"><span>☀️</span><div><b>Tageschallenge</b><small>${dailyDone?'Erledigt ✓':'Noch offen · +1 P'}</small></div><strong>›</strong></button>
+   <button onclick="openEntry('steps')"><span>👟</span><div><b>${steps.toLocaleString('de-DE')} Schritte</b><small>${escapeHtml(stepText)}${steps<7500?' · ab 7.500 zählt der Streak':''}</small></div><strong>›</strong></button>
+   <button onclick="openEntry('food')"><span>🥗</span><div><b>${foodText}</b><small>${foodCount>=3?'Ernährung qualifiziert den Streak ✓':`Noch ${3-foodCount} bis Ernährung für den Streak zählt`}</small></div><strong>›</strong></button>
+   <button onclick="${dailyDone?`go('challenges')`:`openDailyComplete()`}"><span>☀️</span><div><b>Tageschallenge</b><small>${dailyDone?'Erledigt ✓ · braucht für Streak noch 1 weiteren Gesundheitspunkt':'Noch offen · +1 P'}</small></div><strong>›</strong></button>
   </div>
  </section>`;
 }
@@ -1313,7 +1355,7 @@ function crewPointBreakdown(userId,from=weekKey(),to=fmtDate(endOfWeek())){
  let steps=es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.points||0),0);
  let food=es.filter(e=>e.kind==='food').reduce((s,e)=>s+(+e.points||0),0);
  let daily=dailyCompletions.filter(d=>d.user_id===userId&&d.challenge_date>=from&&d.challenge_date<=to).reduce((s,d)=>s+(+d.points||1),0);
- let streakPts=streakBonusEvents(userId).filter(x=>x.date>=from&&x.date<=to).reduce((s,x)=>s+(+x.points||0),0);
+ let movoBonus=streakBonusPointsBetween(userId,from,to);
  let weekly=0;
  for(let wk of weekKeysBetween(from,to)){
   let sel=selectionForWeek(wk),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,done=weeklyChallengeCompletionDate(ch,userId,wk);
@@ -1325,8 +1367,8 @@ function crewPointBreakdown(userId,from=weekKey(),to=fmtDate(endOfWeek())){
   if(done&&done>=from&&done<=to)crew+=15;
  }
  let total=pointsBetween(userId,from,to);
- let accounted=activity+steps+food+daily+streakPts+weekly+crew;
- return {activity,steps,food,daily,streak:streakPts,weekly,crew,other:Math.max(0,total-accounted),total};
+ let accounted=activity+steps+food+daily+weekly+crew;
+ return {activity,steps,food,daily,movoBonus,weekly,crew,other:Math.max(0,total-accounted),total};
 }
 async function openCrewMember(userId){
  let p=profileById(userId);if(!p)return;
@@ -1336,16 +1378,16 @@ async function openCrewMember(userId){
   ['👟','Schritte',b.steps],
   ['🥗','Ernährung',b.food],
   ['☀️','Tageschallenges',b.daily],
-  ['🔥','Streak-Boni',b.streak],
   ['🎯','Wochenchallenge',b.weekly],
   ['👥','Crew-Mission',b.crew],
-  ...(b.other?[['⭐','Weitere Bonuspunkte',b.other]]:[])
+  ...(b.other?[['⭐','Weitere Ranglistenpunkte',b.other]]:[])
  ].filter(x=>x[2]>0);
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard crewMemberModal">
   <div class="modalHead"><h2>Crew-Woche</h2><button class="x" onclick="closeModal()">×</button></div>
   <div class="crewMemberHero">${av}<div><h2>${escapeHtml(firstName(p))}</h2><span class="muted">KW ${isoWeek(new Date())}</span></div><strong>${b.total} P</strong></div>
-  <div class="crewBreakdown">${rows.length?rows.map(([icon,label,pts])=>`<div><span class="crewBreakIcon">${icon}</span><b>${label}</b><strong>+${pts} P</strong></div>`).join(''):'<div class="muted">Diese Woche noch keine Punkte gesammelt.</div>'}</div>
-  <div class="tiny muted section">Die Summe umfasst alle Fit4Us-Punkte dieser Woche einschließlich Challenge- und Streak-Boni.</div>
+  <div class="crewBreakdown">${rows.length?rows.map(([icon,label,pts])=>`<div><span class="crewBreakIcon">${icon}</span><b>${label}</b><strong>+${pts} P</strong></div>`).join(''):'<div class="muted">Diese Woche noch keine Ranglistenpunkte gesammelt.</div>'}</div>
+  ${b.movoBonus?`<div class="notice small section">🔥 <b>+${b.movoBonus} Movo-Bonus</b> aus Streak-Meilensteinen · zählt für Belohnungen, nicht fürs Ranking.</div>`:''}
+  <div class="tiny muted section">Die Summe oben ist die faire Ranglistenwertung aus Aktivität, Schritten, Ernährung und Challenges. Streak-Boni werden bewusst getrennt dargestellt.</div>
  </div></div>`;
 }
 
@@ -1430,7 +1472,7 @@ function daySummaryRowHTML(row){
   return `<div class="dayFeedRow accentAchievement"><span class="dayFeedIcon">${escapeHtml(a.emoji||'🏅')}</span><div><b>${escapeHtml(a.title)}</b><small>Achievement erreicht</small></div><strong>🏅</strong></div>`;
  }
  let s=row.obj;
- return `<div class="dayFeedRow accentStreak"><span class="dayFeedIcon">🔥</span><div><b>${s.days}-Tage-Streak</b><small>Streak-Meilenstein erreicht</small></div><strong>+${s.points} P</strong></div>`;
+ return `<div class="dayFeedRow accentStreak"><span class="dayFeedIcon">🔥</span><div><b>${s.days}-Tage-Streak</b><small>Movo-Bonus · zählt nicht zur Rangliste</small></div><strong>+${s.points} Bonus</strong></div>`;
 }
 async function dayPhotoGalleryHTML(parts){
  let paths=[
@@ -1492,7 +1534,7 @@ async function toggleFeedReaction(type,itemId,emoji,ownerId){
   ?sb.from('feed_reactions').delete().eq('id',old.id).eq('user_id',me.id)
   :sb.from('feed_reactions').insert({item_type:type,item_id:itemId,user_id:me.id,emoji});
  let {error}=await q;if(error)return toast(error.message);
- if(!old&&ownerId&&ownerId!==me.id&&prefFor(ownerId).notify_reactions)notifyUser(ownerId,`${firstName(me)} reagiert ${emoji}`,'Auf deinen Fit4Us-Eintrag','reactions');
+ if(!old&&ownerId&&ownerId!==me.id&&prefFor(ownerId).notify_reactions)notifyUser(ownerId,`${firstName(me)} reagiert ${emoji}`,'Auf deinen Movo-Tag','reactions');
  await loadData();await render();
 }
 function feedReactionBar(type,id,ownerId){
@@ -1518,9 +1560,9 @@ function weeklyDecisionStatusHTML(){
  let sel=currentSelection();if(sel)return '';
  let champ=prevChampion(),ww=weeklyChoiceWindows.find(x=>x.week_key===weekKey()),deadline=ww?.deadline_at?new Date(ww.deadline_at):null,
      chooser=ww?.selector_user_id?profileById(ww.selector_user_id):champ;
- if(!chooser)return `<div class="challengeWaiting"><span>🎲</span><div><b>Wochenchallenge wird vorbereitet</b><small>Fit4Us stellt drei zufällige Optionen zusammen.</small></div></div>`;
+ if(!chooser)return `<div class="challengeWaiting"><span>🎲</span><div><b>Wochenchallenge wird vorbereitet</b><small>Movo stellt drei zufällige Optionen zusammen.</small></div></div>`;
  let left=deadline?Math.max(0,deadline-Date.now()):0,h=Math.floor(left/3600000),m=Math.floor((left%3600000)/60000);
- return `<div class="challengeWaiting"><span>👑</span><div><b>${escapeHtml(firstName(chooser))} hat aktuell die Wahl</b><small>${left>0?`Noch ca. ${h} Std. ${m} Min. Zeit – danach wählt Fit4Us automatisch aus den drei Optionen.`:'Die 18 Stunden sind abgelaufen. Die automatische Auswahl erfolgt beim nächsten Abgleich.'}</small></div></div>`;
+ return `<div class="challengeWaiting"><span>👑</span><div><b>${escapeHtml(firstName(chooser))} hat aktuell die Wahl</b><small>${left>0?`Noch ca. ${h} Std. ${m} Min. Zeit – danach wählt Movo automatisch aus den drei Optionen.`:'Die 18 Stunden sind abgelaufen. Die automatische Auswahl erfolgt beim nächsten Abgleich.'}</small></div></div>`;
 }
 
 async function challengesHTML(){
@@ -1546,7 +1588,7 @@ async function rateChallenge(id,rating){let old=ratings.find(x=>x.challenge_pool
 function openProposal(){
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>Neue Challenge vorschlagen</h2><button class="x" onclick="closeModal()">×</button></div><form class="form section" onsubmit="submitProposal(event)">
  <div class="field"><label>Typ</label><select id="prType" onchange="proposalTypeChanged()"><option value="weekly">Wochenchallenge</option><option value="group">Crew-Challenge</option><option value="daily">Tageschallenge</option></select></div>
- <div class="field hidden" id="prDailyModeWrap"><label>Art der Tageschallenge</label><select id="prDailyMode"><option value="general">Allgemein</option><option value="group_other">Bezieht sich auf eine andere Person der Crew</option></select><div class="tiny muted">Bei Crew-Bezug lost Fit4Us täglich automatisch eine andere Person aus. Die Aufgabe sollte deshalb auch per Nachricht, Anruf oder aus der Ferne machbar sein. Nutze in der Beschreibung <b>{person}</b> als Platzhalter.</div></div>
+ <div class="field hidden" id="prDailyModeWrap"><label>Art der Tageschallenge</label><select id="prDailyMode"><option value="general">Allgemein</option><option value="group_other">Bezieht sich auf eine andere Person der Crew</option></select><div class="tiny muted">Bei Crew-Bezug lost Movo täglich automatisch eine andere Person aus. Die Aufgabe sollte deshalb auch per Nachricht, Anruf oder aus der Ferne machbar sein. Nutze in der Beschreibung <b>{person}</b> als Platzhalter.</div></div>
  <div class="field"><label>Name</label><input id="prName" required maxlength="60"></div>
  <div class="field"><label>Emoji</label><input id="prEmoji" required maxlength="8" value="🎯"></div>
  <div class="field"><label>Beschreibung</label><textarea id="prDesc" rows="4" required maxlength="400" style="width:100%;border:1px solid #dbe4eb;border-radius:13px;padding:12px"></textarea></div>
@@ -1581,7 +1623,7 @@ async function rewardGroupCardHTML(p){
  let av=await avatarHTML(p,48),
      balance=wishCreditBalanceCents(p.id),
      open=openRewardChoicesFor(p.id),
-     pts=pointsBetween(p.id,monthKey()+'-01',monthKey()+'-31'),
+     pts=monthRewardPoints(p.id),
      unchosen=MILESTONES.filter(m=>pts>=m&&!rewardChoices.some(r=>r.user_id===p.id&&r.month_key===monthKey()&&r.milestone===m)),
      names=open.slice(0,3).map(r=>rewardName(r.reward_key));
  return `<div class="card pad rewardPersonCard ${p.id===me.id?'rewardPersonMe':''}">
@@ -1593,11 +1635,11 @@ async function rewardGroupCardHTML(p){
 }
 async function rewardsHTML(){
  let bal=wishCreditBalanceCents(me.id),life=lifetimePoints(me.id),next=highestWishThreshold(me.id)+100,
-     remaining=Math.max(0,next-life),reached=MILESTONES.filter(m=>monthPoints()>=m),group='';
+     remaining=Math.max(0,next-life),rewardMonth=monthRewardPoints(),reached=MILESTONES.filter(m=>rewardMonth>=m),group='';
  for(let p of profiles.filter(x=>x.approved))group+=await rewardGroupCardHTML(p);
- return `<div class="pageHead"><div><small>FIT4US REWARDS</small><h1>Belohnungen</h1></div><span class="pill">Punkte werden nicht ausgegeben</span></div>
- <div class="wishHero card"><div><small>💰 DEIN WUNSCH-GUTHABEN</small><div class="wishHeroAmount">${euro(bal)}</div><p>Je 100 Gesamtpunkte kommen dauerhaft 5,00 € hinzu.</p></div><div class="wishHeroSide"><div><b>${life} P</b><span>Gesamtpunkte</span></div><div><b>${remaining} P</b><span>bis +5,00 €</span></div><button class="cta" ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></div></div>
- <div class="sectionTitle compactTitle"><h2>Deine offenen Belohnungen</h2><span class="pill">${monthPoints()} P diesen Monat</span></div>
+ return `<div class="pageHead"><div><small>MOVO REWARDS</small><h1>Belohnungen</h1></div><span class="pill">Punkte werden nicht ausgegeben</span></div>
+ <div class="wishHero card"><div><small>💰 DEIN WUNSCH-GUTHABEN</small><div class="wishHeroAmount">${euro(bal)}</div><p>Je 100 Lifetime-Belohnungspunkte kommen dauerhaft 5,00 € hinzu.</p></div><div class="wishHeroSide"><div><b>${life} P</b><span>Belohnungspunkte</span></div><div><b>${remaining} P</b><span>bis +5,00 €</span></div><button class="cta" ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></div></div>
+ <div class="sectionTitle compactTitle"><h2>Deine offenen Belohnungen</h2><span class="pill">${rewardMonth} Belohnungs-P diesen Monat</span></div>
  <div class="card pad">${reached.length?reached.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Noch keine Monatsbelohnung freigeschaltet.</div>'}${openRewardsInventoryHTML()}</div>
  <div class="sectionTitle compactTitle"><h2>Belohnungen der Crew</h2><span class="tiny muted">Einlösen kann jeder nur selbst</span></div><div class="grid grid2 rewardPeopleGrid">${group}</div>
  <details class="card pad section disclosureCard"><summary><b>🎁 Alle Belohnungen & Stufen</b><span class="tiny muted">Pool, Bewertungen & Vorschläge</span></summary><div class="section">${rewardsRulesHTML()}</div></details>
@@ -1637,7 +1679,7 @@ function openRewardChoices(){
 }
 function rewardName(key){return rewardPool.find(x=>x.id===key||x.reward_key===key)?.name||REWARDS.find(x=>x.key===key)?.name||key}
 function rewardsOverviewHTML(){
- let pts=monthPoints(),next=MILESTONES.find(m=>m>pts),open=openRewardChoices();
+ let pts=monthRewardPoints(),next=MILESTONES.find(m=>m>pts),open=openRewardChoices();
  if(!next){
   return `<div class="rewardOverview"><div class="rewardNextHead"><div><div class="tiny muted">🎁 Belohnungen</div><b>Alle Punkteziele dieses Monats erreicht!</b></div><span class="rewardBig">🎉</span></div>${open.length?`<div class="notice small" style="margin-top:10px"><b>${open.length} offene Belohnung${open.length===1?'':'en'}</b> – bleiben erhalten, bis du sie einlöst.</div>`:''}<button class="react" style="margin-top:10px" onclick="go('rewards')">Alle Belohnungen ansehen</button></div>`
  }
@@ -1652,7 +1694,7 @@ function rewardsOverviewHTML(){
 }
 function allRewardMilestonesHTML(){
  return `<div class="grid">${MILESTONES.map(m=>{
-   let opts=rewardOptions(m),unlocked=monthPoints()>=m;
+   let opts=rewardOptions(m),unlocked=monthRewardPoints()>=m;
    return `<div class="card pad rewardMilestoneCard ${unlocked?'rewardUnlocked':''}">
      <div class="challengeTop"><div><span class="pill">${unlocked?'✓ Freigeschaltet':'🎁 Punkte-Ziel'}</span><h3 style="margin:8px 0 0">${m} Punkte</h3></div><b class="points">${unlocked?'erreicht':''}</b></div>
      <div class="rewardChoicePreview section">${opts.map(r=>`<div class="rewardPreviewItem"><b>${escapeHtml(r.name)}</b><div class="tiny muted">${escapeHtml(r.desc)}</div></div>`).join('')}</div>
@@ -1665,7 +1707,10 @@ function openRewardsInventoryHTML(){
  if(!open.length)return '';
  return `<div class="section"><b>Offene Belohnungen – monatsübergreifend</b>${open.map(r=>`<div class="reward"><span>${escapeHtml(rewardName(r.reward_key))}</span><div class="tiny muted">${r.month_key||''} · ${r.milestone} P</div><button class="react" onclick="redeemReward('${r.id}')">Einlösen</button></div>`).join('')}</div>`
 }
-function rewardMilestoneHTML(m){let got=rewardChoices.find(r=>r.user_id===me.id&&r.month_key===monthKey()&&r.milestone===m);return `<div class="reward" style="border-top:1px solid #edf1f4"><b>${m} P</b> ${got?`· ${escapeHtml(REWARDS.find(x=>x.key===got.reward_key)?.name||got.reward_key)} ${got.redeemed_at?'✓ eingelöst':`<button class="react" onclick="redeemReward('${got.id}')">Einlösen</button>`}`:`<button class="react" onclick="openReward(${m})">Belohnung wählen</button>`}</div>`}
+function rewardMilestoneHTML(m){
+ let got=rewardChoices.find(r=>r.user_id===me.id&&r.month_key===monthKey()&&r.milestone===m);
+ return `<div class="reward" style="border-top:1px solid var(--line)"><b>${m} P</b> ${got?`· ${escapeHtml(rewardName(got.reward_key))} ${got.redeemed_at?'✓ eingelöst':`<button class="react" onclick="redeemReward('${got.id}')">Einlösen</button>`}`:`<button class="react" onclick="openReward(${m})">Belohnung wählen</button>`}</div>`
+}
 async function redeemReward(id){
  let {data,error}=await sb.from('reward_choices').update({redeemed_at:new Date().toISOString()}).eq('id',id).eq('user_id',me.id).select('id');
  if(error)return toast('Belohnung konnte nicht eingelöst werden: '+error.message);
@@ -1769,16 +1814,23 @@ function rewardProposalFeedHTML(){
  let list=rewardProposals.filter(p=>p.status==='voting');if(!list.length)return '';
  return `<div class="sectionTitle"><h2>📌 Belohnungsvorschläge</h2><span class="pill">Abstimmung</span></div>${list.map(p=>{let v=rewardVoteCounts(p.id),mine=rewardProposalVotes.find(x=>x.proposal_id===p.id&&x.user_id===me.id),who=profileById(p.proposer_id);return `<div class="card pad section rewardProposalVotingCard"><h3>🎁 ${escapeHtml(p.name)}</h3><p class="small muted">${escapeHtml(p.description)}</p><div class="tiny muted">${p.points_required} P · vorgeschlagen von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no}</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteRewardProposal('${p.id}',true)">👍 Dafür</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteRewardProposal('${p.id}',false)">👎 Dagegen</button></div></div>`}).join('')}`
 }
-function rulesHTML(){return `<div class="pageHead"><div><small>SO FUNKTIONIERT FIT4US</small><h1>Punkte & Regeln</h1></div></div>
- <div class="card pad rulesIntro"><b>Transparent und positiv</b><div class="small muted">Punkte werden gesammelt, aber niemals ausgegeben. Rankings enthalten Aktivitäts-, Schritt-, Ernährungs-, Challenge-, Tageschallenge- und Streak-Punkte.</div></div>
- <details class="card pad section disclosureCard" open><summary><b>⭐ Punkte sammeln</b></summary><div class="section">
-  <div class="grid grid2"><div><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p></div><div><h3>🥗 Ernährung</h3><p>Jedes vollständig erfüllte Tagesziel gibt +1 P, maximal ${FOOD.length} P pro Ernährungstag.</p></div></div>
+function rulesHTML(){return `<div class="pageHead"><div><small>SO FUNKTIONIERT MOVO</small><h1>Punkte & Regeln</h1></div></div>
+ <div class="card pad rulesIntro"><b>Fair, motivierend und transparent</b><div class="small muted">Die Rangliste belohnt echte Leistung. Streak-Meilensteine geben kleine Movo-Bonuspunkte für Belohnungen und Wunsch-Guthaben, aber keinen zusätzlichen Ranglisten-Vorteil.</div></div>
+ <details class="card pad section disclosureCard" open><summary><b>⭐ Ranglistenpunkte</b></summary><div class="section">
+  <div class="grid grid2"><div><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p></div><div><h3>🥗 Ernährung</h3><p>1–2 erfüllte Ziele = 1 P · 3–4 = 2 P · 5–6 = 3 P · alle 7 = 4 P. So bleibt Ernährung wertvoll, ohne Sport und Bewegung zu überholen.</p></div></div>
   <h3>🏃 Aktivitäten</h3><div class="grid grid2">${Object.entries(ACTIVITIES).map(([k,a])=>`<div class="choice"><b>${a.icon} ${a.name}</b><div class="tiny muted">${a.mode==='distance'?`${a.step} km = ${a.points} P`:`${a.step} Minuten = ${a.points} P`}${['garden','house'].includes(k)?' · Haus/Garten zusammen max. 4 P pro Tag':''}</div></div>`).join('')}</div>
  </div></details>
- <details class="card pad section disclosureCard"><summary><b>🔥 Streak & Bonuspunkte</b></summary><div class="section"><p>Jeder Tag mit mindestens 1 positivem Fit4Us-Punkt zählt als Streak-Tag.</p><p><b>3 Tage +2 P · 5 Tage +3 P · 7 Tage +5 P · 14 Tage +10 P · 21 Tage +15 P · 30 Tage +25 P</b></p></div></details>
- <details class="card pad section disclosureCard"><summary><b>🎯 Challenges</b></summary><div class="section"><p><b>Tageschallenge:</b> jeden Tag persönlich und zufällig, +1 P. Rund 20 % beziehen eine andere Person ein.</p><p><b>Wochenchallenge:</b> +5 P. Der Gewinner der Vorwoche bekommt drei zufällige Optionen. Erfolgt innerhalb von 18 Stunden nach Wochenbeginn keine Wahl, wählt Fit4Us automatisch aus diesen drei.</p><p><b>Monatsmission:</b> gemeinsame Crew-Mission, zufällig aus dem Pool und für den ganzen Monat fest gespeichert. Bei Erfolg erhält jedes Crew-Mitglied +15 P.</p><p><b>Wiederholschutz:</b> Tagesaufgaben, Wochen- und Monatschallenges versuchen kürzlich verwendete Aufgaben zu vermeiden.</p></div></details>
+ <details class="card pad section disclosureCard"><summary><b>🔥 Streak & Movo-Bonus</b></summary><div class="section">
+  <p><b>Ein Streak-Tag muss qualifiziert sein.</b> Dafür reicht eine der folgenden Bedingungen:</p>
+  <div class="grid grid2"><div class="choice">🏃 Aktivität mit mindestens <b>2 Basispunkten</b></div><div class="choice">👟 mindestens <b>7.500 Schritte</b></div><div class="choice">🥗 mindestens <b>3 Ernährungsziele</b></div><div class="choice">☀️ Daily + mindestens <b>1 weiterer Gesundheitspunkt</b></div></div>
+  <p>Wird ein kompletter Tag nicht qualifiziert, startet der aktuelle Streak wieder bei 0. Dein persönlicher Rekord bleibt erhalten.</p>
+  <p><b>3 Tage +1 · 7 Tage +2 · 14 Tage +3 · 30 Tage +5 · 60 Tage +7 · 100 Tage +10 Movo-Bonuspunkte.</b></p>
+  <div class="notice small"><b>Fairness:</b> Diese Streak-Boni zählen für Belohnungen und Gesamtfortschritt, aber <b>nicht</b> für Wochen-/Monatsranglisten.</div>
+ </div></details>
+ <details class="card pad section disclosureCard"><summary><b>🎯 Challenges</b></summary><div class="section"><p><b>Tageschallenge:</b> jeden Tag persönlich und zufällig, +1 P. Rund 20 % beziehen eine andere Person ein.</p><p><b>Wochenchallenge:</b> +5 P. Der Gewinner der Vorwoche bekommt drei zufällige Optionen. Erfolgt innerhalb von 18 Stunden nach Wochenbeginn keine Wahl, wählt Movo automatisch aus diesen drei.</p><p><b>Monatsmission:</b> gemeinsame Crew-Mission. Bei Erfolg erhält jedes Crew-Mitglied +15 P.</p><p><b>Wiederholschutz:</b> Tagesaufgaben, Wochen- und Monatschallenges versuchen kürzlich verwendete Aufgaben zu vermeiden.</p></div></details>
+ <details class="card pad section disclosureCard"><summary><b>🎁 Belohnungen: machbar, aber verdient</b></summary><div class="section"><p>Monatliche Belohnungsstufen: <b>50 · 100 · 150 · 200 · 250 · 300 Punkte</b>. Kleine Extras kommen früh, größere gemeinsame Erlebnisse sind bewusst Stretch-Ziele.</p><p>Für die Belohnungsstufen zählen Ranglistenpunkte <b>plus</b> kleine Streak-Bonuspunkte. Bereits gewählte Belohnungen bleiben erhalten und Punkte werden nicht ausgegeben.</p><p>Zusätzlich gibt es weiterhin je 100 Lifetime-Belohnungspunkte +5,00 € persönliches Wunsch-Guthaben.</p></div></details>
  <div class="card pad section rewardRuleLink"><div><h3>🎁 Belohnungen & Wunsch-Guthaben</h3><p class="muted small">Belohnungspool, offene Belohnungen, Guthaben und Einlösen sind vollständig im Reiter „Belohnungen“ gebündelt.</p></div><button class="react" onclick="go('rewards')">Belohnungen öffnen</button></div>`}
-function historyHTML(){let ms=completedMonths();if(!historyMonth||!ms.includes(historyMonth))historyMonth=ms[0]||null;return `<div class="historyTop"><div><small>FIT4US ARCHIV</small><h1>Historie</h1></div><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div>${historyMode==='all'?allTimeView():ms.length?`<div class="monthNav"><button onclick="shiftHistory(-1)">‹</button><div><b>${monthLabel(historyMonth)}</b><select onchange="setHistoryMonth(this.value)">${ms.map(m=>`<option value="${m}" ${m===historyMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}</select></div><button onclick="shiftHistory(1)">›</button></div>${monthView(historyMonth)}`:'<div class="card pad muted">Nach dem ersten abgeschlossenen Monat erscheint hier automatisch der Monatsrückblick.</div>'}` }
+function historyHTML(){let ms=completedMonths();if(!historyMonth||!ms.includes(historyMonth))historyMonth=ms[0]||null;return `<div class="historyTop"><div><small>MOVO ARCHIV</small><h1>Historie</h1></div><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div>${historyMode==='all'?allTimeView():ms.length?`<div class="monthNav"><button onclick="shiftHistory(-1)">‹</button><div><b>${monthLabel(historyMonth)}</b><select onchange="setHistoryMonth(this.value)">${ms.map(m=>`<option value="${m}" ${m===historyMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}</select></div><button onclick="shiftHistory(1)">›</button></div>${monthView(historyMonth)}`:'<div class="card pad muted">Nach dem ersten abgeschlossenen Monat erscheint hier automatisch der Monatsrückblick.</div>'}` }
 async function adminHTML(){
  if(!me.is_admin)return '<div class="error">Kein Admin-Zugriff.</div>';
  let pending=profiles.filter(p=>!p.approved),active=profiles.filter(p=>p.approved);
@@ -1788,11 +1840,11 @@ async function adminHTML(){
  let rewardProp=rewardProposals.filter(p=>p.status==='voting').map(p=>{let v=rewardVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>🎁 ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">${p.points_required} P · von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideRewardProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideRewardProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Belohnungsvorschläge.</div>';
  let auditHtml=adminAudit.length?adminAudit.slice(0,50).map(a=>{let p=profileById(a.admin_user_id);return `<div class="rankRow"><span>🧾</span><div><b>${escapeHtml(a.action)}</b><div class="tiny muted">${new Date(a.created_at).toLocaleString('de-DE')} · ${escapeHtml(firstName(p))}</div></div><button class="react" onclick='alert(${JSON.stringify(JSON.stringify(a.details||{},null,2))})'>Details</button></div>`}).join(''):'<div class="muted">Noch keine Admin-Aktionen protokolliert.</div>';
  return `<h1>Admin</h1>
- <div class="notice"><b>🔐 Private Fit4Us-Crew</b></div>
+ <div class="notice"><b>🔐 Private Movo-Crew</b></div>
  <div class="section"><h2>Offene Registrierungen ${pending.length?`(${pending.length})`:''}</h2>${pendingHtml}</div>
  <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div><div class="section"><h2>Belohnungsvorschläge</h2>${rewardProp}</div>
  <div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div>
- <div class="card pad section"><h3>💾 Backup & Restore</h3><div class="uploadBtns"><button class="cta" onclick="exportBackup()">Komplett-Backup herunterladen</button><button class="secondary" onclick="openRestoreDialog()">Backup wiederherstellen</button></div><div class="tiny muted" style="margin-top:8px">Backup enthält alle zentralen Fit4Us-Datenbanktabellen. Bilder in Supabase Storage werden derzeit nicht in die JSON-Datei eingebettet.</div></div>
+ <div class="card pad section"><h3>💾 Backup & Restore</h3><div class="uploadBtns"><button class="cta" onclick="exportBackup()">Komplett-Backup herunterladen</button><button class="secondary" onclick="openRestoreDialog()">Backup wiederherstellen</button></div><div class="tiny muted" style="margin-top:8px">Backup enthält alle zentralen Movo-Daten (intern weiterhin Fit4Us-Tabellen). Bilder in Supabase Storage werden derzeit nicht in die JSON-Datei eingebettet.</div></div>
  <div class="card pad section" style="border-color:#ffd4d4;background:#fffafa"><h3>⚠️ Daten zurücksetzen</h3><p class="small muted">Jeder Reset erstellt zuerst automatisch ein Komplett-Backup und verlangt eine eindeutige Bestätigung.</p><div class="grid"><button class="secondary" onclick="openResetDialog('test')">🧪 Testdaten zurücksetzen</button><button class="secondary" onclick="openResetDialog('season')">🏁 Saison-/Wettbewerbsdaten zurücksetzen</button><button class="secondary danger" onclick="openResetDialog('full')">☢ Kompletter Datenreset</button></div></div>
  <div class="card pad section"><h3>Datenbank</h3><div>Profile: ${active.length}</div><div>Einträge: ${entries.length}</div><div>Challenges im Pool: ${challengePool.length}</div><div>Offene Vorschläge: ${proposals.filter(p=>p.status==='voting').length}</div></div>
  <div class="card pad section"><h3>🧾 Admin-Auditlog</h3>${auditHtml}</div>`
@@ -1846,7 +1898,7 @@ function openResetDialog(mode){
  const defs={
   test:{title:'Testdaten zurücksetzen',desc:'Löscht Aktivitäten, Schritte, Ernährung, Reaktionen, Challenge-Abschlüsse, Achievements, Belohnungen und Bewertungen. Accounts, Freischaltungen und Challenge-Pool bleiben erhalten.',word:'TESTRESET'},
   season:{title:'Saison-/Wettbewerbsdaten zurücksetzen',desc:'Löscht Nutzungs- und Wettbewerbsdaten inklusive laufender Challenge-Zuweisungen, behält Benutzerkonten und Challenge-Pool.',word:'SAISONRESET'},
-  full:{title:'Kompletter Fit4Us-Datenreset',desc:'Löscht nahezu alle Fit4Us-Inhalte außer Benutzerkonten, Admin-/Freischaltungsstatus und der technischen Grundstruktur. Challenge-Pool wird auf Systemdaten reduziert.',word:'FULLRESET'}
+  full:{title:'Kompletter Movo-Datenreset',desc:'Löscht nahezu alle Movo-Inhalte außer Benutzerkonten, Admin-/Freischaltungsstatus und der technischen Grundstruktur. Challenge-Pool wird auf Systemdaten reduziert.',word:'FULLRESET'}
  };
  let d=defs[mode];
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>⚠️ ${d.title}</h2><button class="x" onclick="closeModal()">×</button></div><div class="error">${d.desc}<br><br><b>Vor dem Reset wird automatisch ein Komplett-Backup heruntergeladen.</b></div><div class="field section"><label>Zur Bestätigung exakt <b>${d.word}</b> eingeben</label><input id="resetConfirm"></div><button class="cta danger" onclick="executeReset('${mode}','${d.word}')">Backup erstellen & Reset ausführen</button></div></div>`
@@ -2035,7 +2087,7 @@ async function saveFood(ev,id=''){
      entryDate=id?entries.find(x=>x.id===id).entry_date:selectedEntryDate();
  try{
   if(pendingProof)photo=await uploadProof(pendingProof);
-  let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};
+  let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:foodPoints(items.length),witness:'Ehrenkodex',witness_user_id:null};
   if(photo)payload.photo_path=photo;
   let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='food'),
       res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);
@@ -2044,7 +2096,7 @@ async function saveFood(ev,id=''){
   toast(entryDate===fmtDate()?'Ernährung gespeichert ✓':'Ernährung rückwirkend gespeichert ✓');
  }catch(err){
   if(likelyOffline(err)&&!photo){
-   let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:items.length,witness:'Ehrenkodex',witness_user_id:null};
+   let payload={user_id:me.id,entry_date:entryDate,kind:'food',food_items:items,points:foodPoints(items.length),witness:'Ehrenkodex',witness_user_id:null};
    queueEntry(payload,id?'update':'insert',id||null);pendingProof=null;closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.');
   }
   toast(err.message);
@@ -2074,7 +2126,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.18.0';
+const FIT4US_VERSION='1.19.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){

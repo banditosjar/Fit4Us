@@ -1,5 +1,5 @@
-const VERSION='1.18.0';
-const CACHE='fit4us-v1.18.0';
+const VERSION='1.19.0';
+const CACHE='fit4us-v1.19.0';
 
 const CORE=[
   './',
@@ -9,9 +9,9 @@ const CORE=[
   './config.js',
   './manifest.webmanifest',
   './version.json',
-  './assets/fit4us-logo.png',
-  './assets/fit4us-icon.png',
-  './assets/fit4us-icon-192.png'
+  './assets/movo-logo.png',
+  './assets/movo-icon.png',
+  './assets/movo-icon-192.png'
 ];
 
 self.addEventListener('install',event=>{
@@ -81,8 +81,8 @@ self.addEventListener('push',event=>{
  let d={};try{d=event.data?.json()||{}}catch{d={body:event.data?.text()||''}}
  event.waitUntil((async()=>{
   if('setAppBadge'in self.navigator){try{await self.navigator.setAppBadge(1)}catch{}}
-  await self.registration.showNotification(d.title||'Fit4Us',{
-   body:d.body||'',icon:'./assets/fit4us-icon-192.png',badge:'./assets/fit4us-icon-192.png',
+  await self.registration.showNotification(d.title||'Movo',{
+   body:d.body||'',icon:'./assets/movo-icon-192.png',badge:'./assets/movo-icon-192.png',
    data:{url:d.url||'./'},tag:d.tag||'fit4us',renotify:true
   })
  })())
