@@ -17,17 +17,21 @@ jobs:
         run: |
           set -euo pipefail
           cat .deploy/movo122-01.txt .deploy/movo122-02.txt .deploy/movo122-03.txt .deploy/movo122-04.txt > /tmp/movo122.b64
+          echo 'a336958163fd91991ab2d3adc9ef508602fa39f4804faa93230aeb2188b2c90e  /tmp/movo122.b64' | sha256sum -c -
           base64 -d /tmp/movo122.b64 > /tmp/movo122.tar.gz
+          echo '892ff2c4c1b55a11149ec265ec7e57cd272f16c692c185b078efb1079c0215b1  /tmp/movo122.tar.gz' | sha256sum -c -
           tar -xzf /tmp/movo122.tar.gz -C .
+          mkdir -p assets
+          cp Fit4Us_v1_22_0/assets/*.svg assets/
+          rm -rf Fit4Us_v1_22_0
 
-          # Final functional correction caught during pre-deploy audit.
+          # Functional correction caught during pre-deploy audit.
           sed -i "s/openRewardRedeem('/redeemReward('/g" movo-v1-22-ui.js
 
           python3 - <<'PY'
           from pathlib import Path
           import json,re
 
-          # Core runtime version stays semantically aligned with the UI release.
           p=Path('app.js'); s=p.read_text()
           s=re.sub(r"const FIT4US_VERSION='[^']+';","const FIT4US_VERSION='1.22.0';",s,count=1)
           p.write_text(s)
@@ -42,13 +46,12 @@ jobs:
           s=re.sub(r'href="\.\/style\.css(?:\?v=[^"]*)?"','href="./style.css?v=1.22.0"',s)
           s=re.sub(r'href="\.\/manifest\.webmanifest(?:\?v=[^"]*)?"','href="./manifest.webmanifest?v=1.22.0"',s)
           s=re.sub(r'src="\.\/app\.js(?:\?v=[^"]*)?"','src="./app.js?v=1.22.0"',s)
-          # Remove stale V1.22 layer tags if a rerun ever happens.
           s=re.sub(r'\s*<link[^>]+movo-v1-22\.css[^>]*>','',s)
           s=re.sub(r'\s*<script[^>]+movo-v1-22-ui\.js[^>]*></script>','',s)
           css_tag='  <link rel="stylesheet" href="./movo-v1-22.css?v=1.22.0">\n'
-          if '</head>' in s: s=s.replace('</head>',css_tag+'</head>',1)
+          if '</head>' not in s: raise SystemExit('head close tag missing')
+          s=s.replace('</head>',css_tag+'</head>',1)
           ui_tag='\n  <script src="./movo-v1-22-ui.js?v=1.22.0"></script>'
-          # Load immediately after core app.js so overrides exist before DOMContentLoaded.
           m=re.search(r'<script src="\.\/app\.js\?v=1\.22\.0"></script>',s)
           if not m: raise SystemExit('app.js script tag not found')
           s=s[:m.end()]+ui_tag+s[m.end():]
@@ -72,15 +75,8 @@ jobs:
           node --check app.js
           node --check sw.js
           node --check movo-v1-22-ui.js
-
-          test -f movo-v1-22.css
-          test -f assets/movo-alpine-morning.svg
-          test -f assets/movo-alpine-soft.svg
-          test -f assets/movo-alpine-sunset.svg
-          test -f assets/reward-hike.svg
-          test -f assets/reward-cinema.svg
-          test -f assets/reward-food.svg
-          test -f assets/reward-surprise.svg
+          test -s movo-v1-22.css
+          for f in movo-alpine-morning.svg movo-alpine-soft.svg movo-alpine-sunset.svg reward-hike.svg reward-cinema.svg reward-food.svg reward-surprise.svg; do test -s "assets/$f"; done
           grep -q "const FIT4US_VERSION='1.22.0'" app.js
           grep -q "const VERSION='1.22.0'" sw.js
           grep -q 'movo-v1-22-ui.js?v=1.22.0' index.html
@@ -88,7 +84,6 @@ jobs:
           grep -q 'redeemReward' movo-v1-22-ui.js
           if grep -q 'openRewardRedeem' movo-v1-22-ui.js; then echo 'stale reward handler'; exit 1; fi
 
-          # Production repo remains clean: no deploy payloads/workflow/changelog.
           rm -rf .deploy
           rm -f .github/workflows/movo-v1-22-0-deploy.yml
           rmdir .github/workflows 2>/dev/null || true
