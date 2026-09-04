@@ -125,3 +125,81 @@ html[data-theme="dark"] .rewardNode span{background:#183430!important}html[data-
 html[data-theme="dark"] .recordMini,html[data-theme="dark"] .rewardPersonCard,html[data-theme="dark"] .settingsCard,html[data-theme="dark"] .proposalVotingCard,html[data-theme="dark"] .rewardProposalVotingCard,html[data-theme="dark"] .rewardPoolCard,html[data-theme="dark"] .rewardMilestoneCard,html[data-theme="dark"] .dailyPinnedCard,html[data-theme="dark"] .votingBanner,html[data-theme="dark"] .outboxNotice,html[data-theme="dark"] .witnessRequest{background:#0e2422!important;color:#eef7f3!important;border-color:rgba(255,255,255,.09)!important}
 @media(min-width:720px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.recordsGrid,.rewardPeopleGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.historyTop{align-items:flex-start;flex-direction:column}.segmented{width:100%;grid-template-columns:1fr 1fr}.monthNav>div{flex-direction:column;gap:5px}.monthNav select{max-width:100%;width:100%}}
+
+
+/* =========================================================
+   Movo V1.21.0 — Visual identity refresh based on approved mockup
+   ========================================================= */
+:root{
+ --mint:#20d3a0;--mint-2:#69e8c1;--forest:#073b38;--forest-2:#0d655e;--cream:#f8f5ee;
+ --ink:#153a38;--muted:#718885;--bg:#eef5f1;--surface:#ffffff;--surface-2:#f3f8f5;
+ --line:rgba(10,70,65,.10);--warm:#f0e8da;--shadow:0 14px 34px rgba(14,72,66,.10);--shadow-lg:0 26px 70px rgba(7,59,56,.18);
+ --r-lg:30px;--r-md:22px;--r-sm:15px;--gap:24px;
+}
+body{background:linear-gradient(180deg,#edf6f1 0,#f7f9f6 34%,#eef5f2 100%);color:var(--ink)}
+.main{max-width:1320px}.pageContent{padding-bottom:12px}
+.card{border-color:var(--line);box-shadow:var(--shadow);background:rgba(255,255,255,.96)}
+
+/* Brand/header */
+.movoTop{height:72px;margin-bottom:18px;border-bottom:1px solid rgba(10,70,65,.10)}
+.topBrandBtn{display:flex;align-items:center;gap:11px;border:0;background:transparent;padding:0;color:var(--ink)}
+.brandSymbolMini{width:42px;height:42px}.movoBrandText{display:grid;text-align:left;line-height:1}.movoBrandText b{font-size:24px;letter-spacing:-.05em}.movoBrandText small{font-size:8px;letter-spacing:.02em;margin-top:4px;color:var(--muted)}
+.topUserBtn{border:0;background:transparent;display:flex;align-items:center;gap:9px;color:var(--ink);padding:5px 8px;border-radius:16px}.topUserBtn:hover{background:var(--surface-2)}.topUserBtn>div{text-align:left}.topUserMenu{font-weight:900;letter-spacing:2px;color:var(--muted);margin-left:3px}
+.side{background:linear-gradient(180deg,#073b38,#052b29 68%,#061f1e)}.sideBrandButton{display:flex;align-items:center;gap:11px;background:transparent;border:0;color:#fff;text-align:left;padding:0}.sideBrandSymbol{width:54px;height:54px}.movoBrandText.light b{color:#fff;font-size:29px}.movoBrandText.light small{color:rgba(255,255,255,.68)}.sideClaim{margin:7px 0 28px 65px}.sideNav button{font-size:14px}.sideNav button.active{background:rgba(105,232,193,.16);box-shadow:inset 3px 0 0 var(--mint-2)}.sideUserMini{display:grid;margin-bottom:9px}.sideUserMini small{color:rgba(255,255,255,.55)}
+
+/* Scenic hero */
+.sceneSurface{background:linear-gradient(100deg,rgba(4,54,51,.88),rgba(20,104,94,.56) 55%,rgba(234,222,196,.30)),url('assets/movo-mountain-bg.svg') center 48%/cover;border:1px solid rgba(255,255,255,.14);box-shadow:var(--shadow-lg)}
+.sceneSurface:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 18%,rgba(255,255,255,.22),transparent 28%),linear-gradient(180deg,transparent 50%,rgba(5,44,42,.22));pointer-events:none}.sceneSurface>*{position:relative;z-index:1}
+.homeStage,.crewStage,.challengeStage,.profileStage{padding:34px 30px}.homeStageTop h1,.pageHead.inverse h1,.profileIdentity h1{font-weight:900;text-shadow:0 2px 16px rgba(2,35,33,.18)}
+.homeStageTop p,.pageHead.inverse p{font-size:15px}.homeStageQuote{font-family:Georgia,serif;transform:rotate(-3deg);font-size:18px;line-height:1.25;color:rgba(255,255,255,.80)!important}
+
+/* Home momentum from approved visual */
+.visualMomentum{position:relative;margin-top:26px;min-height:260px;grid-template-columns:190px minmax(190px,1fr) 150px;grid-template-rows:1fr auto;align-items:center;padding:22px 26px;background:rgba(7,54,51,.54)!important;border:1px solid rgba(255,255,255,.16)!important;color:#fff;overflow:hidden}
+.visualMomentum:after{content:"";position:absolute;inset:auto 8% -48% 8%;height:150px;background:radial-gradient(ellipse,rgba(105,232,193,.24),transparent 67%);pointer-events:none}.momentumStreak{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:rgba(4,42,40,.50);border:1px solid rgba(255,255,255,.10)}.streakFlame{font-size:42px;filter:drop-shadow(0 8px 12px rgba(255,109,32,.25))}.momentumStreak b{display:block;font-size:18px}.momentumStreak small,.momentumToday small{display:block;color:rgba(255,255,255,.72)}
+.visualMomentum .movoProgressRing{justify-self:center;width:176px;height:176px;background:conic-gradient(var(--mint-2) var(--day-progress),rgba(255,255,255,.16) 0);box-shadow:0 0 0 13px rgba(105,232,193,.05),0 18px 45px rgba(0,0,0,.18)}.visualMomentum .movoProgressRing:before{inset:12px;background:rgba(5,59,55,.78);backdrop-filter:blur(7px)}.visualMomentum .movoProgressRing b{font-size:34px}.visualMomentum .movoProgressRing small{font-size:12px}.visualMomentum .movoProgressRing span{display:block;color:var(--mint-2);font-size:20px;margin-top:4px}.momentumToday{justify-self:end;text-align:center;padding:15px 18px;border-radius:17px;background:linear-gradient(145deg,#d8f7e6,#f6f0c5);color:#174a40;box-shadow:0 12px 30px rgba(0,0,0,.16)}.momentumToday strong{display:block;font-size:28px}.momentumToday small{color:#59736e}.momentumToday span{display:block;font-size:9px;margin-top:5px}.momentumQuote{grid-column:1/-1;text-align:center;margin-top:7px;padding:10px 18px;border-radius:15px;background:rgba(255,255,255,.10);font-family:Georgia,serif;font-style:italic;color:rgba(255,255,255,.84)}.momentumMeta{grid-column:1/-1;display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:4px}.momentumMeta span{font-size:10px;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.10)}
+.todayNudge{border-radius:24px}.todayNudgeGrid{gap:11px}.todayNudgeGrid button{background:linear-gradient(135deg,#f7fbf9,#eef8f4);border:1px solid rgba(10,70,65,.06);transition:.2s}.todayNudgeGrid button:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.quickAddModern button{border:1px solid var(--line);background:linear-gradient(145deg,#fff,#f2f8f5);padding:17px 9px}.quickAddModern button span{font-size:30px}.quickTemplates{gap:8px}.quickTemplate{box-shadow:none;background:var(--surface-2)}
+.homeChallengeTile{box-shadow:none;border:1px solid var(--line);position:relative;overflow:hidden}.homeChallengeTile:after{content:"";position:absolute;width:70px;height:70px;border-radius:50%;right:-24px;bottom:-30px;background:rgba(32,211,160,.08)}
+
+/* Common tab system */
+.crewTabDock,.challengeTabDock,.profileTabDock{padding:7px;border-radius:22px;box-shadow:0 12px 34px rgba(14,72,66,.08);margin-top:-8px;position:relative;z-index:3}
+.movoTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.movoTabs button{border:0;background:transparent;color:var(--muted);border-radius:15px;padding:11px 12px;font-weight:800;transition:.2s}.movoTabs button.active{background:linear-gradient(135deg,#d9f8ec,#c9f2e4);color:#0b6856;box-shadow:inset 0 0 0 1px rgba(32,211,160,.12)}.crewTabPanel{animation:pageIn .28s ease both}
+
+/* Crew */
+.crewSnapshot{gap:13px}.crewPerson{padding:16px 10px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.10)}.crewPerson.me{background:rgba(105,232,193,.20);outline:1px solid rgba(105,232,193,.55)}.crewPerson .avatar{width:56px!important;height:56px!important}.crewPerson div b{font-size:13px}.crewPerson div span{font-size:9px}.crewCount{padding:8px 13px}
+.groupFeed{gap:14px}.dayFeedCard{border-radius:24px}.dayFeedHead{padding-bottom:9px;border-bottom:1px solid var(--line)}.dayFeedScore>strong{padding:7px 11px;border-radius:999px;background:#d8f8ec;color:#087b60}.dayFeedRow{background:var(--surface-2);border:1px solid rgba(10,70,65,.05)}.dayPhotoStrip button{height:94px}.feedActions{border-top:1px solid var(--line);padding-top:11px}.react,.socialAction{min-width:46px}
+.weekRecap{border-radius:24px;box-shadow:var(--shadow)}
+
+/* Challenges like approved cards */
+.visualChallengeStack{gap:14px}.focusChallenge{position:relative;display:grid!important;grid-template-columns:54px minmax(0,1fr) auto;grid-template-rows:auto 1fr;align-items:center;gap:6px 16px;border-radius:24px;padding:19px 20px;overflow:hidden;box-shadow:var(--shadow)}.focusChallenge .challengeBadge{grid-column:1/-1;grid-row:1}.challengeArt{grid-column:1;grid-row:2;width:54px;height:54px;border-radius:17px;display:grid;place-items:center;font-size:30px;background:rgba(32,211,160,.10)}.focusChallenge>div:nth-of-type(3){grid-column:2;grid-row:2}.focusChallenge>.cta,.focusChallenge>.statusDone{grid-column:3;grid-row:2;align-self:center}.focusChallenge.daily{background:linear-gradient(145deg,#fffdf7,#fff)}.focusChallenge.weekly{background:linear-gradient(145deg,#f7fbff,#fff)}.focusChallenge.monthly{background:linear-gradient(145deg,#f4fcf8,#fff)}.challengeQuote{text-align:center;padding:22px;font-family:Georgia,serif;font-style:italic;background:linear-gradient(135deg,#f6f0e8,#fff);color:#536b66;box-shadow:none}.weeklyPicker{border-radius:24px}
+
+/* Profile */
+.profileHero .avatar{width:96px!important;height:96px!important;box-shadow:0 0 0 5px rgba(255,255,255,.16)}.profileHeroStats{gap:10px}.profileHeroStats>div{padding:14px 10px;background:rgba(255,255,255,.14)}.profileHeroStats b{font-size:21px}.badgeShowcase{border-radius:24px}.badgeShowcase .choice{position:relative;padding:17px;background:linear-gradient(145deg,#fffaf3,#fff);text-align:center}.badgeShowcase .choice b{font-size:14px}.profilePrimary>.card,.profilePrimary>div>.card{border-radius:24px}
+
+/* History/Admin/Rules consistency */
+.historyTop,.pageHead:not(.inverse){padding:8px 2px 4px}.historyTop h1,.pageHead:not(.inverse) h1{font-size:clamp(34px,5vw,48px)}.segmented,.monthNav{box-shadow:0 8px 20px rgba(14,72,66,.05)}.historyHero{border-radius:26px}.adminOnly,.resetDangerCard,.disclosureCard{border-radius:22px}.kpi{box-shadow:none}.choice{transition:.18s}.choice:hover{transform:translateY(-1px);border-color:rgba(32,211,160,.30)}
+
+/* Mobile bottom nav inspired by mockup, while retaining quick-add */
+.bottom{height:78px;background:rgba(255,255,255,.96);border-top:1px solid rgba(10,70,65,.09);box-shadow:0 -8px 28px rgba(14,72,66,.07)}.navBtn{color:#456b67;font-size:10px}.navBtn span{font-family:system-ui;font-size:21px}.navBtn.active{color:#087c62}.navBtn.active span{display:grid;place-items:center;width:38px;height:38px;margin:0 auto -3px;border-radius:50%;background:#d7f7eb;box-shadow:0 0 0 5px rgba(32,211,160,.08)}.plus{background:linear-gradient(145deg,#0c776a,#07443f);box-shadow:0 12px 25px rgba(7,68,63,.30);border:3px solid #eef8f4}
+
+/* Motion */
+.card,.crewPerson,.focusChallenge,.homeChallengeTile,.quickAddModern button{transition:transform .20s cubic-bezier(.2,.8,.2,1),box-shadow .20s ease,border-color .20s ease}.crewPerson:hover,.focusChallenge:hover{transform:translateY(-2px)}
+@keyframes softPop{0%{transform:scale(.96);opacity:.5}100%{transform:scale(1);opacity:1}}.statusDone,.dayFeedScore>strong{animation:softPop .3s ease both}
+
+/* Dark theme — same visual system, no white leaks */
+html[data-theme="dark"]{--ink:#f1fbf7;--muted:#9ab0aa;--surface:#0e2926;--surface-2:#12312d;--line:rgba(255,255,255,.09);--bg:#061b19}
+html[data-theme="dark"] body{background:radial-gradient(circle at 18% -10%,rgba(32,211,160,.12),transparent 32%),#061b19}
+html[data-theme="dark"] .card{background:rgba(14,41,38,.96);border-color:rgba(255,255,255,.09)}
+html[data-theme="dark"] .movoTabs button.active{background:linear-gradient(135deg,#17473d,#1b5e4e);color:#91f1cf}
+html[data-theme="dark"] .crewTabDock,html[data-theme="dark"] .challengeTabDock,html[data-theme="dark"] .profileTabDock{background:#0e2926}
+html[data-theme="dark"] .todayNudgeGrid button,html[data-theme="dark"] .quickAddModern button,html[data-theme="dark"] .quickTemplate,html[data-theme="dark"] .dayFeedRow{background:#12312d!important;color:#eef8f4!important;border-color:rgba(255,255,255,.08)!important}
+html[data-theme="dark"] .homeChallengeTile{background:linear-gradient(145deg,#102d29,#0e2522)!important;color:#eef8f4!important}
+html[data-theme="dark"] .focusChallenge.daily{background:linear-gradient(145deg,#302b1f,#102724)!important}html[data-theme="dark"] .focusChallenge.weekly{background:linear-gradient(145deg,#162f35,#102724)!important}html[data-theme="dark"] .focusChallenge.monthly{background:linear-gradient(145deg,#14372e,#102724)!important}
+html[data-theme="dark"] .challengeArt{background:#173c34}.challengeQuote{background:linear-gradient(135deg,#24291f,#102724);color:#c8d9d4}
+html[data-theme="dark"] .dayFeedScore>strong{background:#174b3f;color:#91eccb}.badgeShowcase .choice{background:linear-gradient(145deg,#2b281f,#102724)!important}.momentumToday{background:linear-gradient(145deg,#bdebd6,#e8dfa8);color:#173d35}
+html[data-theme="dark"] .bottom{background:rgba(8,30,28,.97);border-color:rgba(255,255,255,.08)}html[data-theme="dark"] .navBtn{color:#9ab0aa}html[data-theme="dark"] .navBtn.active{color:#8ceac9}html[data-theme="dark"] .navBtn.active span{background:#17473d;box-shadow:0 0 0 5px rgba(32,211,160,.05)}html[data-theme="dark"] .plus{border-color:#0a2522}
+html[data-theme="dark"] .topUserBtn{color:#eef8f4}html[data-theme="dark"] .topUserBtn:hover{background:#12312d}
+
+@media(min-width:1080px){.shell{grid-template-columns:265px 1fr}.homeStage,.crewStage,.challengeStage,.profileStage{padding:44px}.homeFlow,.crewFlow,.challengeFlow,.profileFlow{--gap:28px}.visualMomentum{min-height:290px}.groupFeed{grid-template-columns:1fr 1fr}.groupFeed .feedMore{grid-column:1/-1}.challengeStack{grid-template-columns:1fr!important}.focusChallenge{min-height:150px}.profileTabDock{max-width:720px;margin-left:auto;margin-right:auto}.side{padding:26px 20px}}
+@media(max-width:760px){.homeStage,.crewStage,.challengeStage,.profileStage{padding:24px 18px}.visualMomentum{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;min-height:0;padding:17px}.momentumStreak{grid-column:1}.visualMomentum .movoProgressRing{grid-column:1/-1;grid-row:2;width:154px;height:154px}.momentumToday{grid-column:2;grid-row:1}.momentumQuote{grid-row:3}.momentumMeta{grid-row:4}.crewSnapshot{grid-template-columns:repeat(4,minmax(76px,1fr));overflow-x:auto}.crewPerson .avatar{width:48px!important;height:48px!important}.focusChallenge{grid-template-columns:45px minmax(0,1fr);grid-template-rows:auto 1fr auto}.challengeArt{width:45px;height:45px;font-size:24px}.focusChallenge>.cta,.focusChallenge>.statusDone{grid-column:1/-1;grid-row:3;width:100%;text-align:center;justify-content:center}.profileHero{grid-template-columns:auto 1fr}.profileHero>.glassButton{grid-column:1/-1;width:100%}.profileHeroStats{grid-template-columns:repeat(2,1fr)}.movoTabs button{padding:10px 5px;font-size:11px}}
+@media(max-width:470px){.visualMomentum{grid-template-columns:1fr}.momentumStreak,.momentumToday,.visualMomentum .movoProgressRing{grid-column:1;grid-row:auto;justify-self:stretch}.visualMomentum .movoProgressRing{justify-self:center}.momentumToday{width:100%}.movoTabs button{font-size:10px}.crewSnapshot{grid-template-columns:repeat(4,88px)}.homeStageQuote{display:none}.profileHeroStats{grid-template-columns:1fr 1fr}}
