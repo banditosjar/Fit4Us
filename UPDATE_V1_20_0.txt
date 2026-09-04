@@ -1,0 +1,31 @@
+Movo / Fit4Us V1.20.0 – Visual Identity Refresh
+================================================
+Keine neue Supabase-Migration. Keine Edge Function neu deployen.
+
+ECHTES UI-REDESIGN
+- Vollständig neues, konsistentes Designsystem statt weiterer CSS-Patches.
+- Home, Crew, Challenges und Profil strukturell neu aufgebaut.
+- Natur-/Berg-Hintergrund als leichtes SVG-Asset, kein schweres Foto.
+- Sichtbare Movo-Wortmarke im mobilen Header und Desktop-Sidebar.
+- Neue Hero-Flächen, Glas-Effekte, Mint/Forest-Farbwelt und klarere Hierarchie.
+- Crew-Mitglieder sauber im Crew-Hero; Crew-Moment bekommt eigenen Abstand/Block.
+- Alle Hauptkarten mit einheitlichem Spacing und Innenabständen.
+- Daily Crew Feed für Mobile/Desktop neu gestylt.
+- Challenges klar in Heute / Woche / Monat gegliedert.
+- Profil deutlich aufgeräumt, wichtige Werte zuerst, Details darunter.
+- Neue Micro-Animationen für Seitenwechsel, Progress, Buttons und Reaktionen.
+- prefers-reduced-motion wird respektiert.
+- Dark Mode für das neue System berücksichtigt.
+
+BRANDING
+- Neue Produktionsassets in mehreren SVG-/PNG-Varianten.
+- PWA-Icons 192/512 + maskable, Apple Touch Icon 180, Favicon ICO.
+- Claim: Move. Motivate. Together.
+- Technischer Projektname und interne Datenstruktur bleiben Fit4Us.
+
+UPDATE
+1. UPDATE-Dateien nach GitHub übernehmen.
+2. config.js NICHT überschreiben.
+3. Keine SQL-Migration ausführen.
+4. Keine Edge Function deployen.
+5. PWA nach Deployment komplett schließen und neu öffnen.

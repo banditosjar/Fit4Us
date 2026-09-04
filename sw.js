@@ -1,5 +1,5 @@
-const VERSION='1.19.0';
-const CACHE='fit4us-v1.19.0';
+const VERSION='1.20.0';
+const CACHE='fit4us-v1.20.0';
 
 const CORE=[
   './',
@@ -10,6 +10,10 @@ const CORE=[
   './manifest.webmanifest',
   './version.json',
   './assets/movo-logo.png',
+ './assets/movo-icon-512.png',
+ './assets/movo-mountain-bg.svg',
+ './assets/movo-wordmark-white.svg',
+ './assets/movo-wordmark-dark.svg',
   './assets/movo-icon.png',
   './assets/movo-icon-192.png'
 ];

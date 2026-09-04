@@ -745,9 +745,9 @@ function stopRealtime(){
  realtimeChannels.forEach(c=>sb?.removeChannel(c));realtimeChannels=[]
 }
 function renderShell(){
- $('#boot').innerHTML=`<div class="shell">
- <aside class="side"><img src="assets/movo-logo.png"><div class="sideNav" id="sideNav"></div><div class="sideBottom" id="sideUser"></div></aside>
- <main class="main"><header class="top"><img class="brandMini movoMini" src="assets/movo-icon.png"><div class="topUser" id="topUser"></div></header><div id="content"></div></main>
+ $('#boot').innerHTML=`<div class="shell movoShell">
+ <aside class="side movoSide"><img class="sideBrand" src="assets/movo-wordmark-white.svg" alt="Movo"><div class="sideClaim">Gemeinsam besser. Jeden Tag.</div><div class="sideNav" id="sideNav"></div><div class="sideBottom" id="sideUser"></div></aside>
+ <main class="main"><header class="top movoTop"><button class="topBrandBtn" onclick="go('home')" aria-label="Movo Home"><img class="brandMini" src="assets/movo-wordmark-dark.svg" alt="Movo"></button><div class="topUser" id="topUser"></div></header><div id="content" class="pageContent"></div></main>
  <nav class="bottom" id="bottomNav"></nav><div id="mobileMenuRoot"></div></div><div id="modalRoot"></div>`;
  navs()
 }
@@ -1176,7 +1176,7 @@ function statsFor(userId,from,to){
 
 function monthView(m){let rank=monthRank(m),team=profiles.filter(p=>p.approved).map(p=>({p,s:mStats(p.id,m)})),tot={steps:team.reduce((s,x)=>s+x.s.steps,0),min:team.reduce((s,x)=>s+x.s.minutes,0),km:team.reduce((s,x)=>s+x.s.km,0),acts:team.reduce((s,x)=>s+x.s.acts,0)};return `<div class="historyHero"><div><small>🏆 CHAMPION ${monthLabel(m).toUpperCase()}</small><h2>${rank[0]?.pts?escapeHtml(firstName(rank[0].p)):'–'}</h2><b>${rank[0]?.pts||0} Punkte</b></div><span>👑</span></div><div class="card pad section"><h3>Endstand</h3>${rank.map((x,i)=>`<div class="rankRow"><span>${['🥇','🥈','🥉'][i]||i+1+'.'}</span><b>${escapeHtml(firstName(x.p))}</b><b>${x.pts} P</b></div>`).join('')}</div><div class="grid kpis section"><div class="kpi"><b>${tot.steps.toLocaleString('de-DE')}</b><small>Crew-Schritte</small></div><div class="kpi"><b>${tot.min}</b><small>Aktivminuten</small></div><div class="kpi"><b>${tot.km.toFixed(1)}</b><small>km</small></div><div class="kpi"><b>${tot.acts}</b><small>Aktivitäten</small></div></div><div class="grid grid2 section"><div class="card pad"><h3>👑 Wochenchampions</h3>${monthWeeks(m).map(w=>{let c=weekChamp(w),sel=selectionForWeek(w),ch=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null;return `<div class="histWeek"><div><b>KW ${isoWeek(new Date(w+'T12:00'))}</b><small>${ch?ch.icon+' '+ch.title:'–'}</small></div><div>${c?'👑 '+escapeHtml(firstName(c.p))+' · '+c.pts+' P':'–'}</div></div>`}).join('')}</div><div class="card pad"><h3>🏅 Monatsrekorde</h3>${[['👟','Schritte','steps'],['⏱️','Aktivminuten','minutes'],['🥗','Ernährungstage','food']].map(([ic,l,k])=>{let x=[...team].sort((a,b)=>b.s[k]-a.s[k])[0];return `<div class="histWeek"><div>${ic} <b>${l}</b></div><div>${x?escapeHtml(firstName(x.p))+' · '+(k==='steps'?x.s[k].toLocaleString('de-DE'):x.s[k]):'–'}</div></div>`}).join('')}</div></div><h2 class="section">Persönliche Monatswerte</h2><div class="grid grid2">${team.map(x=>`<div class="card pad"><h3>${escapeHtml(firstName(x.p))}</h3><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span><span>🥗 ${x.s.food} Ernährungstage</span></div></div>`).join('')}</div>`}
 
-function allTimeView(){let u=profiles.filter(p=>p.approved).map(p=>{let es=entries.filter(e=>e.user_id===p.id);return {p,pts:lifetimePoints(p.id),s:mStats(p.id,'')}}).sort((a,b)=>b.pts-a.pts);return `<div class="historyHero"><div><small>∞ FIT4US ALL-TIME</small><h2>${u[0]?escapeHtml(firstName(u[0].p)):'–'}</h2><b>${u[0]?.pts||0} Gesamtpunkte</b></div><span>🏛️</span></div><div class="grid grid2 section">${u.map((x,i)=>`<div class="card pad"><div class="challengeTop"><h3>${['🥇','🥈','🥉'][i]||i+1+'.'} ${escapeHtml(firstName(x.p))}</h3><b>${x.pts} P</b></div><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span></div></div>`).join('')}</div>`}
+function allTimeView(){let u=profiles.filter(p=>p.approved).map(p=>{let es=entries.filter(e=>e.user_id===p.id);return {p,pts:lifetimePoints(p.id),s:mStats(p.id,'')}}).sort((a,b)=>b.pts-a.pts);return `<div class="historyHero"><div><small>∞ MOVO ALL-TIME</small><h2>${u[0]?escapeHtml(firstName(u[0].p)):'–'}</h2><b>${u[0]?.pts||0} Gesamtpunkte</b></div><span>🏛️</span></div><div class="grid grid2 section">${u.map((x,i)=>`<div class="card pad"><div class="challengeTop"><h3>${['🥇','🥈','🥉'][i]||i+1+'.'} ${escapeHtml(firstName(x.p))}</h3><b>${x.pts} P</b></div><div class="personalMonth"><span>👟 ${x.s.steps.toLocaleString('de-DE')}</span><span>⏱️ ${x.s.minutes} Min.</span><span>🗺️ ${x.s.km.toFixed(1)} km</span><span>🏃 ${x.s.acts} Aktivitäten</span></div></div>`).join('')}</div>`}
 
 function entryEditControls(e){
  if(!canEditEntryAnywhere(e))return '';
@@ -1332,21 +1332,21 @@ function todayNudgeHTML(){
 
 async function homeHTML(){
  resetFeedCount();
- return `<div class="homeHero"><div><small>FIT4US · ${new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'})}</small><h1>Hallo ${escapeHtml(firstName(me))} 👋</h1><p>Heute zählt, was dir gut tut.</p></div><div class="homeHeroMark">✦</div></div>
- ${homeMetricsHTML()}
- ${todayNudgeHTML()}
- ${outboxHTML()}${pendingWitnessHTML()}
- ${votingBannerHTML()}
- <div class="sectionTitle compactTitle"><h2>Heute</h2><button class="textLink" onclick="go('challenges')">Challenges →</button></div>
- ${homeChallengesHTML()}
- <div class="sectionTitle compactTitle"><h2>Schnell hinzufügen</h2></div>
- ${quickAddModernHTML()}
- ${quickTemplatesHTML()}
- ${currentWeekSnapshotHTML()}
- ${almostThereHTML()}
- <details class="card pad section disclosureCard"><summary><b>📝 Meine Einträge heute</b><span class="tiny muted">bearbeiten oder löschen</span></summary><div class="section">${await todayOwnEntriesHTML()}</div></details>
- <div class="sectionTitle compactTitle"><h2>Neu in deiner Crew</h2><button class="textLink" onclick="go('group')">Zum Crew Feed →</button></div>
- <div class="homeFeed">${await feedHTML(3)}</div>`;
+ let date=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});
+ return `<section class="homeStage sceneSurface">
+   <div class="homeStageTop"><div><small>${escapeHtml(date)}</small><h1>Guten ${new Date().getHours()<11?'Morgen':new Date().getHours()<18?'Tag':'Abend'}, ${escapeHtml(firstName(me))} 👋</h1><p>Dranbleiben. Gemeinsam. In deinem Tempo.</p></div><div class="homeStageQuote">„Kleine Schritte.<br>Große Wirkung.“</div></div>
+   ${homeMetricsHTML()}
+ </section>
+ <div class="homeFlow">
+  ${todayNudgeHTML()}
+  ${outboxHTML()}${pendingWitnessHTML()}${votingBannerHTML()}
+  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>DEINE ZIELE</small><h2>Heute im Blick</h2></div><button class="textLink" onclick="go('challenges')">Alle Challenges →</button></div>${homeChallengesHTML()}</section>
+  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>SCHNELL & EINFACH</small><h2>Eintragen</h2></div></div>${quickAddModernHTML()}${quickTemplatesHTML()}</section>
+  ${currentWeekSnapshotHTML()}
+  ${almostThereHTML()}
+  <details class="card pad disclosureCard"><summary><b>📝 Meine Einträge heute</b><span class="tiny muted">bearbeiten oder löschen</span></summary><div class="section">${await todayOwnEntriesHTML()}</div></details>
+  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>GEMEINSAM DRANBLEIBEN</small><h2>Neu in deiner Crew</h2></div><button class="textLink" onclick="go('group')">Crew öffnen →</button></div><div class="homeFeed">${await feedHTML(3)}</div></section>
+ </div>`;
 }
 
 function crewPointBreakdown(userId,from=weekKey(),to=fmtDate(endOfWeek())){
@@ -1401,13 +1401,15 @@ async function crewSnapshotHTML(){
 }
 async function groupHTML(){
  let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk);
- return `<div class="pageHead"><div><small>UNSERE CREW</small><h1>Crew</h1></div><span class="pill">${allApprovedUsers().length} Mitglieder</span></div>
- ${await crewSnapshotHTML()}
- ${crewMomentHTML()}
- ${c?`<div class="weekRecap section"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}
- <div class="grid grid2 section rankingGrid"><div><div class="sectionTitle compactTitle"><h2>Wochenranking</h2></div><div class="card pad">${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</div></div><div><div class="sectionTitle compactTitle"><h2>Monatsranking</h2></div><div class="card pad">${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</div></div></div>
- <div class="sectionTitle compactTitle"><h2>Crew Feed</h2><span class="pill">1 Person · 1 Tag · 1 Block</span></div>
- <div class="groupFeed">${await feedHTML(feedVisibleCount)}</div>`;
+ return `<section class="crewStage sceneSurface"><div class="pageHead inverse"><div><small>BETTER TOGETHER</small><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div><span class="crewCount">${allApprovedUsers().length} Mitglieder</span></div>
+  <div class="crewOverview">${await crewSnapshotHTML()}</div>
+ </section>
+ <div class="crewFlow">
+  ${crewMomentHTML()}
+  ${c?`<div class="weekRecap"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}
+  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>FAIRE LEISTUNG</small><h2>Ranking</h2></div></div><div class="grid grid2 rankingGrid"><div class="rankingPanel"><h3>Diese Woche</h3><div class="card pad">${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</div></div><div class="rankingPanel"><h3>Dieser Monat</h3><div class="card pad">${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</div></div></div></section>
+  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>LIVE AUS DER CREW</small><h2>Crew Feed</h2></div><span class="pill">1 Person · 1 Tag</span></div><div class="groupFeed">${await feedHTML(feedVisibleCount)}</div></section>
+ </div>`;
 }
 
 function feedDateTime(item){
@@ -1572,18 +1574,17 @@ async function challengesHTML(){
      dc=dailyChallengeFor(),done=dc&&dailyCompletions.some(x=>x.user_id===me.id&&x.challenge_date===fmtDate()),
      w=ch?challengeProgressForWeek(ch,me.id,weekKey()):[0,1],wp=Math.min(100,w[0]/w[1]*100),pick='';
  if(choose)pick=`<div class="weeklyPicker card pad"><div class="challengeTop"><div><small>👑 DEINE WAHL</small><h2>Eine von drei Wochenchallenges</h2></div><span class="pill">bis Montag +18 h</span></div><div class="grid choiceGrid section">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${escapeHtml(c.title)}</b><div class="tiny muted">${escapeHtml(c.desc)}</div><span class="points">+5 P</span></button>`).join('')}</div></div>`;
- return `<div class="pageHead"><div><small>DEINE ZIELE</small><h1>Challenges</h1></div><button class="cta compactCta" onclick="openProposal()">＋ Vorschlag</button></div>
- <div class="challengeStack">
-  ${dc?`<section class="focusChallenge daily"><div><small>☀️ HEUTE${dc.targetUser?` · MIT ${escapeHtml(firstName(dc.targetUser)).toUpperCase()}`:''}</small><h2>${escapeHtml(dc.emoji)} ${escapeHtml(dc.name)}</h2><p>${escapeHtml(dc.description)}</p></div>${done?'<span class="statusDone">✓ Erledigt</span>':`<button class="cta" onclick="openDailyComplete()">Erledigt · +1 P</button>`}</section>`:''}
-  <section class="focusChallenge weekly"><div><small>🎯 DIESE WOCHE</small><h2>${ch?ch.icon+' '+escapeHtml(ch.title):'Noch keine Challenge gewählt'}</h2>${ch?`<p>${escapeHtml(ch.desc)}</p><div class="progress"><i style="width:${wp}%"></i></div><b>${w[0]} / ${w[1]} · +5 P</b>`:weeklyDecisionStatusHTML()}</div></section>
-  <section class="focusChallenge monthly"><div><small>👥 DIESEN MONAT</small><h2>${gc.icon} ${escapeHtml(gc.title)}</h2><p>${escapeHtml(gc.desc)}</p><div class="progress"><i style="width:${gp}%"></i></div><b>${Math.round(gp)} % · +15 P für jedes Crew-Mitglied</b></div></section>
- </div>
- ${pick}
- <details class="card pad section disclosureCard" ${openVotingCount()?'open':''}><summary><b>📌 Vorschläge & Abstimmungen</b><span class="pill">${openVotingCount()} offen</span></summary><div class="section">${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}</div></details>
- <details class="card pad section disclosureCard"><summary><b>📚 Challenge-Pool</b><span class="tiny muted">${challengePool.filter(poolAvailable).length} verfügbar</span></summary><div class="section">${challengePoolHTML()}</div></details>`;
+ return `<section class="challengeStage sceneSurface"><div class="pageHead inverse"><div><small>KLEINE SCHRITTE · GROSSE WIRKUNG</small><h1>Challenges</h1><p>Deine drei Ebenen: heute, diese Woche, gemeinsam.</p></div><button class="glassButton" onclick="openProposal()">＋ Vorschlag</button></div></section>
+ <div class="challengeFlow"><div class="challengeStack">
+  ${dc?`<section class="focusChallenge daily"><div class="challengeBadge">☀️ HEUTE</div><div><h2>${escapeHtml(dc.emoji)} ${escapeHtml(dc.name)}</h2><p>${escapeHtml(dc.description)}</p></div>${done?'<span class="statusDone">✓ Erledigt</span>':`<button class="cta" onclick="openDailyComplete()">Erledigt · +1 P</button>`}</section>`:''}
+  <section class="focusChallenge weekly"><div class="challengeBadge">🎯 DIESE WOCHE</div><div><h2>${ch?ch.icon+' '+escapeHtml(ch.title):'Noch keine Challenge gewählt'}</h2>${ch?`<p>${escapeHtml(ch.desc)}</p><div class="progress"><i style="width:${wp}%"></i></div><b>${w[0]} / ${w[1]} · +5 P</b>`:weeklyDecisionStatusHTML()}</div></section>
+  <section class="focusChallenge monthly"><div class="challengeBadge">👥 DIESEN MONAT</div><div><h2>${gc.icon} ${escapeHtml(gc.title)}</h2><p>${escapeHtml(gc.desc)}</p><div class="progress"><i style="width:${gp}%"></i></div><b>${Math.round(gp)} % · +15 P für jedes Crew-Mitglied</b></div></section>
+ </div>${pick}
+ <details class="card pad disclosureCard" ${openVotingCount()?'open':''}><summary><b>📌 Vorschläge & Abstimmungen</b><span class="pill">${openVotingCount()} offen</span></summary><div class="section">${await pinnedProposalsHTML()}${rewardProposalFeedHTML()}</div></details>
+ <details class="card pad disclosureCard"><summary><b>📚 Challenge-Pool</b><span class="tiny muted">${challengePool.filter(poolAvailable).length} verfügbar</span></summary><div class="section">${challengePoolHTML()}</div></details></div>`;
 }
 function challengePoolHTML(){return ['weekly','group','daily'].map(type=>{let title=type==='weekly'?'🎯 Wochenchallenges':type==='group'?'👥 Crewn-Monatschallenges':'☀️ Tageschallenges',list=challengePool.filter(c=>c.challenge_type===type);return `<h3>${title}</h3><div class="grid grid2">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by);return `<button class="choice ${!poolAvailable(c)?'disabled':''}" onclick="openChallengeDetail('${c.id}')"><div><b>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</b>${!poolAvailable(c)?' 🔒':''}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?' 👥':''}</div><div class="tiny muted">${escapeHtml(dailyTemplateText(c.description,null))}</div><div class="tiny muted" style="margin-top:5px">+${c.points} P · 👍 ${r.filter(x=>x.rating==='again').length} · 😐 ${r.filter(x=>x.rating==='okay').length} · 👎 ${r.filter(x=>x.rating==='never').length}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</div></button>`}).join('')}</div>`}).join('')}
-function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=ratings.filter(x=>x.challenge_pool_id===id),creator=profileById(c.created_by),poolDesc=dailyTemplateText(c.description,null);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(poolDesc)}</p><div class="notice"><b>Typ:</b> ${escapeHtml(c.challenge_type)}<br><b>Punkte:</b> +${c.points}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?'<br><b>Crew-Bezug:</b> Fit4Us lost täglich eine andere Person aus.':''}${c.target_value?`<br><b>Ziel:</b> ${c.target_value} ${escapeHtml(c.target_unit||'')}`:''}${creator?`<br><b>Vorgeschlagen von:</b> ${escapeHtml(firstName(creator))}`:''}</div><div class="section"><b>Bewertungen nach Durchführung</b><div class="reactions"><span class="react">👍 ${r.filter(x=>x.rating==='again').length}</span><span class="react">😐 ${r.filter(x=>x.rating==='okay').length}</span><span class="react">👎 ${r.filter(x=>x.rating==='never').length}</span></div></div><div class="section"><b>Wie fandest du diese Challenge?</b><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="adminSuspendChallenge('${c.id}')">⏸ Sperren</button>${!poolAvailable(c)?`<button class="secondary" onclick="adminUnsuspendChallenge('${c.id}')">▶ Entsperren</button>`:''}<button class="secondary danger" onclick="adminDeleteChallenge('${c.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`}
+function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=ratings.filter(x=>x.challenge_pool_id===id),creator=profileById(c.created_by),poolDesc=dailyTemplateText(c.description,null);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(poolDesc)}</p><div class="notice"><b>Typ:</b> ${escapeHtml(c.challenge_type)}<br><b>Punkte:</b> +${c.points}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?'<br><b>Crew-Bezug:</b> Movo lost täglich eine andere Person aus.':''}${c.target_value?`<br><b>Ziel:</b> ${c.target_value} ${escapeHtml(c.target_unit||'')}`:''}${creator?`<br><b>Vorgeschlagen von:</b> ${escapeHtml(firstName(creator))}`:''}</div><div class="section"><b>Bewertungen nach Durchführung</b><div class="reactions"><span class="react">👍 ${r.filter(x=>x.rating==='again').length}</span><span class="react">😐 ${r.filter(x=>x.rating==='okay').length}</span><span class="react">👎 ${r.filter(x=>x.rating==='never').length}</span></div></div><div class="section"><b>Wie fandest du diese Challenge?</b><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="adminSuspendChallenge('${c.id}')">⏸ Sperren</button>${!poolAvailable(c)?`<button class="secondary" onclick="adminUnsuspendChallenge('${c.id}')">▶ Entsperren</button>`:''}<button class="secondary danger" onclick="adminDeleteChallenge('${c.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`}
 async function rateChallenge(id,rating){let old=ratings.find(x=>x.challenge_pool_id===id&&x.user_id===me.id&&x.week_key===weekKey()),payload={challenge_pool_id:id,user_id:me.id,week_key:weekKey(),rating},q=old?sb.from('challenge_ratings').update({rating}).eq('id',old.id):sb.from('challenge_ratings').insert(payload),{error}=await q;if(error)return toast(error.message);closeModal();await loadData();await render();toast('Bewertung gespeichert')}
 function openProposal(){
  $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>Neue Challenge vorschlagen</h2><button class="x" onclick="closeModal()">×</button></div><form class="form section" onsubmit="submitProposal(event)">
@@ -1648,21 +1649,20 @@ async function rewardsHTML(){
 
 async function meHTML(){
  let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);
- let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=monthPoints();
- return `<div class="profileHero card">${av}<div><small>MEIN PROFIL</small><h1>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h1><span class="muted">@${escapeHtml(me.username)}</span></div><div class="profileHeroStats"><div><small>Monat</small><b>${pts} P</b></div><div><small>Streak</small><b>🔥 ${streak()} Tage</b></div><div><small>Guthaben</small><b>${euro(wishCreditBalanceCents(me.id))}</b></div></div><button class="secondary" onclick="openProfile()">Bearbeiten</button></div>
- <div class="grid grid2 section"><div>
-  <div class="card pad"><div class="challengeTop"><h3>🔥 Dein Streak</h3><span class="pill">Rekord ${maxStreakEver()} Tage</span></div><div class="section">${streakHeatmapHTML()}</div></div>
-  <div class="card pad section"><h3>🏅 Persönliche Rekorde</h3>${personalRecordsHTML()}</div>
-  ${trend4(me.id)}
+ let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,96),pts=monthPoints();
+ return `<section class="profileStage sceneSurface"><div class="profileHero">${av}<div class="profileIdentity"><small>DEIN WEG · DEINE ERFOLGE</small><h1>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h1><span>@${escapeHtml(me.username)}</span></div><button class="glassButton" onclick="openProfile()">Bearbeiten</button></div><div class="profileHeroStats"><div><small>Monat</small><b>${pts} P</b></div><div><small>Streak</small><b>🔥 ${streak()}</b><span>Tage</span></div><div><small>Rekord</small><b>${maxStreakEver()}</b><span>Tage</span></div><div><small>Guthaben</small><b>${euro(wishCreditBalanceCents(me.id))}</b></div></div></section>
+ <div class="profileFlow"><div class="grid grid2 profilePrimary"><div>
+  <div class="card pad"><div class="challengeTop"><div><small>KONTINUITÄT</small><h3>🔥 Dein Streak</h3></div><span class="pill">Rekord ${maxStreakEver()} Tage</span></div><div class="section">${streakHeatmapHTML()}</div></div>
+  <div class="card pad"><div class="challengeTop"><div><small>BESTLEISTUNGEN</small><h3>🏅 Persönliche Rekorde</h3></div></div>${personalRecordsHTML()}</div>${trend4(me.id)}
  </div><div>
-  <div class="card pad"><h3>Diese Woche vs. Vorwoche</h3>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div>
-  <div class="section">${weeklyReviewHTML()}</div>
-  <div class="card pad section rewardProfileLink"><div><h3>🎁 Belohnungen</h3><div class="muted small">${euro(wishCreditBalanceCents(me.id))} Wunsch-Guthaben · ${openRewardChoices().length} offen</div></div><button class="react" onclick="go('rewards')">Öffnen</button></div>
+  <div class="card pad"><div><small>VERGLEICH</small><h3>Diese Woche vs. Vorwoche</h3></div>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div>
+  ${weeklyReviewHTML()}
+  <div class="card pad rewardProfileLink"><div><small>MOTIVATION</small><h3>🎁 Belohnungen</h3><div class="muted small">${euro(wishCreditBalanceCents(me.id))} Wunsch-Guthaben · ${openRewardChoices().length} offen</div></div><button class="react" onclick="go('rewards')">Öffnen</button></div>
  </div></div>
- <details class="card pad section disclosureCard"><summary><b>🏅 Achievements</b><span class="tiny muted">${achievements.filter(a=>a.user_id===me.id).length} erreicht</span></summary><div class="section">${achievementHTML()}</div></details>
- <details class="card pad section disclosureCard"><summary><b>📊 Monatsrückblick & Hall of Fame</b></summary><div class="section">${monthlyReviewHTML()}<h3 class="section">Hall of Fame</h3>${hallOfFameHTML()}</div></details>
- <details class="card pad section disclosureCard"><summary><b>📝 Meine Einträge – aktueller Monat</b><span class="tiny muted">nur bei Bedarf öffnen</span></summary><div class="grid section">${await ownEntriesHTML()}</div></details>
- ${await settingsHTML()}`;
+ <details class="card pad disclosureCard"><summary><b>🏅 Achievements</b><span class="tiny muted">${achievements.filter(a=>a.user_id===me.id).length} erreicht</span></summary><div class="section">${achievementHTML()}</div></details>
+ <details class="card pad disclosureCard"><summary><b>📊 Monatsrückblick & Hall of Fame</b></summary><div class="section">${monthlyReviewHTML()}<h3 class="section">Hall of Fame</h3>${hallOfFameHTML()}</div></details>
+ <details class="card pad disclosureCard"><summary><b>📝 Meine Einträge – aktueller Monat</b><span class="tiny muted">nur bei Bedarf öffnen</span></summary><div class="grid section">${await ownEntriesHTML()}</div></details>
+ ${await settingsHTML()}</div>`;
 }
 
 function achievementHTML(){let list=achievements.filter(a=>a.user_id===me.id);if(!list.length)return '<div class="muted">Noch keine Achievements.</div>';return `<div class="grid grid2">${list.map(a=>`<div class="choice"><b>${escapeHtml(a.emoji)} ${escapeHtml(a.title)}</b><div class="tiny muted">Erreicht am ${new Date(a.achieved_on+'T12:00').toLocaleDateString('de-DE')}</div></div>`).join('')}</div>`}
@@ -2126,7 +2126,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.19.0';
+const FIT4US_VERSION='1.20.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
