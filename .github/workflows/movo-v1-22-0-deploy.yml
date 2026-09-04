@@ -1,0 +1,104 @@
+name: Movo V1.22.0 mockup UI deploy
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/movo-v1-22-0-deploy.yml']
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Assemble verified V1.22.0 visual runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .deploy/movo122-01.txt .deploy/movo122-02.txt .deploy/movo122-03.txt .deploy/movo122-04.txt > /tmp/movo122.b64
+          base64 -d /tmp/movo122.b64 > /tmp/movo122.tar.gz
+          tar -xzf /tmp/movo122.tar.gz -C .
+
+          # Final functional correction caught during pre-deploy audit.
+          sed -i "s/openRewardRedeem('/redeemReward('/g" movo-v1-22-ui.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+
+          # Core runtime version stays semantically aligned with the UI release.
+          p=Path('app.js'); s=p.read_text()
+          s=re.sub(r"const FIT4US_VERSION='[^']+';","const FIT4US_VERSION='1.22.0';",s,count=1)
+          p.write_text(s)
+
+          p=Path('sw.js'); s=p.read_text()
+          s=re.sub(r"const VERSION='[^']+'","const VERSION='1.22.0'",s,count=1)
+          s=re.sub(r"const CACHE='[^']+'","const CACHE='fit4us-v1.22.0'",s,count=1)
+          p.write_text(s)
+
+          p=Path('index.html'); s=p.read_text()
+          s=re.sub(r'<title>.*?</title>','<title>Movo · V1.22.0</title>',s,count=1,flags=re.S)
+          s=re.sub(r'href="\.\/style\.css(?:\?v=[^"]*)?"','href="./style.css?v=1.22.0"',s)
+          s=re.sub(r'href="\.\/manifest\.webmanifest(?:\?v=[^"]*)?"','href="./manifest.webmanifest?v=1.22.0"',s)
+          s=re.sub(r'src="\.\/app\.js(?:\?v=[^"]*)?"','src="./app.js?v=1.22.0"',s)
+          # Remove stale V1.22 layer tags if a rerun ever happens.
+          s=re.sub(r'\s*<link[^>]+movo-v1-22\.css[^>]*>','',s)
+          s=re.sub(r'\s*<script[^>]+movo-v1-22-ui\.js[^>]*></script>','',s)
+          css_tag='  <link rel="stylesheet" href="./movo-v1-22.css?v=1.22.0">\n'
+          if '</head>' in s: s=s.replace('</head>',css_tag+'</head>',1)
+          ui_tag='\n  <script src="./movo-v1-22-ui.js?v=1.22.0"></script>'
+          # Load immediately after core app.js so overrides exist before DOMContentLoaded.
+          m=re.search(r'<script src="\.\/app\.js\?v=1\.22\.0"></script>',s)
+          if not m: raise SystemExit('app.js script tag not found')
+          s=s[:m.end()]+ui_tag+s[m.end():]
+          p.write_text(s)
+
+          p=Path('manifest.webmanifest')
+          m=json.loads(p.read_text())
+          m['name']='Movo – Move. Motivate. Together.'
+          m['short_name']='Movo'
+          m['theme_color']='#0f766e'
+          m['background_color']='#e8efeb'
+          p.write_text(json.dumps(m,ensure_ascii=False,indent=2))
+
+          Path('version.json').write_text(json.dumps({
+            'version':'1.22.0',
+            'build':'Movo V1.22.0 (intern Fit4Us)',
+            'cache':'fit4us-v1.22.0'
+          },indent=2))
+          PY
+
+          node --check app.js
+          node --check sw.js
+          node --check movo-v1-22-ui.js
+
+          test -f movo-v1-22.css
+          test -f assets/movo-alpine-morning.svg
+          test -f assets/movo-alpine-soft.svg
+          test -f assets/movo-alpine-sunset.svg
+          test -f assets/reward-hike.svg
+          test -f assets/reward-cinema.svg
+          test -f assets/reward-food.svg
+          test -f assets/reward-surprise.svg
+          grep -q "const FIT4US_VERSION='1.22.0'" app.js
+          grep -q "const VERSION='1.22.0'" sw.js
+          grep -q 'movo-v1-22-ui.js?v=1.22.0' index.html
+          grep -q 'movo-v1-22.css?v=1.22.0' index.html
+          grep -q 'redeemReward' movo-v1-22-ui.js
+          if grep -q 'openRewardRedeem' movo-v1-22-ui.js; then echo 'stale reward handler'; exit 1; fi
+
+          # Production repo remains clean: no deploy payloads/workflow/changelog.
+          rm -rf .deploy
+          rm -f .github/workflows/movo-v1-22-0-deploy.yml
+          rmdir .github/workflows 2>/dev/null || true
+          rmdir .github 2>/dev/null || true
+      - name: Commit clean Movo V1.22.0 production runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Movo Deploy"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Movo v1.22.0: mockup-accurate mobile UI"
+          git push origin main
