@@ -1,8 +1,0 @@
-Fit4Us V1.7.1
-- Alle „Alle Belohnungen ansehen“-Links führen jetzt zu Punkte & Regeln.
-- Mobile Navigation komplett überarbeitet.
-- Mobil erreichbar: Home, Gruppe, Eintragen, Challenges, Mein Profil, Punkte & Regeln, Historie.
-- Admin erscheint im mobilen Mehr-Menü ausschließlich bei is_admin=true.
-- Nicht-Admins werden auch bei direktem Admin-Aufruf abgefangen.
-- Abmelden ist mobil ebenfalls im Mehr-Menü verfügbar.
-Keine neue Supabase-Migration nötig, wenn V1.7.0 bereits installiert wurde.

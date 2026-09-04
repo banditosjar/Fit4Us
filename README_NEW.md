@@ -1,2 +1,0 @@
-# Movo
-Production runtime only.
