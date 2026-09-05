@@ -1,7 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 300"><g transform="translate(10,-85) scale(.76)">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#63E6BE"/><stop offset="1" stop-color="#20C997"/></linearGradient></defs>
-
-<circle cx="164" cy="126" r="38" fill="url(#g)"/><circle cx="348" cy="126" r="38" fill="url(#g)"/>
-<path d="M105 360 C118 285 127 213 168 194 C205 177 224 216 256 274 C288 216 307 177 344 194 C385 213 394 285 407 360" fill="none" stroke="url(#g)" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M172 218 C194 247 218 286 256 331 C294 286 318 247 340 218" fill="none" stroke="url(#g)" stroke-width="34" stroke-linecap="round" opacity=".92"/>
-</g><text x="415" y="158" font-family="Arial Rounded MT Bold,Arial,sans-serif" font-size="130" font-weight="900" letter-spacing="-7" fill="#FFFFFF">Movo</text><text x="424" y="215" font-family="Arial,sans-serif" font-size="34" font-weight="600" letter-spacing="1.4" fill="rgba(255,255,255,.78)">MOVE. MOTIVATE. TOGETHER.</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 118">
+ <g transform="translate(4 7) scale(.86)">
+ <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#64E4BD"/><stop offset="1" stop-color="#0AA17E"/></linearGradient></defs>
+ <g fill="none" stroke="url(#g)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M31 39 C30 51 23 62 17 78"/>
+  <path d="M32 43 C43 49 49 63 60 74"/>
+  <path d="M89 39 C90 51 97 62 103 78"/>
+  <path d="M88 43 C77 49 71 63 60 74"/>
+ </g>
+ <circle cx="31" cy="19" r="10.5" fill="url(#g)"/>
+ <circle cx="89" cy="19" r="10.5" fill="url(#g)"/>
+</g>
+ <text x="118" y="66" font-family="Nunito Sans,Arial,sans-serif" font-size="65" font-weight="900" letter-spacing="-3" fill="#FFFFFF">Movo</text>
+ <text x="121" y="94" font-family="Nunito Sans,Arial,sans-serif" font-size="16" font-weight="700" fill="#BCE7DD">Move. Motivate. Together.</text>
+</svg>
