@@ -1,0 +1,84 @@
+name: Movo V1.22.1 production cleanup
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/movo-v1-22-1-cleanup.yml']
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Normalize production structure and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets supabase/functions/scheduled-notifications supabase/functions/push-notification
+
+          # V1.22 visual / brand assets were manually uploaded into root: move them where CSS/HTML expect them.
+          for f in movo-alpine-morning.svg movo-alpine-soft.svg movo-alpine-sunset.svg \
+                   movo-app-icon-light.svg movo-app-icon.svg movo-icon-1024.png movo-icon-180.png \
+                   movo-icon-192.png movo-icon-512.png movo-icon.png movo-logo-dark.png movo-logo-white.png \
+                   movo-logo.png movo-maskable-512.png movo-mountain-bg.svg movo-symbol.svg \
+                   movo-wordmark-compact-dark.svg movo-wordmark-compact-white.svg \
+                   movo-wordmark-dark.svg movo-wordmark-white.svg \
+                   reward-cinema.svg reward-food.svg reward-hike.svg reward-surprise.svg favicon.ico; do
+            if [ -e "$f" ]; then mv -f "$f" "assets/$f"; fi
+          done
+
+          # Restore the two Edge Functions that were accidentally flattened into repository root.
+          if [ -f index.ts ]; then mv -f index.ts supabase/functions/scheduled-notifications/index.ts; fi
+          if [ -f config.toml ]; then mv -f config.toml supabase/functions/scheduled-notifications/config.toml; fi
+          if [ -f 'index (1).ts' ]; then mv -f 'index (1).ts' supabase/functions/push-notification/index.ts; fi
+          if [ -f 'config (2).toml' ]; then mv -f 'config (2).toml' supabase/functions/push-notification/config.toml; fi
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,re
+          V='1.22.1'
+          p=Path('app.js'); s=p.read_text(); s=re.sub(r"const FIT4US_VERSION='[^']+';",f"const FIT4US_VERSION='{V}';",s,count=1); p.write_text(s)
+          p=Path('sw.js'); s=p.read_text(); s=re.sub(r"const VERSION='[^']+'",f"const VERSION='{V}'",s,count=1); s=re.sub(r"const CACHE='[^']+'",f"const CACHE='fit4us-v{V}'",s,count=1); p.write_text(s)
+          p=Path('index.html'); s=p.read_text(); s=re.sub(r'<title>.*?</title>',f'<title>Movo · V{V}</title>',s,count=1); s=re.sub(r'manifest\.webmanifest\?v=[^\"]+',f'manifest.webmanifest?v={V}',s); s=re.sub(r'style\.css\?v=[^\"]+',f'style.css?v={V}',s); s=re.sub(r'app\.js\?v=[^\"]+',f'app.js?v={V}',s); p.write_text(s)
+          Path('version.json').write_text(json.dumps({'version':V,'build':f'Movo V{V} (intern Fit4Us)','cache':f'fit4us-v{V}'},indent=2)+'\n')
+          p=Path('style.css'); s=p.read_text(); marker='/* V1.22.1 – preserve approved mobile composition */';
+          if marker not in s:
+              s += '''\n\n/* V1.22.1 – preserve approved mobile composition */\n@media(min-width:761px){\n .mockMobileScreen{max-width:680px;margin:24px auto 48px;border-radius:30px;overflow:hidden;box-shadow:0 26px 70px rgba(4,48,43,.16)}\n .mockMobileScreen .mockSheet{margin-left:0;margin-right:0}\n .mockRewardGrid{grid-template-columns:1fr 1fr}\n .mockRewardTile.featured{grid-column:1/-1;grid-row:auto}\n .mockRankingStack{grid-template-columns:1fr}\n}\n'''
+              p.write_text(s)
+          PY
+
+          # Root must contain only current production runtime + production folders.
+          touch .nojekyll
+          rm -rf .deploy
+          rm -f download
+          find . -maxdepth 1 -type f \( -name 'MIGRATION_*' -o -name 'UPDATE_*' -o -name '*AUDIT*' -o -name 'PUSH_SETUP*' -o -name 'preview.html' -o -name '_visual-audit.html' -o -name 'config.example.js' -o -name 'supabase-setup.sql' \) -delete
+
+          # Keep only current asset set.
+          find assets -maxdepth 1 -type f | while read -r f; do
+            b="$(basename "$f")"
+            case "$b" in
+              movo-icon-180.png|movo-icon-192.png|movo-icon-512.png|movo-icon-1024.png|movo-icon.png|movo-maskable-512.png|movo-logo.png|movo-logo-dark.png|movo-logo-white.png|movo-app-icon.svg|movo-app-icon-light.svg|movo-mountain-bg.svg|movo-symbol.svg|movo-wordmark-dark.svg|movo-wordmark-white.svg|movo-wordmark-compact-dark.svg|movo-wordmark-compact-white.svg|movo-alpine-morning.svg|movo-alpine-soft.svg|movo-alpine-sunset.svg|reward-cinema.svg|reward-food.svg|reward-hike.svg|reward-surprise.svg|favicon.ico) ;;
+              *) rm -f "$f" ;;
+            esac
+          done
+
+          # Remove deployment machinery itself from the production commit.
+          rm -rf .github
+
+          node --check app.js
+          node --check sw.js
+          test -f assets/movo-alpine-morning.svg
+          test -f assets/reward-hike.svg
+          test -f supabase/functions/scheduled-notifications/index.ts
+          test -f supabase/functions/push-notification/index.ts
+
+      - name: Commit clean production runtime
+        shell: bash
+        run: |
+          git config user.name 'Movo Production Cleanup'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'Movo v1.22.1: fix visual assets and clean production structure'
+          git push
