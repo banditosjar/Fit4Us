@@ -12,7 +12,7 @@ Deno.serve(async req=>{
  try{
   if(req.headers.get('x-cron-secret')!==Deno.env.get('CRON_SECRET'))return new Response('Unauthorized',{status:401})
   const admin=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}})
-  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:fit4us@example.invalid',Deno.env.get('VAPID_PUBLIC_KEY')!,Deno.env.get('VAPID_PRIVATE_KEY')!)
+  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:movo@example.invalid',Deno.env.get('VAPID_PUBLIC_KEY')!,Deno.env.get('VAPID_PRIVATE_KEY')!)
   const {date,hour}=localParts()
 
   const {data:profiles}=await admin.from('profiles').select('id,first_name').eq('approved',true)
@@ -23,7 +23,7 @@ Deno.serve(async req=>{
   async function send(uid:string,title:string,body:string,tag:string){
    for(const s of (subs||[]).filter(x=>x.user_id===uid)){
     try{
-     await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body,url:'https://banditosjar.github.io/Fit4Us/',tag}))
+     await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body,url:'https://banditosjar.github.io/Movo/',tag}))
      sentCount++
     }catch(e){
      const status=(e as any)?.statusCode
@@ -33,9 +33,6 @@ Deno.serve(async req=>{
    }
   }
 
-  // Automatisch gewählte Wochenchallenge: Der Cron läuft stündlich. Nur eine
-  // Auswahl aus dem letzten 70-Minuten-Fenster wird gemeldet, damit derselbe
-  // Auto-Pick beim nächsten Stundenlauf nicht erneut gepusht wird.
   const cutoff=new Date(Date.now()-70*60*1000).toISOString()
   const {data:autoRows}=await admin.from('weekly_choice_windows')
    .select('week_key,auto_selected_at')
@@ -49,28 +46,36 @@ Deno.serve(async req=>{
    }
    for(const p of profiles||[]){
     const pr=(prefs||[]).find(x=>x.user_id===p.id)
-    if(pr?.notify_challenges!==false)await send(p.id,'🎲 Wochenchallenge automatisch gewählt',`Fit4Us hat „${title}“ aus den drei Optionen ausgewählt.`,'weekly-auto-'+row.week_key)
+    if(pr?.notify_challenges!==false)await send(p.id,'🎲 Wochenchallenge automatisch gewählt',`Movo hat „${title}“ aus den drei Optionen ausgewählt.`,'weekly-auto-'+row.week_key)
    }
   }
 
-  // 08:00: nur erinnern, wenn die persönliche Tageschallenge noch NICHT erledigt ist.
   if(hour===8){
    const {data:done}=await admin.from('daily_challenge_completions').select('user_id').eq('challenge_date',date)
    const completed=new Set((done||[]).map(x=>x.user_id))
    for(const p of profiles||[]){
     const pr=(prefs||[]).find(x=>x.user_id===p.id)
-    if(pr?.notify_challenges!==false&&!completed.has(p.id))await send(p.id,'☀️ Deine Fit4Us-Challenge wartet',`Guten Morgen ${p.first_name} – deine persönliche Tageschallenge ist noch offen.`,'daily-'+date)
+    if(pr?.notify_challenges!==false&&!completed.has(p.id))await send(p.id,'☀️ Deine Movo-Challenge wartet',`Guten Morgen ${p.first_name} – deine persönliche Tageschallenge ist noch offen.`,'daily-'+date)
    }
   }
 
-  // 19:00: nur wenn heute noch kein positiver Punkt gesammelt wurde.
   if(hour===19){
-   const {data:entries}=await admin.from('entries').select('user_id,points').eq('entry_date',date).gt('points',0)
-   const {data:daily}=await admin.from('daily_challenge_completions').select('user_id,points').eq('challenge_date',date)
-   const active=new Set([...(entries||[]).map(x=>x.user_id),...(daily||[]).filter(x=>(x.points||1)>0).map(x=>x.user_id)])
+   const {data:todayEntries}=await admin.from('entries').select('user_id,kind,points,steps,food_items').eq('entry_date',date)
+   const {data:daily}=await admin.from('daily_challenge_completions').select('user_id').eq('challenge_date',date)
+   const dailyUsers=new Set((daily||[]).map(x=>x.user_id))
+   const qualified=new Set<string>()
+   for(const p of profiles||[]){
+    const es=(todayEntries||[]).filter(x=>x.user_id===p.id)
+    const stepOk=es.some(x=>x.kind==='steps'&&Number(x.steps||0)>=7500)
+    const foodOk=es.some(x=>x.kind==='food'&&Array.isArray(x.food_items)&&x.food_items.length>=3)
+    const activityOk=es.some(x=>x.kind==='activity'&&Number(x.points||0)>=2)
+    const otherHealth=es.some(x=>Number(x.points||0)>0)
+    const dailyPlus=dailyUsers.has(p.id)&&otherHealth
+    if(stepOk||foodOk||activityOk||dailyPlus)qualified.add(p.id)
+   }
    for(const p of profiles||[]){
     const pr=(prefs||[]).find(x=>x.user_id===p.id)
-    if(pr?.notify_streak!==false&&!active.has(p.id))await send(p.id,'🔥 Dein Streak ist heute noch offen',`Ein einziger Punkt reicht heute, ${p.first_name}.`,'streak-'+date)
+    if(pr?.notify_streak!==false&&!qualified.has(p.id))await send(p.id,'🔥 Dein Streak ist heute noch offen',`${p.first_name}, dir fehlt heute noch ein qualifizierter aktiver Tag. 7.500 Schritte, 3 Ernährungsziele, eine Aktivität ab 2 P oder Daily + ein weiterer Gesundheitspunkt reichen.`,'streak-'+date)
    }
   }
 

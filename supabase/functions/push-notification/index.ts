@@ -45,13 +45,13 @@ Deno.serve(async req=>{
   const {data:subs}=await admin.from('push_subscriptions').select('*').eq('user_id',target_user_id)
   if(!subs?.length)return json({sent:0,no_subscriptions:true})
 
-  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:fit4us@example.invalid',vapidPublic,vapidPrivate)
+  webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT')||'mailto:movo@example.invalid',vapidPublic,vapidPrivate)
   let sent=0,removed=0,failed=0
   for(const s of subs){
    try{
     await webpush.sendNotification(
      {endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},
-     JSON.stringify({title,body,url:targetUrl||'https://banditosjar.github.io/Fit4Us/',tag:tag||category})
+     JSON.stringify({title,body,url:targetUrl||'https://banditosjar.github.io/Movo/',tag:tag||category})
     )
     sent++
    }catch(e){
