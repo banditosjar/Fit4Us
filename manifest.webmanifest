@@ -1,19 +1,31 @@
 {
-  "name": "Movo",
+  "name": "Movo – Move. Motivate. Together.",
   "short_name": "Movo",
   "description": "Move. Motivate. Together. Gemeinsam aktiv, bewusster und motivierter.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F7FBF8",
-  "theme_color": "#092C2A",
+  "background_color": "#e8efeb",
+  "theme_color": "#0f766e",
   "lang": "de-DE",
   "icons": [
     {
-      "src": "./assets/movo-symbol.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "./assets/movo-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./assets/movo-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/movo-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "id": "./"

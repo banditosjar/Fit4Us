@@ -25,61 +25,112 @@ html[data-theme="dark"]{--bg:#071817;--surface:#0e2422;--surface-2:#112b28;--ink
 @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes pulseRing{0%,100%{filter:drop-shadow(0 0 0 rgba(99,230,190,0))}50%{filter:drop-shadow(0 0 13px rgba(99,230,190,.38))}}.movoProgressRing{animation:pulseRing 3.2s ease-in-out infinite}.react:active,.quickAddModern button:active,.homeChallengeTile:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
 
-/* Movo V1.20.1 visual hotfix */
-/* Always-visible branding, independent from missing raster logo assets */
-.topBrandBtn{display:inline-flex!important;align-items:center;gap:10px!important;min-height:44px!important;border:0!important;background:transparent!important;color:inherit!important;position:relative!important;padding-left:48px!important}
-.topBrandBtn img{display:none!important}
-.topBrandBtn:before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:40px;height:40px;background:url('./assets/movo-symbol.svg') center/contain no-repeat}
-.topBrandBtn:after{content:"Movo";font-size:24px;font-weight:950;letter-spacing:-.055em;color:var(--ink)}
-.movoTop{display:flex!important;min-height:62px!important;height:auto!important;padding:6px 0 10px!important}
-.sideBrand{display:none!important}
-.movoSide:before{content:"Movo";display:block;padding:2px 10px 0 62px;margin:0 0 2px;min-height:48px;background:url('./assets/movo-symbol.svg') 8px center/45px 45px no-repeat;font-size:29px;font-weight:950;line-height:48px;letter-spacing:-.055em;color:#fff}
-.movoSide .sideClaim{margin-top:4px!important}
-.authLogo{display:none!important}.authCard:before{content:"Movo";display:block;margin:0 auto 18px;padding-top:78px;background:url('./assets/movo-symbol.svg') top center/74px 74px no-repeat;text-align:center;font-size:34px;font-weight:950;letter-spacing:-.055em;color:var(--ink)}
+/* =========================================================
+   V1.20.1 – Branding visibility & complete dark-mode cleanup
+   ========================================================= */
+/* Branding is text+symbol, so Movo remains visible even if an image asset is stale/missing. */
+.movoTop{display:flex!important;min-height:64px;height:auto;padding:6px 0 8px}
+.topBrandBtn,.sideBrandButton{display:inline-flex;align-items:center;gap:10px;border:0;background:transparent;color:inherit;text-align:left;padding:0}
+.brandSymbolMini{width:42px;height:42px;object-fit:contain;flex:0 0 auto}
+.movoBrandText{display:flex;flex-direction:column;line-height:1;min-width:0}
+.movoBrandText b{font-size:25px;letter-spacing:-.055em;font-weight:950;color:var(--ink)}
+.movoBrandText small{font-size:8px;letter-spacing:.02em;color:var(--muted);margin-top:4px;white-space:nowrap}
+.sideBrandButton{width:100%;padding:4px 8px;margin-bottom:4px;color:#fff}
+.sideBrandSymbol{width:48px;height:48px;filter:none;flex:0 0 auto}
+.movoBrandText.light b{font-size:28px;color:#fff}
+.movoBrandText.light small{color:rgba(255,255,255,.62)}
 
-/* Missing component styling: browser defaults were visible as white rectangles */
+/* Quick templates had no V1.20 style and therefore fell back to browser-default white rectangles. */
 .quickTemplates{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
 .quickTemplate{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:9px 12px;box-shadow:var(--shadow-sm);font:inherit;text-align:left;transition:transform .18s ease,background .18s ease,border-color .18s ease}
 .quickTemplate:hover{transform:translateY(-1px);border-color:rgba(32,201,151,.35)}
 .quickTemplate span{font-size:15px}.quickTemplate b{font-size:11px}.quickTemplate small{font-size:10px;color:var(--muted);white-space:nowrap}
+
+/* Comments were also relying on browser-default button styling. */
 .socialAction{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;font:inherit;font-size:11px;font-weight:900;transition:.18s ease}
 .socialAction span{font-size:11px}.socialAction.active{background:#dff7ee;border-color:#8bd9bf;color:#087d62}
-.weekSnapshot>div{background:var(--surface-2)!important;border:1px solid var(--line)}
+
+/* Make stat/snapshot cards use theme surfaces instead of fixed white. */
+.weekSnapshot>div{background:var(--surface-2);border:1px solid var(--line)}
 .secondary,.react,.uploadBtn,.choice,.rewardPreviewItem,.mobileMenuSheet,.modalCard,.tabs button.active{background:var(--surface);color:var(--ink)}
 .pill,.chip,.bonusPill{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
 .feedMore .secondary{background:var(--surface);color:var(--ink)}
 
-html[data-theme="dark"] .quickTemplate,html[data-theme="dark"] .socialAction,html[data-theme="dark"] .secondary,html[data-theme="dark"] .react,html[data-theme="dark"] .uploadBtn,html[data-theme="dark"] .choice,html[data-theme="dark"] .weekSnapshot>div,html[data-theme="dark"] .rewardPreviewItem,html[data-theme="dark"] .mobileMenuSheet,html[data-theme="dark"] .modalCard,html[data-theme="dark"] .tabs button.active{background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important}
-html[data-theme="dark"] .pill,html[data-theme="dark"] .chip,html[data-theme="dark"] .bonusPill{background:#15322f!important;color:#a9bbb6!important;border-color:rgba(255,255,255,.08)!important}
-html[data-theme="dark"] .socialAction.active,html[data-theme="dark"] .react.active{background:#173c34!important;color:#79e2bf!important;border-color:#2e715f!important}
-html[data-theme="dark"] .topBrandBtn:after,html[data-theme="dark"] .authCard:before{color:#f3fbf7!important}
-html[data-theme="dark"] .quickTemplate small,html[data-theme="dark"] .weekSnapshot small,html[data-theme="dark"] .weekSnapshot span{color:#91a5a0!important}
+/* Complete dark theme sweep for components that previously stayed white. */
+html[data-theme="dark"] .quickTemplate,
+html[data-theme="dark"] .socialAction,
+html[data-theme="dark"] .secondary,
+html[data-theme="dark"] .react,
+html[data-theme="dark"] .uploadBtn,
+html[data-theme="dark"] .choice,
+html[data-theme="dark"] .weekSnapshot>div,
+html[data-theme="dark"] .rewardPreviewItem,
+html[data-theme="dark"] .mobileMenuSheet,
+html[data-theme="dark"] .modalCard,
+html[data-theme="dark"] .tabs button.active{
+ background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important;
+}
+html[data-theme="dark"] .pill,
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .bonusPill{background:#15322f!important;color:#a9bbb6!important;border-color:rgba(255,255,255,.08)!important}
+html[data-theme="dark"] .socialAction.active,
+html[data-theme="dark"] .react.active{background:#173c34!important;color:#79e2bf!important;border-color:#2e715f!important}
+html[data-theme="dark"] .movoBrandText b{color:#f3fbf7}
+html[data-theme="dark"] .movoBrandText small{color:#91a5a0}
+html[data-theme="dark"] .quickTemplate small{color:#91a5a0}
+html[data-theme="dark"] .weekSnapshot small,
+html[data-theme="dark"] .weekSnapshot span{color:#91a5a0}
 
-/* Consistent vertical rhythm */
-.movoSection + .movoSection,.homeFlow>.movoSection + .movoSection,.crewFlow>* + *,.challengeFlow>* + *,.profileFlow>* + *{margin-top:24px!important}
-.crewStage + .crewFlow,.homeStage + .homeFlow,.challengeStage + .challengeFlow,.profileStage + .profileFlow{margin-top:24px!important}
+/* Section rhythm: no visual blocks glued together. */
+.movoSection + .movoSection,.homeFlow>.movoSection + .movoSection,.crewFlow>* + *, .challengeFlow>* + *, .profileFlow>* + *{margin-top:24px}
+.crewStage + .crewFlow,.homeStage + .homeFlow,.challengeStage + .challengeFlow,.profileStage + .profileFlow{margin-top:24px}
 .crewMomentCard{margin-top:18px!important}
 
-@media(min-width:1080px){.movoTop{display:flex!important;margin-bottom:18px!important;padding:0 2px 10px!important;border-bottom:1px solid var(--line)}.topBrandBtn:after{font-size:24px}}
-@media(max-width:520px){.quickTemplates{display:grid;grid-template-columns:1fr}.quickTemplate{border-radius:16px;grid-template-columns:auto 1fr auto}.topBrandBtn:after{font-size:21px}.topBrandBtn{padding-left:43px!important}.topBrandBtn:before{width:36px;height:36px}}
+@media(min-width:1080px){
+ .movoTop{display:flex!important;margin-bottom:18px;padding:0 2px 10px;border-bottom:1px solid var(--line)}
+ .movoBrandText b{font-size:24px}
+ .sideClaim{margin-top:6px}
+}
+@media(max-width:520px){
+ .movoBrandText small{display:none}.movoBrandText b{font-size:22px}.brandSymbolMini{width:38px;height:38px}
+ .quickTemplates{display:grid;grid-template-columns:1fr}
+ .quickTemplate{border-radius:16px;grid-template-columns:auto 1fr auto}
+}
 
 
 /* =========================================================
    V1.20.2 – Full UI consistency & dark-mode audit
    ========================================================= */
+
+/* Form controls and plain browser elements: never fall back to white defaults. */
 button,select,input,textarea{color:var(--ink)}
 select,input,textarea{background:var(--surface);border-color:var(--line)}
+
+/* Ranking: current user highlight keeps contrast in both themes. */
 .rankMe{background:linear-gradient(135deg,#e5f8f0,#f5fbf8)!important;border:1px solid rgba(32,201,151,.22)}
-.rankRow{min-height:52px}.rankRow>div{min-width:0}.rankRow b{color:inherit}
+.rankRow{min-height:52px}
+.rankRow>div{min-width:0}
+.rankRow b{color:inherit}
+
+/* Challenges: semantic cards, but theme-aware instead of fixed white canvases. */
 .focusChallenge{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 .focusChallenge.daily{background:linear-gradient(145deg,#fffaf0,#fff)}
 .focusChallenge.weekly{background:linear-gradient(145deg,#eef8fb,#fff)}
 .focusChallenge.monthly{background:linear-gradient(145deg,#eaf9f3,#fff)}
-.focusChallenge p{color:var(--muted)}.focusChallenge b{color:var(--ink)}.challengeBadge{color:var(--muted)}
-.notice{color:#123b31}.rulesIntro{display:grid;gap:5px}.rulesIntro .muted{line-height:1.55}
+.focusChallenge p{color:var(--muted)}
+.focusChallenge b{color:var(--ink)}
+.challengeBadge{color:var(--muted)}
+
+/* Notices/rules: no pale white slab with unreadable text in dark mode. */
+.notice{color:#123b31}
+.rulesIntro{display:grid;gap:5px}
+.rulesIntro .muted{line-height:1.55}
 .disclosureCard .choice{min-height:52px;display:flex;align-items:center;line-height:1.4}
+
+/* History – previously several components were completely unstyled browser defaults. */
 .historyTop{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px;padding:6px 0 4px}
-.historyTop small{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--muted)}.historyTop h1{margin:3px 0 0}
+.historyTop small{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--muted)}
+.historyTop h1{margin:3px 0 0}
 .segmented{display:inline-grid;grid-auto-flow:column;gap:3px;padding:4px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px}
 .segmented button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:8px 13px;font-weight:900;font-size:11px}
 .segmented button.active{background:var(--surface);color:#087d62;box-shadow:var(--shadow-sm)}
@@ -88,17 +139,42 @@ select,input,textarea{background:var(--surface);border-color:var(--line)}
 .monthNav>div{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0}
 .monthNav select{max-width:210px;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:var(--surface);color:var(--ink)}
 .historyHero,.monthHero,.statBig{display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(125deg,#dff7ee,#f8fcfa);border:1px solid rgba(32,201,151,.18);color:#123a31;box-shadow:var(--shadow-sm)}
-.historyHero small{font-size:10px;font-weight:900;letter-spacing:.08em;color:#638179}.historyHero h2{font-size:30px;margin:5px 0;color:#0c4034}.historyHero>span{font-size:44px;filter:drop-shadow(0 8px 18px rgba(9,44,42,.12))}
-.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:15px;border-radius:17px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-sm);display:grid;gap:2px}.kpi b{font-size:22px;color:var(--ink)}.kpi small{font-size:10px;color:var(--muted)}
-.histWeek{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.histWeek:last-child{border-bottom:0}.histWeek small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.personalMonth span{border:1px solid var(--line)}
+.historyHero small{font-size:10px;font-weight:900;letter-spacing:.08em;color:#638179}
+.historyHero h2{font-size:30px;margin:5px 0;color:#0c4034}
+.historyHero>span{font-size:44px;filter:drop-shadow(0 8px 18px rgba(9,44,42,.12))}
+.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{padding:15px;border-radius:17px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-sm);display:grid;gap:2px}
+.kpi b{font-size:22px;color:var(--ink)}
+.kpi small{font-size:10px;color:var(--muted)}
+.histWeek{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.histWeek:last-child{border-bottom:0}
+.histWeek small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.personalMonth span{border:1px solid var(--line)}
+
+/* Admin – grouped, readable and deliberate instead of generic white warning boxes. */
 .adminOnly{border-color:rgba(255,202,128,.42);background:linear-gradient(145deg,#fffaf1,var(--surface))}
-.resetDangerCard{border-color:rgba(224,91,91,.34)!important;background:linear-gradient(145deg,#fff4f4,var(--surface))!important}.resetDangerCard h3{color:#a64040}.resetDangerCard .grid{gap:9px}.resetDangerCard .secondary{width:100%;justify-content:center}
-.dayFeedRow.accentStreak{border:1px solid rgba(255,154,80,.14)}.dayFeedRow.accentDaily{border:1px solid rgba(255,202,128,.12)}.dayFeedCard,.dayFeedRows{min-width:0}
+.resetDangerCard{border-color:rgba(224,91,91,.34)!important;background:linear-gradient(145deg,#fff4f4,var(--surface))!important}
+.resetDangerCard h3{color:#a64040}
+.resetDangerCard .grid{gap:9px}
+.resetDangerCard .secondary{width:100%;justify-content:center}
+
+/* Feed: slightly cleaner rhythm and consistent bonus treatment. */
+.dayFeedRow.accentStreak{border:1px solid rgba(255,154,80,.14)}
+.dayFeedRow.accentDaily{border:1px solid rgba(255,202,128,.12)}
+.dayFeedCard{min-width:0}
+.dayFeedRows{min-width:0}
+
+/* Other previously unstyled screens/components found by the selector audit. */
 .recordsGrid,.rewardPeopleGrid,.onboardingGrid{display:grid;gap:10px}
 .recordMini,.rewardPersonCard,.settingsCard,.proposalVotingCard,.rewardProposalVotingCard,.rewardPoolCard,.rewardMilestoneCard,.dailyPinnedCard,.votingBanner,.outboxNotice,.witnessRequest{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow-sm)}
-.settingToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.settingToggle:last-child{border-bottom:0}
-.heatmap{display:grid;grid-template-columns:repeat(14,minmax(12px,1fr));gap:4px;overflow:auto;padding:4px 0}.heatCell{aspect-ratio:1;border-radius:4px;background:var(--surface-2);border:1px solid var(--line)}.heatLegend{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;margin-top:8px}
+.settingToggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.settingToggle:last-child{border-bottom:0}
+.heatmap{display:grid;grid-template-columns:repeat(14,minmax(12px,1fr));gap:4px;overflow:auto;padding:4px 0}
+.heatCell{aspect-ratio:1;border-radius:4px;background:var(--surface-2);border:1px solid var(--line)}
+.heatLegend{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;margin-top:8px}
 .rewardPersonHead,.rewardNextHead,.wishHistoryRow,.rewardPersonStats,.bonusBreakdown,.crewBreakdown{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+/* Dark mode: exhaustive sweep of every fixed-light component found in V1.20. */
 html[data-theme="dark"] .rankMe{background:linear-gradient(135deg,#153b32,#102b27)!important;border-color:#286452!important;color:#f0fbf6!important}
 html[data-theme="dark"] .focusChallenge{border-color:rgba(255,255,255,.09)!important;color:#eef7f3!important}
 html[data-theme="dark"] .focusChallenge.daily{background:linear-gradient(145deg,#2c2a1e,#112724)!important}
@@ -110,21 +186,49 @@ html[data-theme="dark"] .progress{background:#243b37}
 html[data-theme="dark"] .notice{background:#12332c!important;color:#c9eee1!important;border-color:#285e50!important}
 html[data-theme="dark"] .error{background:#3a2022!important;color:#ffd0d0!important;border-color:#6c3539!important}
 html[data-theme="dark"] .crewMoment{background:linear-gradient(135deg,#2c291e,#122724)!important;color:#f4f8f5!important;border-color:rgba(255,202,128,.16)!important}
-html[data-theme="dark"] .crewMoment>span{background:#42351f!important}html[data-theme="dark"] .crewMoment small{color:#d7b477!important}
-html[data-theme="dark"] .streakSecure,html[data-theme="dark"] .dayStreak{background:#382b1f!important;color:#f1bd78!important}
-html[data-theme="dark"] .streakSecure.done{background:#17382f!important;color:#8ce1c0!important}html[data-theme="dark"] .dayFeedIcon{background:#183b34!important}
-html[data-theme="dark"] .historyTop small{color:#91a5a0}html[data-theme="dark"] .segmented{background:#102825;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .segmented button{color:#91a5a0}html[data-theme="dark"] .segmented button.active{background:#183430!important;color:#77dfbd!important;box-shadow:none}
-html[data-theme="dark"] .monthNav{background:#0e2422;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .monthNav>button,html[data-theme="dark"] .monthNav select{background:#112b28;color:#eef7f3;border-color:rgba(255,255,255,.10)}
-html[data-theme="dark"] .historyHero,html[data-theme="dark"] .monthHero,html[data-theme="dark"] .statBig{background:linear-gradient(125deg,#143a32,#102824)!important;border-color:#285c50!important;color:#eef7f3!important}html[data-theme="dark"] .historyHero small{color:#8fb4aa!important}html[data-theme="dark"] .historyHero h2{color:#f1fbf7!important}
-html[data-theme="dark"] .kpi{background:#0e2422;border-color:rgba(255,255,255,.09)}html[data-theme="dark"] .personalMonth span{background:#112b28!important;color:#d8e7e2!important;border-color:rgba(255,255,255,.09)!important}
-html[data-theme="dark"] .adminOnly{background:linear-gradient(145deg,#2b291e,#0e2422)!important;border-color:#6d5b39!important}html[data-theme="dark"] .resetDangerCard{background:linear-gradient(145deg,#341f22,#0e2422)!important;border-color:#6c3439!important}html[data-theme="dark"] .resetDangerCard h3{color:#ffb3b3!important}
-html[data-theme="dark"] .pushDiagGrid>div,html[data-theme="dark"] .pushStatus{background:#112b28!important;color:#eef7f3!important;border:1px solid rgba(255,255,255,.08)}html[data-theme="dark"] .pushStatus.success{background:#15372f!important}html[data-theme="dark"] .pushStatus.warning{background:#392f1f!important}html[data-theme="dark"] .pushStatus.error{background:#392123!important}
-html[data-theme="dark"] .mobileMenuGrid button{background:#112b28!important;color:#eef7f3!important}html[data-theme="dark"] .mobileMenuHandle{background:#35504b!important}html[data-theme="dark"] .tabs{background:#102825!important}html[data-theme="dark"] .x{background:#183430!important;color:#eef7f3!important}
+html[data-theme="dark"] .crewMoment>span{background:#42351f!important}
+html[data-theme="dark"] .crewMoment small{color:#d7b477!important}
+html[data-theme="dark"] .streakSecure{background:#382b1f!important;color:#f1bd78!important}
+html[data-theme="dark"] .streakSecure.done{background:#17382f!important;color:#8ce1c0!important}
+html[data-theme="dark"] .dayStreak{background:#382b1f!important;color:#f1bd78!important}
+html[data-theme="dark"] .dayFeedIcon{background:#183b34!important}
+html[data-theme="dark"] .historyTop small{color:#91a5a0}
+html[data-theme="dark"] .segmented{background:#102825;border-color:rgba(255,255,255,.09)}
+html[data-theme="dark"] .segmented button{color:#91a5a0}
+html[data-theme="dark"] .segmented button.active{background:#183430!important;color:#77dfbd!important;box-shadow:none}
+html[data-theme="dark"] .monthNav{background:#0e2422;border-color:rgba(255,255,255,.09)}
+html[data-theme="dark"] .monthNav>button,html[data-theme="dark"] .monthNav select{background:#112b28;color:#eef7f3;border-color:rgba(255,255,255,.10)}
+html[data-theme="dark"] .historyHero,html[data-theme="dark"] .monthHero,html[data-theme="dark"] .statBig{background:linear-gradient(125deg,#143a32,#102824)!important;border-color:#285c50!important;color:#eef7f3!important}
+html[data-theme="dark"] .historyHero small{color:#8fb4aa!important}
+html[data-theme="dark"] .historyHero h2{color:#f1fbf7!important}
+html[data-theme="dark"] .kpi{background:#0e2422;border-color:rgba(255,255,255,.09)}
+html[data-theme="dark"] .personalMonth span{background:#112b28!important;color:#d8e7e2!important;border-color:rgba(255,255,255,.09)!important}
+html[data-theme="dark"] .adminOnly{background:linear-gradient(145deg,#2b291e,#0e2422)!important;border-color:#6d5b39!important}
+html[data-theme="dark"] .resetDangerCard{background:linear-gradient(145deg,#341f22,#0e2422)!important;border-color:#6c3439!important}
+html[data-theme="dark"] .resetDangerCard h3{color:#ffb3b3!important}
+html[data-theme="dark"] .pushDiagGrid>div,html[data-theme="dark"] .pushStatus{background:#112b28!important;color:#eef7f3!important;border:1px solid rgba(255,255,255,.08)}
+html[data-theme="dark"] .pushStatus.success{background:#15372f!important}
+html[data-theme="dark"] .pushStatus.warning{background:#392f1f!important}
+html[data-theme="dark"] .pushStatus.error{background:#392123!important}
+html[data-theme="dark"] .mobileMenuGrid button{background:#112b28!important;color:#eef7f3!important}
+html[data-theme="dark"] .mobileMenuHandle{background:#35504b!important}
+html[data-theme="dark"] .tabs{background:#102825!important}
+html[data-theme="dark"] .x{background:#183430!important;color:#eef7f3!important}
 html[data-theme="dark"] .field input,html[data-theme="dark"] .field select,html[data-theme="dark"] .field textarea,html[data-theme="dark"] textarea{background:#112b28!important;color:#eef7f3!important;border-color:rgba(255,255,255,.10)!important;color-scheme:dark}
-html[data-theme="dark"] .rewardNode span{background:#183430!important}html[data-theme="dark"] .rewardNode.done span{background:#185440!important}html[data-theme="dark"] .challengeWaiting{background:#112b28!important;color:#eef7f3!important}
+html[data-theme="dark"] .rewardNode span{background:#183430!important}
+html[data-theme="dark"] .rewardNode.done span{background:#185440!important}
+html[data-theme="dark"] .challengeWaiting{background:#112b28!important;color:#eef7f3!important}
 html[data-theme="dark"] .recordMini,html[data-theme="dark"] .rewardPersonCard,html[data-theme="dark"] .settingsCard,html[data-theme="dark"] .proposalVotingCard,html[data-theme="dark"] .rewardProposalVotingCard,html[data-theme="dark"] .rewardPoolCard,html[data-theme="dark"] .rewardMilestoneCard,html[data-theme="dark"] .dailyPinnedCard,html[data-theme="dark"] .votingBanner,html[data-theme="dark"] .outboxNotice,html[data-theme="dark"] .witnessRequest{background:#0e2422!important;color:#eef7f3!important;border-color:rgba(255,255,255,.09)!important}
-@media(min-width:720px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.recordsGrid,.rewardPeopleGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:620px){.historyTop{align-items:flex-start;flex-direction:column}.segmented{width:100%;grid-template-columns:1fr 1fr}.monthNav>div{flex-direction:column;gap:5px}.monthNav select{max-width:100%;width:100%}}
+
+@media(min-width:720px){
+ .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .recordsGrid,.rewardPeopleGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+ .historyTop{align-items:flex-start;flex-direction:column}
+ .segmented{width:100%;grid-template-columns:1fr 1fr}
+ .monthNav>div{flex-direction:column;gap:5px}.monthNav select{max-width:100%;width:100%}
+}
 
 
 /* =========================================================
@@ -203,3 +307,142 @@ html[data-theme="dark"] .topUserBtn{color:#eef8f4}html[data-theme="dark"] .topUs
 @media(min-width:1080px){.shell{grid-template-columns:265px 1fr}.homeStage,.crewStage,.challengeStage,.profileStage{padding:44px}.homeFlow,.crewFlow,.challengeFlow,.profileFlow{--gap:28px}.visualMomentum{min-height:290px}.groupFeed{grid-template-columns:1fr 1fr}.groupFeed .feedMore{grid-column:1/-1}.challengeStack{grid-template-columns:1fr!important}.focusChallenge{min-height:150px}.profileTabDock{max-width:720px;margin-left:auto;margin-right:auto}.side{padding:26px 20px}}
 @media(max-width:760px){.homeStage,.crewStage,.challengeStage,.profileStage{padding:24px 18px}.visualMomentum{grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto;min-height:0;padding:17px}.momentumStreak{grid-column:1}.visualMomentum .movoProgressRing{grid-column:1/-1;grid-row:2;width:154px;height:154px}.momentumToday{grid-column:2;grid-row:1}.momentumQuote{grid-row:3}.momentumMeta{grid-row:4}.crewSnapshot{grid-template-columns:repeat(4,minmax(76px,1fr));overflow-x:auto}.crewPerson .avatar{width:48px!important;height:48px!important}.focusChallenge{grid-template-columns:45px minmax(0,1fr);grid-template-rows:auto 1fr auto}.challengeArt{width:45px;height:45px;font-size:24px}.focusChallenge>.cta,.focusChallenge>.statusDone{grid-column:1/-1;grid-row:3;width:100%;text-align:center;justify-content:center}.profileHero{grid-template-columns:auto 1fr}.profileHero>.glassButton{grid-column:1/-1;width:100%}.profileHeroStats{grid-template-columns:repeat(2,1fr)}.movoTabs button{padding:10px 5px;font-size:11px}}
 @media(max-width:470px){.visualMomentum{grid-template-columns:1fr}.momentumStreak,.momentumToday,.visualMomentum .movoProgressRing{grid-column:1;grid-row:auto;justify-self:stretch}.visualMomentum .movoProgressRing{justify-self:center}.momentumToday{width:100%}.movoTabs button{font-size:10px}.crewSnapshot{grid-template-columns:repeat(4,88px)}.homeStageQuote{display:none}.profileHeroStats{grid-template-columns:1fr 1fr}}
+
+
+/* =====================================================================
+   MOVO V1.22.0 — Mockup-accurate mobile visual system
+   Structural redesign, not a legacy-style patch.
+   ===================================================================== */
+
+:root{
+ --movo-ink:#153238;
+ --movo-deep:#063f3a;
+ --movo-teal:#0f766e;
+ --movo-green:#20d3a3;
+ --movo-mint:#8ef0d0;
+ --movo-cream:#f7f4eb;
+ --movo-paper:#fbfaf6;
+ --movo-line:#dfe7e2;
+ --movo-muted:#6d8584;
+ --movo-shadow:0 18px 40px rgba(4,48,43,.17);
+ --movo-radius:24px;
+}
+body{background:#e8efeb}
+.movo122Shell .main{background:#e8efeb}
+.movo122Shell .pageContent{max-width:1180px}
+.pageContent.pageEntered{animation:movoPageIn .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes movoPageIn{from{opacity:.2;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.mockMobileScreen{color:var(--movo-ink);position:relative}
+.mockScene{position:relative;overflow:hidden;color:white;background-color:#145f5d;background-size:cover;background-position:center;border-radius:0 0 34px 34px;box-shadow:0 14px 30px rgba(4,46,43,.12)}
+.mockScene:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,47,46,.06),rgba(2,47,46,.36));pointer-events:none}
+.mockScene>*{position:relative;z-index:1}
+.mockSceneMorning{background-image:url("assets/movo-alpine-morning.svg");min-height:510px;padding:30px}
+.mockSceneCrew{background-image:linear-gradient(rgba(1,61,57,.06),rgba(1,61,57,.28)),url("assets/movo-alpine-morning.svg");padding:28px;min-height:265px}
+.mockSceneChallenge,.mockSceneSecondary{background-image:url("assets/movo-alpine-soft.svg");padding:28px;min-height:155px}
+.mockSceneProfile{background-image:url("assets/movo-alpine-soft.svg");padding:28px;min-height:155px}
+.mockSceneRewards{background-image:url("assets/movo-alpine-soft.svg");padding:28px;min-height:155px}
+.mockSceneMore{background-image:url("assets/movo-alpine-sunset.svg");padding:28px;min-height:155px}
+.mockSheet{position:relative;z-index:2;margin-top:-24px;border-radius:30px 30px 0 0;background:var(--movo-cream);padding:18px 18px 110px;min-height:380px}
+.mockGreeting{display:flex;gap:13px;align-items:center}
+.mockGreeting .avatar{width:58px!important;height:58px!important;border:3px solid #a4f4db;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.mockGreeting small{font-size:14px;font-weight:700}
+.mockGreeting h1{font-size:27px;line-height:1;margin:2px 0 5px}
+.mockGreeting p{margin:0;font-size:12px;color:rgba(255,255,255,.85)}
+.mockPageTitle{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.mockPageTitle h1{font-size:30px;margin:0 0 3px;letter-spacing:-.035em}
+.mockPageTitle p{font-size:13px;margin:0;color:rgba(255,255,255,.86)}
+.mockIconBtn{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.12);color:white;font-weight:900;backdrop-filter:blur(10px)}
+
+.mockMomentum{position:relative;margin-top:24px;height:335px;border:0;background:transparent;box-shadow:none}
+.mockGlass{position:absolute;left:0;top:22px;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:17px;background:rgba(7,68,65,.55);box-shadow:inset 0 0 0 1px rgba(255,255,255,.11);backdrop-filter:blur(10px)}
+.mockGlass .streakFlame{font-size:35px}.mockGlass b{display:block;font-size:19px}.mockGlass small{font-size:10px;color:#fff}
+.mockToday{position:absolute;right:0;top:20px;background:#c9f5dc;color:#103f36;border-radius:14px;padding:9px 13px;text-align:center;box-shadow:0 6px 16px rgba(0,0,0,.13)}
+.mockToday strong{display:block;font-size:24px}.mockToday small{font-size:10px;font-weight:800}.mockToday span{display:block;font-size:8px}
+.mockRing{position:absolute;left:50%;top:45px;transform:translateX(-50%);width:210px;height:210px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#7bf0c2 var(--ring),rgba(225,255,247,.22) 0);animation:ringPop .7s ease both}
+.mockRing:before{content:"";position:absolute;width:172px;height:172px;border-radius:50%;background:rgba(10,83,78,.55);backdrop-filter:blur(6px)}
+.mockRing>div{position:relative;z-index:1;text-align:center}.mockRing b{display:block;font-size:35px}.mockRing small{font-size:12px}.mockRing span{display:block;margin-top:10px;color:#80efc7;font-size:22px}
+@keyframes ringPop{from{transform:translateX(-50%) scale(.88);opacity:.4}to{transform:translateX(-50%) scale(1);opacity:1}}
+.mockQuote{position:absolute;left:0;right:0;bottom:30px;margin:auto;max-width:350px;text-align:center;padding:13px;border-radius:16px;background:rgba(27,91,87,.55);border:1px solid rgba(255,255,255,.14);font-style:italic;font-size:13px;backdrop-filter:blur(9px)}
+.mockMeta{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:7px}.mockMeta span{font-size:9px;padding:5px 8px;border-radius:999px;background:rgba(4,50,47,.45)}
+
+.mockWhiteCard{background:var(--movo-paper);border:1px solid rgba(14,84,74,.06);border-radius:22px;box-shadow:var(--movo-shadow);padding:18px;color:var(--movo-ink)}
+.mockCardTitle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.mockCardTitle h2{font-size:18px;margin:0}.mockCardTitle small{font-weight:800;color:var(--movo-muted)}.mockCardTitle span{font-size:10px;color:var(--movo-muted)}
+.mockNudgeList{display:grid;gap:9px}.mockNudgeRow{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:10px;align-items:center;border:0;background:transparent;color:var(--movo-ink);padding:3px 0;text-align:left}
+.mockNudgeIcon{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:#e9f7f2}.mockNudgeIcon.sun{background:#fff4d7}.mockNudgeIcon.sport{background:#e3f2eb}
+.mockNudgeRow b{display:block;font-size:13px}.mockNudgeRow small{display:block;color:var(--movo-muted);font-size:10px;margin-top:2px}.mockNudgeRow i{display:block;height:5px;background:#dfe9e6;border-radius:999px;margin-top:5px;overflow:hidden}.mockNudgeRow i em{display:block;height:100%;background:#28d2a0;border-radius:999px}
+.miniAction{padding:7px 10px;border-radius:999px;background:#cff6e7;color:#176451;font-size:9px;font-weight:900}
+.mockSectionHead{display:flex;justify-content:space-between;align-items:end;margin:25px 2px 10px}.mockSectionHead small{font-size:9px;font-weight:900;letter-spacing:.08em;color:#708684}.mockSectionHead h2{font-size:18px;margin:2px 0 0}.mockSectionHead button{border:0;background:transparent;color:#0a806b;font-weight:900}
+.quickAddModern{grid-template-columns:repeat(3,1fr)!important;gap:9px}.quickAddModern button{background:var(--movo-paper)!important;color:var(--movo-ink)!important;border:0!important;box-shadow:0 8px 22px rgba(8,63,58,.09)!important;border-radius:18px!important;min-height:84px}
+.quickAddModern button span{font-size:25px!important}.quickAddModern button b{font-size:11px!important}
+.quickTemplates{display:flex!important;gap:8px!important;overflow-x:auto;padding:2px 1px 6px}.quickTemplate{flex:0 0 auto!important;border-radius:999px!important;background:#edf7f3!important;color:#28504c!important;border:1px solid #d8e9e3!important;box-shadow:none!important}
+.homeChallengeGrid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}.homeChallengeTile{min-height:66px!important;text-align:left!important;background:var(--movo-paper)!important;color:var(--movo-ink)!important;border:0!important;border-radius:18px!important;box-shadow:0 8px 20px rgba(8,63,58,.08)!important;padding:12px 14px!important}
+.homeChallengeTile small,.homeChallengeTile span{color:#66827e!important}.homeChallengeTile b{font-size:13px!important}
+.mockCompactDetails{background:var(--movo-paper);border:1px solid #e2ebe6;border-radius:18px;margin-top:16px;box-shadow:0 7px 18px rgba(8,63,58,.06);overflow:hidden;color:var(--movo-ink)}
+.mockCompactDetails>summary{padding:15px 16px;display:flex;justify-content:space-between;list-style:none;font-weight:900;font-size:12px}.mockCompactDetails>summary::-webkit-details-marker{display:none}.mockCompactDetails>div{padding:0 16px 16px}
+
+.mockCrewPeople{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:20px}.mockCrewAvatar{border:0;background:transparent;color:white;display:flex;flex-direction:column;align-items:center;gap:3px}.mockCrewAvatar .avatar{width:54px!important;height:54px!important;border:3px solid #d2fff2}.mockCrewAvatar.me .avatar{border-color:#87f2ce;box-shadow:0 0 0 3px rgba(78,237,190,.22)}.mockCrewAvatar b{font-size:11px}.mockCrewAvatar span{font-size:9px;color:#e0f6f0}
+.mockSegmented{padding:4px;border-radius:18px;background:var(--movo-paper);box-shadow:0 9px 22px rgba(5,58,52,.08);margin-bottom:14px}.mockSegmented .movoTabs,.mockSegmented .segmented{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:4px!important;background:transparent!important;padding:0!important;border:0!important}.mockSegmented .movoTabs button,.mockSegmented .segmented button{border:0!important;border-radius:13px!important;background:transparent!important;color:#47615f!important;padding:10px 6px!important;font-size:10px!important;font-weight:800!important}.mockSegmented .movoTabs button.active,.mockSegmented .segmented button.active{background:#c9f5e5!important;color:#0d6e5d!important}
+.groupFeed,.mockCrewFeed,.mockFeed{display:grid!important;gap:12px!important}.dayFeedCard{background:var(--movo-paper)!important;color:var(--movo-ink)!important;border:1px solid #e2ebe6!important;border-radius:20px!important;box-shadow:0 9px 24px rgba(5,58,52,.08)!important}.dayFeedWho small,.dayFeedRow small{color:#6d8584!important}.dayFeedRow{background:#f1f6f3!important;border:0!important;color:var(--movo-ink)!important}.dayFeedIcon{background:white!important}.dayStreak{background:#fff0da!important;color:#a15d10!important;border:0!important}.dayFeedScore>strong,.dayFeedRow>strong{color:#079475!important}.react{background:white!important;color:#183e3a!important;border:1px solid #d7e7e1!important}.react.active{background:#c8f6e5!important;color:#08715c!important}
+.mockMomentWrap{display:grid;gap:14px}.mockLastWinner{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:linear-gradient(135deg,#fff6df,#fff);border-radius:19px;padding:16px;color:var(--movo-ink);box-shadow:var(--movo-shadow)}.mockLastWinner small,.mockLastWinner b{display:block}.mockLastWinner small{font-size:9px;color:#97722a}.mockLastWinner b{font-size:16px}.mockLastWinner p{margin:2px 0 0;font-size:11px;color:var(--movo-muted)}
+.mockRankingStack{display:grid;gap:12px}.mockRankingStack .rankRow{color:var(--movo-ink)!important;border-color:#e5ece9!important}.rankMe{background:#e4f7ef!important;border-radius:14px!important;color:#0c594b!important}
+
+.mockChallengeList{display:grid;gap:12px}.mockChallengeCard{background:var(--movo-paper);border-radius:22px;box-shadow:var(--movo-shadow);padding:15px;color:var(--movo-ink);border:1px solid #e6ece8}.mockChallengeTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mockChallengeTop>span{font-weight:900;font-size:14px}.mockChallengeTop em{font-style:normal;padding:6px 9px;border-radius:999px;background:#cef5e6;color:#176d5c;font-size:9px;font-weight:900}.mockChallengeBody{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:11px;align-items:center}.mockChallengeIcon{width:46px;height:46px;border-radius:15px;background:#fff5d8;display:grid;place-items:center;font-size:26px}.mockChallengeCard.weekly .mockChallengeIcon{background:#ffe7df}.mockChallengeCard.group .mockChallengeIcon{background:#e6f3fb}.mockChallengeBody h2{font-size:14px;margin:0 0 4px}.mockChallengeBody p{font-size:10px;color:#6a817e;margin:0}.mockChallengeArt{font-size:40px}.mockPrimaryBtn{width:100%;border:0;border-radius:15px;background:#25d1a0;color:#073f36;padding:12px;font-weight:900;margin-top:12px}.mockDone{margin-top:12px;padding:10px;text-align:center;background:#d8f6eb;color:#10705d;border-radius:13px;font-weight:900}.mockProgress{height:6px;border-radius:999px;background:#e2eae6;overflow:hidden;margin:9px 0 5px}.mockProgress i{display:block;height:100%;background:#22cfa0;border-radius:999px}.mockCrewMini{margin-top:10px;font-size:12px;color:#56726f}.mockCrewMini span{margin-left:8px;font-size:10px}.mockQuoteCard{padding:19px;text-align:center;border-radius:20px;background:#f3efe5;color:#44615e;font-family:Georgia,serif;font-style:italic;margin-top:14px;box-shadow:0 8px 22px rgba(8,63,58,.06)}.mockQuoteCard.light{background:rgba(255,255,255,.65)}
+.mockChoiceList{display:grid;gap:8px}.mockChoiceList button{display:grid;grid-template-columns:1fr auto;text-align:left;background:#f0f6f3;border:0;border-radius:15px;padding:12px;color:var(--movo-ink)}.mockChoiceList b,.mockChoiceList small{display:block}.mockChoiceList small{grid-column:1/-1;color:var(--movo-muted);margin-top:3px}.mockChoiceList span{grid-column:2;grid-row:1;color:#078d73;font-weight:900}
+
+.mockPointsPill{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.82);color:#175449;font-weight:900}.mockCreditStrip{display:flex;align-items:center;justify-content:space-between;background:#0d6d62;color:white;padding:14px;border-radius:18px;margin-bottom:14px}.mockCreditStrip small,.mockCreditStrip b,.mockCreditStrip span{display:block}.mockCreditStrip small{font-size:9px}.mockCreditStrip b{font-size:22px}.mockCreditStrip span{font-size:9px;color:#cbeee5}.mockCreditStrip button{border:0;border-radius:999px;background:#bff4df;color:#0f604f;padding:9px 12px;font-weight:900}
+.mockRewardGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mockRewardTile{position:relative;min-height:130px;border-radius:19px;overflow:hidden;background:#214;box-shadow:0 10px 25px rgba(8,63,58,.12)}.mockRewardTile.featured{grid-column:1/-1;min-height:190px}.mockRewardImage{position:absolute;inset:0;background-size:cover;background-position:center}.mockRewardTile.hike .mockRewardImage{background-image:url("assets/reward-hike.svg")}.mockRewardTile.cinema .mockRewardImage{background-image:url("assets/reward-cinema.svg")}.mockRewardTile.food .mockRewardImage{background-image:url("assets/reward-food.svg")}.mockRewardTile.surprise .mockRewardImage{background-image:url("assets/reward-surprise.svg")}.mockRewardOverlay{position:absolute;inset:auto 0 0;padding:42px 13px 13px;background:linear-gradient(transparent,rgba(4,30,29,.86));color:white}.mockRewardOverlay b,.mockRewardOverlay span{display:block}.mockRewardOverlay b{font-size:15px}.mockRewardOverlay span{font-size:10px;margin-top:3px}.mockRewardOverlay button{float:right;margin-top:-28px;border:0;border-radius:999px;padding:8px 11px;background:#84edc8;color:#0b4f42;font-weight:900}.rewardInventoryMock{margin-top:14px}.rewardMilestone,.rewardChoiceRow,.openRewardRow{color:var(--movo-ink)!important}.mockOpenRewards{display:grid;gap:8px}.mockOpenRewards>div{display:flex;gap:10px;align-items:center;padding:10px;border-radius:14px;background:#f0f6f3}.mockOpenRewards small{display:block;color:var(--movo-muted)}
+
+.mockProfileCard{background:var(--movo-paper);border-radius:24px;padding:18px;text-align:center;box-shadow:var(--movo-shadow);margin-top:-48px;position:relative}.mockProfileCard>.avatar{width:76px!important;height:76px!important;border:4px solid white;box-shadow:0 6px 18px rgba(0,0,0,.15)}.mockProfileName h2{font-size:20px;margin:8px 0 1px}.mockProfileName h2 button{border:0;background:transparent}.mockProfileName span{font-size:10px;color:var(--movo-muted)}.mockProfileStats{display:grid;grid-template-columns:repeat(3,1fr);margin:15px 0;padding:10px 0;background:#f8f2e7;border-radius:16px}.mockProfileStats>div{border-right:1px solid #e6dfd4}.mockProfileStats>div:last-child{border:0}.mockProfileStats span,.mockProfileStats b,.mockProfileStats small{display:block}.mockProfileStats span{font-size:19px}.mockProfileStats b{font-size:19px}.mockProfileStats small{font-size:9px;color:#657a77}.mockBadgesCard{margin-top:14px}.mockBadgeGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.mockBadge{text-align:center}.mockBadge span{width:50px;height:50px;margin:auto;border-radius:50%;display:grid;place-items:center;background:#fff0dd;font-size:26px}.mockBadge.locked span{background:#e8ecea;filter:grayscale(1);opacity:.75}.mockBadge b{display:block;margin-top:6px;font-size:9px}.mockProfileQuote{margin-top:18px;padding:16px;border-radius:16px;background:#f4efe5;font-family:Georgia,serif;font-style:italic;color:#506864}.profilePrimary,.profilePrimary>div{display:block!important}.profilePrimary .card,.trend.card,.rewardProfileLink{background:var(--movo-paper)!important;color:var(--movo-ink)!important;border-color:#e4ebe7!important}
+
+.mockMonthNav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;margin-bottom:12px}.mockMonthNav button{width:34px;height:34px;border-radius:50%;border:0;background:#edf4f0}.mockMonthNav b{text-align:center}.mockMonthNav select{grid-column:1/-1;background:#f1f6f3;border:0;border-radius:12px;padding:8px;color:var(--movo-ink)}.historyContentMock .monthHero,.historyContentMock .card{background:#fff!important;color:var(--movo-ink)!important;border-color:#e6ece8!important}.historyContentMock .rankRow{color:var(--movo-ink)!important;border-color:#e5ece8!important}
+
+.mockRuleList{padding:0;overflow:hidden}.mockRuleList details{border-bottom:1px solid #e4ebe7}.mockRuleList details:last-child{border:0}.mockRuleList summary{list-style:none;display:grid;grid-template-columns:32px 1fr auto;gap:8px;align-items:center;padding:15px 16px}.mockRuleList summary::-webkit-details-marker{display:none}.mockRuleList summary span{width:30px;height:30px;border-radius:9px;background:#e6f5ef;display:grid;place-items:center}.mockRuleList summary b{font-size:12px}.mockRuleList summary em{font-style:normal;color:#6c8380}.mockRuleList details>div{padding:0 16px 15px;font-size:11px;color:#57706d;line-height:1.5}
+
+.mockAdminCard{margin-bottom:10px}.mockAdminTitle{display:flex;justify-content:space-between;align-items:center}.mockAdminTitle h2{font-size:15px}.mockAdminTitle span{background:#d7f4e9;border-radius:999px;padding:5px 9px;font-size:10px}.mockAdminUser{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 0;border-top:1px solid #e5ebe8}.mockAdminUser b,.mockAdminUser small{display:block}.mockAdminUser b{font-size:12px}.mockAdminUser small{font-size:9px;color:var(--movo-muted)}.mockAdminUser button,.mockAdminUser em{border:0;background:#d7f5e9;color:#156856;padding:7px 10px;border-radius:999px;font-size:9px;font-style:normal;font-weight:900}.mockAdminEmpty{color:var(--movo-muted);font-size:10px;padding:7px 0}.mockAdminActions{display:grid;gap:8px}.mockAdminActions button{border:0;border-radius:14px;background:#edf5f1;padding:12px;color:var(--movo-ink);font-weight:800}.mockAdminActions button.danger{background:#ffe8e5;color:#a84136}.mockCompactDetails.danger{border-color:#f3d4d0}
+
+.mockSettingsList{display:grid;gap:16px}.mockSettingsGroup h3{font-size:12px;margin:0 0 7px}.mockSettingsGroup>button,.mockSettingsGroup>label,.mockSettingsSelect{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 0;border:0;border-bottom:1px solid #e4ebe7;background:transparent;color:var(--movo-ink);text-align:left;width:100%}.mockSettingsGroup label{grid-template-columns:1fr auto}.mockSettingsGroup b,.mockSettingsGroup span{font-size:11px}.mockSettingsGroup em{font-style:normal}.mockSettingsSelect select{border:0;background:#edf4f0;border-radius:10px;padding:6px;color:var(--movo-ink)}.mockLogoutBtn{border:0;border-radius:14px;background:#ffe8e4;color:#a13d34;padding:12px;font-weight:900}.pushGroup .pushStatus{background:#edf7f3!important;color:var(--movo-ink)!important;border-color:#d8eae4!important}.pushGroup .pushDiagGrid>div{background:white!important;color:var(--movo-ink)!important}
+
+.mockMoreList{padding:0;overflow:hidden}.mockMoreList button{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:8px;width:100%;border:0;border-bottom:1px solid #e3ebe7;background:transparent;color:var(--movo-ink);padding:14px 16px;text-align:left}.mockMoreList button:last-child{border:0}.mockMoreList button span{width:30px;height:30px;border-radius:10px;background:#e7f6f0;display:grid;place-items:center}.mockMoreList button b{font-size:12px}.mockMoreList button em{font-style:normal;color:#6f8784}.mockMorePoster{height:240px;margin-top:15px;border-radius:22px;background-image:linear-gradient(180deg,transparent,rgba(5,42,39,.72)),url("assets/movo-alpine-sunset.svg");background-size:cover;background-position:center;display:flex;align-items:flex-end;justify-content:center;color:white;text-align:center;padding:23px;box-shadow:var(--movo-shadow)}.mockMorePoster b,.mockMorePoster span,.mockMorePoster strong{display:block;font-family:Georgia,serif;font-style:italic}.mockMorePoster b{font-size:19px}.mockMorePoster span{font-size:14px}.mockMorePoster strong{font-size:18px;margin-top:3px}
+
+.movoBottomNav{background:rgba(255,255,255,.97)!important;border-top:1px solid #dce7e3!important;box-shadow:0 -8px 24px rgba(4,48,43,.08)!important}.movoBottomNav .navBtn{color:#365653!important}.movoBottomNav .navBtn.active{color:#079976!important}.movoBottomNav .plus{background:#079c79!important;color:white!important;box-shadow:0 5px 15px rgba(7,156,121,.33)!important}
+html[data-theme="dark"] .mockSheet,
+html[data-theme="dark"] .mockWhiteCard,
+html[data-theme="dark"] .dayFeedCard,
+html[data-theme="dark"] .homeChallengeTile,
+html[data-theme="dark"] .quickAddModern button,
+html[data-theme="dark"] .mockProfileCard,
+html[data-theme="dark"] .mockCompactDetails{background:var(--movo-paper)!important;color:var(--movo-ink)!important}
+html[data-theme="dark"] .mockMobileScreen{color:var(--movo-ink)!important}
+html[data-theme="dark"] .mockSheet{background:var(--movo-cream)!important}
+html[data-theme="dark"] .movo122Shell .main{background:#e8efeb!important}
+
+@media(max-width:760px){
+ body{background:#e8efeb!important}
+ .movo122Shell .top{display:none!important}
+ .movo122Shell .main{padding:0!important}
+ .movo122Shell .pageContent{padding:0!important;max-width:none!important}
+ .mockScene{border-radius:0 0 28px 28px}
+ .mockSceneMorning{padding:20px 18px 22px;min-height:500px}
+ .mockSceneCrew,.mockSceneChallenge,.mockSceneProfile,.mockSceneRewards,.mockSceneSecondary,.mockSceneMore{padding:22px 18px}
+ .mockSheet{padding:17px 14px 96px;margin-top:-22px}
+ .mockPageTitle h1{font-size:25px}
+ .mockCrewPeople{gap:5px}.mockCrewAvatar .avatar{width:48px!important;height:48px!important}
+ .mockRewardGrid{gap:8px}.mockBadgeGrid{gap:9px}
+ .mockWhiteCard{border-radius:18px;padding:14px}
+ .dayFeedCard{border-radius:18px!important}
+ .mockSceneMorning .mockGreeting h1{font-size:23px}
+ .mockRing{width:190px;height:190px}.mockRing:before{width:156px;height:156px}
+ .mockMomentum{height:330px}
+ .mockQuote{bottom:30px}
+}
+@media(min-width:761px){
+ .mockMobileScreen{max-width:1040px;margin:0 auto}
+ .mockSheet{margin-left:22px;margin-right:22px}
+ .homeMockSheet,.crewMockSheet,.challengeMockSheet,.profileMockSheet,.rewardsMockSheet{display:block}
+ .mockRewardGrid{grid-template-columns:2fr 1fr 1fr}.mockRewardTile.featured{grid-column:auto;grid-row:span 2}
+ .mockRankingStack{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ .pageContent.pageEntered,.mockRing{animation:none!important}
+}

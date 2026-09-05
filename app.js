@@ -1,7 +1,7 @@
 
 const CFG=window.FIT4US_CONFIG||{};
 const configured=CFG.supabaseUrl && !CFG.supabaseUrl.startsWith('DEINE_') && CFG.supabaseKey && !CFG.supabaseKey.startsWith('DEIN_');
-let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], feedDayPosts=[], currentView='home', crewUiTab='feed', challengeUiTab='current', profileUiTab='stats', pendingProof=null, pendingAvatar=null, signedCache={};
+let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], feedDayPosts=[], currentView='home', crewUiTab='feed', challengeUiTab='current', profileUiTab='stats', rewardUiTab='rewards', pendingProof=null, pendingAvatar=null, signedCache={};
 let realtimeRefreshTimer=null,realtimeRefreshRunning=false,realtimeRefreshPending=false;
 let bootInFlight=null,bootUserId=null,authReady=false;
 let realtimeChannels=[];
@@ -326,7 +326,7 @@ const fit4usAuthStorage={
 };
 
 async function init(){
- if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-wordmark-dark.svg"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
+ if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:fit4usAuthStorage}});
  sb.auth.onAuthStateChange((evt,s)=>{
   session=s;
@@ -340,7 +340,7 @@ async function init(){
  if(session)await safeBootApp('startup');else showAuth();
 }
 function showAuth(){
- $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-wordmark-dark.svg">
+ $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png">
  <div class="tabs"><button id="tabLogin" class="active" onclick="authTab('login')">Anmelden</button><button id="tabReg" onclick="authTab('reg')">Konto erstellen</button></div>
  <div id="authBody"></div></div></div>`; authTab('login')
 }
@@ -399,7 +399,7 @@ async function loadOwnProfileWithRetry(userId,attempts=3){
 function showLoadProblem(message='Movo konnte deine Daten gerade nicht vollständig laden.'){
  stopRealtime();
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-  <img class="authLogo" src="assets/movo-wordmark-dark.svg"><div style="font-size:44px">📡</div>
+  <img class="authLogo" src="assets/movo-logo.png"><div style="font-size:44px">📡</div>
   <h2>Verbindung kurz unterbrochen</h2><p>${escapeHtml(message)}</p>
   <div class="notice small" style="text-align:left"><b>Du bleibst angemeldet.</b><br>Movo zeigt bei einem kurzen Ladefehler keine leeren Ersatzdaten mehr an.</div>
   <div class="grid" style="margin-top:18px"><button class="cta" onclick="safeBootApp('manual-retry',true)">Erneut laden</button><button class="secondary" onclick="logout()">Abmelden</button></div>
@@ -436,7 +436,7 @@ async function bootApp(reason='unknown'){
 }
 function showPendingApproval(){
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-   <img class="authLogo" src="assets/movo-wordmark-dark.svg">
+   <img class="authLogo" src="assets/movo-logo.png">
    <div style="font-size:48px">🔒</div>
    <h2>Freischaltung ausstehend</h2>
    <p>Hallo <b>${escapeHtml(me.first_name)}</b>! Dein Movo-Konto wurde erstellt, muss aber zuerst von einem Admin freigeschaltet werden.</p>
@@ -719,17 +719,20 @@ async function notifyGroup(title,body,category='challenges'){for(let p of profil
 
 async function settingsHTML(){
  let p=prefFor();
- return `<div class="card pad settingsCard"><h3>⚙️ Komfort & Datenschutz</h3>
- <div class="field section"><label>Darstellung</label><select onchange="changeTheme(this.value)"><option value="system" ${p.theme==='system'?'selected':''}>System</option><option value="light" ${p.theme==='light'?'selected':''}>Hell</option><option value="dark" ${p.theme==='dark'?'selected':''}>Dunkel</option></select></div>
- <h4>Im Feed teilen</h4>${[['feed_activity','Aktivitäten'],['feed_food','Ernährung'],['feed_steps','Schritte'],['feed_daily','Tageschallenges'],['feed_achievements','Achievements']].map(([k,l])=>`<label class="settingToggle"><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"><span>${l}</span></label>`).join('')}
- <h4>Push-Kategorien</h4>${[['notify_reactions','💬 Reaktionen & Kommentare'],['notify_witness','👀 Zeugenanfragen'],['notify_challenges','🎯 Challenges & Crew-Missionen'],['notify_votes','📌 Abstimmungen'],['notify_streak','🔥 Streak-Erinnerung'],['notify_rewards','🎁 Belohnungen & Guthaben']].map(([k,l])=>`<label class="settingToggle"><input type="checkbox" ${p[k]!==false?'checked':''} onchange="togglePref('${k}',this.checked)"><span>${l}</span></label>`).join('')}
- <div class="section">${await pushDeviceStatusHTML()}</div>
- <label class="settingToggle"><input type="checkbox" ${p.celebration_sound?'checked':''} onchange="togglePref('celebration_sound',this.checked)"><span>🔊 Sound bei großen Erfolgen</span></label>
- <button class="secondary section" onclick="logout()">Abmelden</button></div>`;
+ return `<div class="mockSettingsList">
+  <div class="mockSettingsGroup"><h3>Allgemein</h3>
+   <button onclick="openProfile()"><span>♙</span><b>Profil bearbeiten</b><em>›</em></button>
+   <div class="mockSettingsSelect"><span>◐</span><b>Design</b><select onchange="changeTheme(this.value)"><option value="system" ${p.theme==='system'?'selected':''}>System</option><option value="light" ${p.theme==='light'?'selected':''}>Hell</option><option value="dark" ${p.theme==='dark'?'selected':''}>Dunkel</option></select></div>
+  </div>
+  <div class="mockSettingsGroup"><h3>Im Feed teilen</h3>${[['feed_activity','Aktivitäten'],['feed_food','Ernährung'],['feed_steps','Schritte'],['feed_daily','Tageschallenges'],['feed_achievements','Achievements']].map(([k,l])=>`<label><span>${l}</span><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"></label>`).join('')}</div>
+  <div class="mockSettingsGroup"><h3>Benachrichtigungen</h3>${[['notify_reactions','Reaktionen & Kommentare'],['notify_witness','Zeugenanfragen'],['notify_challenges','Challenges & Crew-Missionen'],['notify_votes','Abstimmungen'],['notify_streak','Streak-Erinnerung'],['notify_rewards','Belohnungen & Guthaben']].map(([k,l])=>`<label><span>${l}</span><input type="checkbox" ${p[k]!==false?'checked':''} onchange="togglePref('${k}',this.checked)"></label>`).join('')}</div>
+  <div class="mockSettingsGroup pushGroup">${await pushDeviceStatusHTML()}</div>
+  <button class="mockLogoutBtn" onclick="logout()">Abmelden</button>
+ </div>`;
 }
 async function maybeShowOnboarding(){
  if(prefFor().onboarded)return;
- $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-wordmark-dark.svg"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-logo.png"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
 }
 async function finishOnboarding(){await savePreferencePatch({onboarded:true});closeModal()}
 
@@ -745,17 +748,42 @@ function stopRealtime(){
  realtimeChannels.forEach(c=>sb?.removeChannel(c));realtimeChannels=[]
 }
 function renderShell(){
- $('#boot').innerHTML=`<div class="shell movoShell">
- <aside class="side movoSide"><img class="sideBrand" src="assets/movo-wordmark-white.svg" alt="Movo"><div class="sideClaim">Gemeinsam besser. Jeden Tag.</div><div class="sideNav" id="sideNav"></div><div class="sideBottom" id="sideUser"></div></aside>
- <main class="main"><header class="top movoTop"><button class="topBrandBtn" onclick="go('home')" aria-label="Movo Home"><img class="brandMini" src="assets/movo-wordmark-dark.svg" alt="Movo"></button><div class="topUser" id="topUser"></div></header><div id="content" class="pageContent"></div></main>
- <nav class="bottom" id="bottomNav"></nav><div id="mobileMenuRoot"></div></div><div id="modalRoot"></div>`;
+ $('#boot').innerHTML=`<div class="shell movoShell movo122Shell">
+ <aside class="side movoSide">
+   <button class="sideBrandButton" onclick="go('home')" aria-label="Movo Home">
+     <img class="sideBrandSymbol" src="assets/movo-symbol.svg" alt="">
+     <span class="movoBrandText light"><b>Movo</b><small>Move. Motivate. Together.</small></span>
+   </button>
+   <div class="sideClaim">Mehr als Fitness.<br>Eine Crew.</div>
+   <div class="sideNav" id="sideNav"></div>
+   <div class="sideBottom" id="sideUser"></div>
+ </aside>
+ <main class="main">
+   <header class="top movoTop">
+     <button class="topBrandBtn" onclick="go('home')" aria-label="Movo Home">
+       <img class="brandSymbolMini" src="assets/movo-symbol.svg" alt="">
+       <span class="movoBrandText"><b>Movo</b><small>Move. Motivate. Together.</small></span>
+     </button>
+     <div class="topUser" id="topUser"></div>
+   </header>
+   <div id="content" class="pageContent"></div>
+ </main>
+ <nav class="bottom movoBottomNav" id="bottomNav"></nav>
+ </div><div id="modalRoot"></div>`;
  navs()
 }
 async function navs(){
- let nav=[['home','⌂','Home'],['group','♟','Crew'],['add','＋',''],['challenges','♜','Challenges'],['me','♙','Profil']];
- $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">＋</button>`:`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
- $('#sideNav').innerHTML=[['home','⌂  Home'],['group','♟  Crew'],['challenges','♜  Challenges'],['rewards','✦  Belohnungen'],['me','♙  Mein Profil'],['rules','◎  Punkte & Regeln'],['history','◷  Historie'],...(me?.is_admin?[['admin','◇  Admin']]:[])].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
- let av=await avatarHTML(me,42);$('#topUser').innerHTML=`<button class="topUserBtn" onclick="openMobileMenu()" aria-label="Movo Menü öffnen">${av}<div><b>${escapeHtml(firstName(me))}</b><div class="tiny muted">@${escapeHtml(me.username)}</div></div><span class="topUserMenu">•••</span></button>`;
+ let nav=[['home','⌂','Home'],['group','♧','Crew'],['add','＋',''],['challenges','♜','Challenges'],['me','♙','Profil']];
+ $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'
+  ?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">＋</button>`
+  :`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
+ $('#sideNav').innerHTML=[
+  ['home','⌂  Home'],['group','♧  Crew'],['challenges','♜  Challenges'],['rewards','◇  Rewards'],
+  ['me','♙  Profil'],['history','◷  Historie'],['rules','◎  Regeln'],['more','•••  Mehr'],
+  ...(me?.is_admin?[['admin','◇  Admin']]:[])
+ ].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
+ let av=await avatarHTML(me,42);
+ $('#topUser').innerHTML=`<button class="topUserBtn" onclick="go('more')" aria-label="Movo Menü öffnen">${av}<div><b>${escapeHtml(firstName(me))}</b><div class="tiny muted">@${escapeHtml(me.username)}</div></div><span class="topUserMenu">•••</span></button>`;
  $('#sideUser').innerHTML=`<div class="sideUserMini"><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div><button class="secondary" style="width:100%" onclick="logout()">Abmelden</button>`
 }
 function openMobileMenu(){
@@ -787,6 +815,8 @@ async function render(){
  if(currentView==='rules')c.innerHTML=rulesHTML();
  if(currentView==='history')c.innerHTML=historyHTML();
  if(currentView==='admin')c.innerHTML=await adminHTML();
+ if(currentView==='more')c.innerHTML=await moreHTML();
+ requestAnimationFrame(()=>document.querySelector('.pageContent')?.classList.add('pageEntered'));
 }
 function ranking(list){
  return profiles.map(p=>({p,pts:pointsOf(p.id,list)})).sort((a,b)=>b.pts-a.pts||firstName(a.p).localeCompare(firstName(b.p)))
@@ -1271,13 +1301,13 @@ function homeMetricsHTML(){
  let today=fmtDate(),pts=pointsBetween(me.id,today,today),rewardBonus=streakBonusPointsBetween(me.id,today,today),
      steps=entries.filter(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='steps').reduce((s,e)=>Math.max(s,+e.steps||0),0),
      food=entries.find(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='food'),
-     pct=Math.min(100,Math.round(pts/8*100)),secured=activeDay(today,me.id),s=streak();
- return `<section class="movoPulseCard card visualMomentum" style="--day-progress:${pct}%">
-   <div class="momentumStreak"><span class="streakFlame">🔥</span><div><b>${s} ${s===1?'Tag':'Tage'}</b><small>Streak</small></div></div>
-   <div class="movoProgressRing" aria-label="${pts} Punkte heute gesammelt"><div><b>${pts} P</b><small>heute gesammelt</small><span>♻</span></div></div>
-   <div class="momentumToday"><strong>+${pts} P</strong><small>heute</small>${rewardBonus?`<span>✨ +${rewardBonus} Bonus</span>`:''}</div>
-   <div class="momentumQuote">„Jeder Schritt zählt.<br>Für dich. Für uns.“</div>
-   <div class="momentumMeta"><span>👟 ${steps.toLocaleString('de-DE')}</span><span>🥗 ${(food?.food_items||[]).length}/7</span><span>${secured?'✓ aktiver Tag':'○ Streak offen'}</span></div>
+     secured=activeDay(today,me.id),s=streak(),visual=Math.min(96,18+Math.min(78,pts*7));
+ return `<section class="movoPulseCard mockMomentum">
+   <div class="momentumStreak mockGlass"><span class="streakFlame">🔥</span><div><b>${s}</b><small>Tage<br>Streak</small></div></div>
+   <div class="movoProgressRing mockRing" style="--ring:${visual}%"><div><b>${pts} P</b><small>heute gesammelt</small><span>♻</span></div></div>
+   <div class="momentumToday mockToday"><strong>+${pts} P</strong><small>heute</small>${rewardBonus?`<span>✨ +${rewardBonus} Bonus</span>`:''}</div>
+   <div class="momentumQuote mockQuote">„Jeder Schritt zählt.<br>Für dich. Für uns.“</div>
+   <div class="momentumMeta mockMeta"><span>👟 ${steps.toLocaleString('de-DE')}</span><span>🍴 ${(food?.food_items||[]).length}/7</span><span>${secured?'✓ aktiv':'○ offen'}</span></div>
   </section>`;
 }
 function homeChallengesHTML(){
@@ -1316,37 +1346,43 @@ function todayNudgeHTML(){
  let ds=fmtDate(),stepEntry=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='steps').sort((a,b)=>(+b.steps||0)-(+a.steps||0))[0],
      steps=+stepEntry?.steps||0,next=nextStepTarget(steps),remain=Math.max(0,next-steps),
      food=entries.find(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='food'),foodCount=(food?.food_items||[]).length,
-     dailyDone=!!dailyCompletedBy(me.id,ds),secured=activeDay(ds,me.id),
-     currentStepPts=stepPoints(steps),nextStepPts=stepPoints(next);
- let stepText=remain>0?`Noch ${remain.toLocaleString('de-DE')} bis ${nextStepPts>currentStepPts?`+${nextStepPts} P`: 'zum nächsten Ziel'}`:'Nächstes Schrittziel erreicht';
- let foodText=foodCount===7?'Alle Ziele · 4 P':`${foodCount} Ziele · ${foodPoints(foodCount)} P`;
- return `<section class="todayNudge card">
-  <div class="todayNudgeHead"><div><small>DEIN HEUTE</small><h2>Was fehlt noch?</h2></div><span class="streakSecure ${secured?'done':''}">${secured?'✓ Streak qualifiziert':'🔥 Streak noch offen'}</span></div>
-  <div class="todayNudgeGrid">
-   <button onclick="openEntry('steps')"><span>👟</span><div><b>${steps.toLocaleString('de-DE')} Schritte</b><small>${escapeHtml(stepText)}${steps<7500?' · ab 7.500 zählt der Streak':''}</small></div><strong>›</strong></button>
-   <button onclick="openEntry('food')"><span>🥗</span><div><b>${foodText}</b><small>${foodCount>=3?'Ernährung qualifiziert den Streak ✓':`Noch ${3-foodCount} bis Ernährung für den Streak zählt`}</small></div><strong>›</strong></button>
-   <button onclick="${dailyDone?`go('challenges')`:`openDailyComplete()`}"><span>☀️</span><div><b>Tageschallenge</b><small>${dailyDone?'Erledigt ✓ · braucht für Streak noch 1 weiteren Gesundheitspunkt':'Noch offen · +1 P'}</small></div><strong>›</strong></button>
-  </div>
- </section>`;
+     dailyDone=!!dailyCompletedBy(me.id,ds),
+     acts=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='activity'),
+     actDone=acts.some(e=>(+e.points||0)>=2);
+ let stepPct=Math.min(100,steps/next*100),foodPct=Math.min(100,foodCount/7*100);
+ return `<section class="todayNudge mockWhiteCard">
+   <div class="mockCardTitle"><h2>Was fehlt mir noch?</h2></div>
+   <div class="mockNudgeList">
+    <button onclick="openEntry('steps')" class="mockNudgeRow"><span class="mockNudgeIcon mint">👟</span><div><b>Schritte</b><small>${remain?`Noch ${remain.toLocaleString('de-DE')} bis zum nächsten Punkt`:'Nächstes Schrittziel erreicht'}</small><i><em style="width:${stepPct}%"></em></i></div></button>
+    <button onclick="openEntry('food')" class="mockNudgeRow"><span class="mockNudgeIcon green">🍴</span><div><b>Ernährung</b><small>${foodCount} / 7 Ziele</small><i><em style="width:${foodPct}%"></em></i></div></button>
+    <button onclick="${dailyDone?`go('challenges')`:`openDailyComplete()`}" class="mockNudgeRow"><span class="mockNudgeIcon sun">☀️</span><div><b>Daily</b><small>${dailyDone?'Erledigt ✓':'Noch offen'}</small></div>${dailyDone?'':'<span class="miniAction">Jetzt machen</span>'}</button>
+    <button onclick="openEntry('activity')" class="mockNudgeRow"><span class="mockNudgeIcon sport">🏋️</span><div><b>Aktivität</b><small>${actDone?'Aktiver Tag qualifiziert ✓':'Noch offen'}</small></div></button>
+   </div>
+  </section>`;
 }
 
 async function homeHTML(){
  resetFeedCount();
- let date=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});
- return `<section class="homeStage sceneSurface">
-   <div class="homeStageTop"><div><small>${escapeHtml(date)}</small><h1>Guten ${new Date().getHours()<11?'Morgen':new Date().getHours()<18?'Tag':'Abend'}, ${escapeHtml(firstName(me))} 👋</h1><p>Dranbleiben. Gemeinsam. In deinem Tempo.</p></div><div class="homeStageQuote">„Kleine Schritte.<br>Große Wirkung.“</div></div>
-   ${homeMetricsHTML()}
- </section>
- <div class="homeFlow">
-  ${todayNudgeHTML()}
-  ${outboxHTML()}${pendingWitnessHTML()}${votingBannerHTML()}
-  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>DEINE ZIELE</small><h2>Heute im Blick</h2></div><button class="textLink" onclick="go('challenges')">Alle Challenges →</button></div>${homeChallengesHTML()}</section>
-  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>SCHNELL & EINFACH</small><h2>Eintragen</h2></div></div>${quickAddModernHTML()}${quickTemplatesHTML()}</section>
-  ${currentWeekSnapshotHTML()}
-  ${almostThereHTML()}
-  <details class="card pad disclosureCard"><summary><b>📝 Meine Einträge heute</b><span class="tiny muted">bearbeiten oder löschen</span></summary><div class="section">${await todayOwnEntriesHTML()}</div></details>
-  <section class="movoSection"><div class="sectionTitle compactTitle"><div><small>GEMEINSAM DRANBLEIBEN</small><h2>Neu in deiner Crew</h2></div><button class="textLink" onclick="go('group')">Crew öffnen →</button></div><div class="homeFeed">${await feedHTML(3)}</div></section>
- </div>`;
+ let hr=new Date().getHours(),greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend';
+ let av=await avatarHTML(me,58);
+ return `<section class="mockMobileScreen homeMockScreen">
+   <div class="mockScene mockSceneMorning">
+    <div class="mockGreeting">${av}<div><small>${greet},</small><h1>${escapeHtml(firstName(me))}! 👋</h1><p>Dranbleiben. Du machst das stark!</p></div></div>
+    ${homeMetricsHTML()}
+   </div>
+   <div class="mockSheet homeMockSheet">
+    ${todayNudgeHTML()}
+    ${outboxHTML()}${pendingWitnessHTML()}${votingBannerHTML()}
+    <div class="mockSectionHead"><div><small>HEUTE</small><h2>Deine Challenges</h2></div><button onclick="go('challenges')">Alle →</button></div>
+    ${homeChallengesHTML()}
+    <div class="mockSectionHead"><div><small>SCHNELL</small><h2>Eintragen</h2></div></div>
+    ${quickAddModernHTML()}
+    ${quickTemplatesHTML()}
+    <div class="mockSectionHead"><div><small>DEINE CREW</small><h2>Neu bei euch</h2></div><button onclick="go('group')">Crew →</button></div>
+    <div class="homeFeed mockFeed">${await feedHTML(2)}</div>
+    <details class="mockCompactDetails"><summary>📝 Meine Einträge heute <span>›</span></summary><div>${await todayOwnEntriesHTML()}</div></details>
+   </div>
+ </section>`;
 }
 
 function crewPointBreakdown(userId,from=weekKey(),to=fmtDate(endOfWeek())){
@@ -1394,20 +1430,28 @@ async function openCrewMember(userId){
 async function crewSnapshotHTML(){
  let from=weekKey(),to=fmtDate(endOfWeek()),cards='';
  for(let p of allApprovedUsers()){
-  let av=await avatarHTML(p,42),pts=pointsBetween(p.id,from,to);
-  cards+=`<button class="crewPerson ${p.id===me.id?'me':''}" onclick="openCrewMember('${p.id}')">${av}<div><b>${escapeHtml(firstName(p))}</b><span>${pts} P diese Woche</span></div><strong>›</strong></button>`;
+  let av=await avatarHTML(p,48),pts=pointsBetween(p.id,from,to);
+  cards+=`<button class="mockCrewAvatar ${p.id===me.id?'me':''}" onclick="openCrewMember('${p.id}')">${av}<b>${escapeHtml(firstName(p))}</b><span>${pts} P</span></button>`;
  }
- return `<div class="crewSnapshot">${cards}</div>`;
+ return `<div class="mockCrewPeople">${cards}</div>`;
 }
 function setCrewUiTab(tab){crewUiTab=tab;render()}
 function crewTabsHTML(){return `<div class="movoTabs crewTabs"><button class="${crewUiTab==='feed'?'active':''}" onclick="setCrewUiTab('feed')">Feed</button><button class="${crewUiTab==='moment'?'active':''}" onclick="setCrewUiTab('moment')">Crew-Moment</button><button class="${crewUiTab==='ranking'?'active':''}" onclick="setCrewUiTab('ranking')">Rangliste</button></div>`}
 async function groupHTML(){
  let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk),body='';
- if(crewUiTab==='feed')body=`<section class="movoSection crewTabPanel"><div class="sectionTitle compactTitle"><div><small>LIVE AUS DER CREW</small><h2>Heute miteinander</h2></div><span class="pill">1 Person · 1 Tag</span></div><div class="groupFeed">${await feedHTML(feedVisibleCount)}</div></section>`;
- if(crewUiTab==='moment')body=`<section class="movoSection crewTabPanel">${crewMomentHTML()}${c?`<div class="weekRecap"><div><small>🏆 LETZTER WOCHENABSCHLUSS</small><h2>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h2><p>KW ${isoWeek(d)}</p></div><span>👑</span></div>`:''}</section>`;
- if(crewUiTab==='ranking')body=`<section class="movoSection crewTabPanel"><div class="sectionTitle compactTitle"><div><small>FAIRE LEISTUNG</small><h2>Ranking</h2></div></div><div class="grid grid2 rankingGrid"><div class="rankingPanel"><h3>Diese Woche</h3><div class="card pad">${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</div></div><div class="rankingPanel"><h3>Dieser Monat</h3><div class="card pad">${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</div></div></div></section>`;
- return `<section class="crewStage sceneSurface"><div class="pageHead inverse"><div><small>BETTER TOGETHER</small><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div><span class="crewCount">${allApprovedUsers().length} Mitglieder</span></div><div class="crewOverview">${await crewSnapshotHTML()}</div></section>
- <div class="crewFlow"><div class="crewTabDock card">${crewTabsHTML()}</div>${body}</div>`;
+ if(crewUiTab==='feed')body=`<div class="mockCrewFeed">${await feedHTML(feedVisibleCount)}</div>`;
+ if(crewUiTab==='moment')body=`<div class="mockMomentWrap">${crewMomentHTML()}${c?`<div class="mockLastWinner"><span>🏆</span><div><small>LETZTER WOCHENABSCHLUSS</small><b>${escapeHtml(firstName(c.p))} · ${c.pts} P</b><p>KW ${isoWeek(d)}</p></div><strong>👑</strong></div>`:''}</div>`;
+ if(crewUiTab==='ranking')body=`<div class="mockRankingStack"><section class="mockWhiteCard"><div class="mockCardTitle"><h2>Diese Woche</h2></div>${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</section><section class="mockWhiteCard"><div class="mockCardTitle"><h2>Dieser Monat</h2></div>${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</section></div>`;
+ return `<section class="mockMobileScreen crewMockScreen">
+  <div class="mockScene mockSceneCrew">
+   <div class="mockPageTitle"><div><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div><button class="mockIconBtn" onclick="go('more')">♙＋</button></div>
+   ${await crewSnapshotHTML()}
+  </div>
+  <div class="mockSheet crewMockSheet">
+   <div class="mockSegmented">${crewTabsHTML()}</div>
+   ${body}
+  </div>
+ </section>`;
 }
 
 function feedDateTime(item){
@@ -1573,15 +1617,21 @@ async function challengesHTML(){
      gc=groupChallengeForPeriod(monthKey()),gv=groupChallengeValueMonth(monthKey()),gp=Math.min(100,gv/gc.target*100),
      dc=dailyChallengeFor(),done=dc&&dailyCompletions.some(x=>x.user_id===me.id&&x.challenge_date===fmtDate()),
      w=ch?challengeProgressForWeek(ch,me.id,weekKey()):[0,1],wp=Math.min(100,w[0]/w[1]*100),body='';
- let pick=choose?`<div class="weeklyPicker card pad"><div class="challengeTop"><div><small>👑 DEINE WAHL</small><h2>Eine von drei Wochenchallenges</h2></div><span class="pill">bis Montag +18 h</span></div><div class="grid choiceGrid section">${weeklyOptions().map(c=>`<button class="choice" onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${escapeHtml(c.title)}</b><div class="tiny muted">${escapeHtml(c.desc)}</div><span class="points">+5 P</span></button>`).join('')}</div></div>`:'';
- if(challengeUiTab==='current')body=`<div class="challengeStack visualChallengeStack">
-  ${dc?`<section class="focusChallenge daily"><div class="challengeBadge">☀️ HEUTE</div><div class="challengeArt">☀️</div><div><h2>${escapeHtml(dc.emoji)} ${escapeHtml(dc.name)}</h2><p>${escapeHtml(dc.description)}</p></div>${done?'<span class="statusDone">✓ Erledigt</span>':`<button class="cta" onclick="openDailyComplete()">Erledigt · +1 P</button>`}</section>`:''}
-  <section class="focusChallenge weekly"><div class="challengeBadge">🎯 DIESE WOCHE</div><div class="challengeArt">🎯</div><div><h2>${ch?ch.icon+' '+escapeHtml(ch.title):'Noch keine Challenge gewählt'}</h2>${ch?`<p>${escapeHtml(ch.desc)}</p><div class="progress"><i style="width:${wp}%"></i></div><b>${w[0]} / ${w[1]} · +5 P</b>`:weeklyDecisionStatusHTML()}</div></section>
-  <section class="focusChallenge monthly"><div class="challengeBadge">👥 DIESEN MONAT</div><div class="challengeArt">👥</div><div><h2>${gc.icon} ${escapeHtml(gc.title)}</h2><p>${escapeHtml(gc.desc)}</p><div class="progress"><i style="width:${gp}%"></i></div><b>${Math.round(gp)} % · +15 P für jedes Crew-Mitglied</b></div></section>
- </div>${pick}<div class="challengeQuote card">„Gemeinsam schaffen wir mehr,<br>als jeder allein.“ ♡</div>`;
- if(challengeUiTab==='proposals')body=`<section class="movoSection"><div class="sectionTitle"><div><small>DEINE CREW ENTSCHEIDET MIT</small><h2>Vorschläge & Abstimmungen</h2></div><button class="cta" onclick="openProposal()">＋ Vorschlag</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()||'<div class="card pad muted">Aktuell keine offenen Vorschläge.</div>'}</section>`;
- if(challengeUiTab==='pool')body=`<section class="movoSection"><div class="sectionTitle"><div><small>IDEEN FÜR SPÄTER</small><h2>Challenge-Pool</h2></div><span class="pill">${challengePool.filter(poolAvailable).length} verfügbar</span></div><div class="card pad">${challengePoolHTML()}</div></section>`;
- return `<section class="challengeStage sceneSurface"><div class="pageHead inverse"><div><small>KLEINE SCHRITTE · GROSSE WIRKUNG</small><h1>Challenges</h1><p>Heute. Diese Woche. Gemeinsam.</p></div><button class="glassButton" onclick="openProposal()">＋ Vorschlag</button></div></section><div class="challengeFlow"><div class="challengeTabDock card">${challengeTabsHTML()}</div>${body}</div>`;
+ let pick=choose?`<section class="mockWhiteCard mockPicker"><div class="mockCardTitle"><h2>👑 Deine Wahl</h2><span>3 Optionen</span></div><div class="mockChoiceList">${weeklyOptions().map(c=>`<button onclick="chooseChallenge('${c.id}')"><b>${c.icon} ${escapeHtml(c.title)}</b><small>${escapeHtml(c.desc)}</small><span>+5 P</span></button>`).join('')}</div></section>`:'';
+ if(challengeUiTab==='current')body=`<div class="mockChallengeList">
+  ${dc?`<section class="mockChallengeCard daily"><div class="mockChallengeTop"><span>Tages-Challenge</span><em>Heute</em></div><div class="mockChallengeBody"><span class="mockChallengeIcon">☀️</span><div><h2>${escapeHtml(dc.name)}</h2><p>${escapeHtml(dc.description)}</p></div><span class="mockChallengeArt">👟</span></div>${done?'<div class="mockDone">✓ Erledigt</div>':`<button class="mockPrimaryBtn" onclick="openDailyComplete()">Erledigt · +1 P</button>`}</section>`:''}
+  <section class="mockChallengeCard weekly"><div class="mockChallengeTop"><span>Wochen-Challenge</span><em>Diese Woche</em></div><div class="mockChallengeBody"><span class="mockChallengeIcon">🎯</span><div><h2>${ch?escapeHtml(ch.title):'Noch keine Challenge gewählt'}</h2>${ch?`<p>${escapeHtml(ch.desc)}</p><div class="mockProgress"><i style="width:${wp}%"></i></div><b>${w[0]} / ${w[1]}</b>`:weeklyDecisionStatusHTML()}</div></div></section>
+  <section class="mockChallengeCard group"><div class="mockChallengeTop"><span>Crew-Mission</span><em>${new Date().toLocaleDateString('de-DE',{month:'long'})}</em></div><div class="mockChallengeBody"><span class="mockChallengeIcon">👥</span><div><h2>${escapeHtml(gc.title)}</h2><p>${escapeHtml(gc.desc)}</p><div class="mockProgress"><i style="width:${gp}%"></i></div><b>${Math.round(gp)} % · ${gv.toLocaleString('de-DE')} / ${gc.target.toLocaleString('de-DE')}</b></div></div><div class="mockCrewMini">👤 👤 👤 👤 <span>gemeinsam dran</span></div></section>
+ </div>${pick}<div class="mockQuoteCard">“ Gemeinsam schaffen wir mehr,<br>als jeder allein. ♡ ”</div>`;
+ if(challengeUiTab==='proposals')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><div><small>CREW-IDEEN</small><h2>Vorschläge & Abstimmungen</h2></div><button class="mockPrimaryMini" onclick="openProposal()">＋ Vorschlag</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()||'<div class="mockEmpty">Aktuell keine offenen Vorschläge.</div>'}</section>`;
+ if(challengeUiTab==='pool')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><div><small>IDEEN FÜR SPÄTER</small><h2>Challenge-Pool</h2></div><span>${challengePool.filter(poolAvailable).length} verfügbar</span></div>${challengePoolHTML()}</section>`;
+ return `<section class="mockMobileScreen challengeMockScreen">
+  <div class="mockScene mockSceneChallenge"><div class="mockPageTitle"><div><h1>Challenges</h1><p>Kleine Challenges. Große Wirkung.</p></div><button class="mockIconBtn" onclick="openProposal()">＋</button></div></div>
+  <div class="mockSheet challengeMockSheet">
+   <div class="mockSegmented">${challengeTabsHTML()}</div>
+   ${body}
+  </div>
+ </section>`;
 }
 function challengePoolHTML(){return ['weekly','group','daily'].map(type=>{let title=type==='weekly'?'🎯 Wochenchallenges':type==='group'?'👥 Crewn-Monatschallenges':'☀️ Tageschallenges',list=challengePool.filter(c=>c.challenge_type===type);return `<h3>${title}</h3><div class="grid grid2">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by);return `<button class="choice ${!poolAvailable(c)?'disabled':''}" onclick="openChallengeDetail('${c.id}')"><div><b>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</b>${!poolAvailable(c)?' 🔒':''}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?' 👥':''}</div><div class="tiny muted">${escapeHtml(dailyTemplateText(c.description,null))}</div><div class="tiny muted" style="margin-top:5px">+${c.points} P · 👍 ${r.filter(x=>x.rating==='again').length} · 😐 ${r.filter(x=>x.rating==='okay').length} · 👎 ${r.filter(x=>x.rating==='never').length}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</div></button>`}).join('')}</div>`}).join('')}
 function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=ratings.filter(x=>x.challenge_pool_id===id),creator=profileById(c.created_by),poolDesc=dailyTemplateText(c.description,null);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(poolDesc)}</p><div class="notice"><b>Typ:</b> ${escapeHtml(c.challenge_type)}<br><b>Punkte:</b> +${c.points}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?'<br><b>Crew-Bezug:</b> Movo lost täglich eine andere Person aus.':''}${c.target_value?`<br><b>Ziel:</b> ${c.target_value} ${escapeHtml(c.target_unit||'')}`:''}${creator?`<br><b>Vorgeschlagen von:</b> ${escapeHtml(firstName(creator))}`:''}</div><div class="section"><b>Bewertungen nach Durchführung</b><div class="reactions"><span class="react">👍 ${r.filter(x=>x.rating==='again').length}</span><span class="react">😐 ${r.filter(x=>x.rating==='okay').length}</span><span class="react">👎 ${r.filter(x=>x.rating==='never').length}</span></div></div><div class="section"><b>Wie fandest du diese Challenge?</b><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="adminSuspendChallenge('${c.id}')">⏸ Sperren</button>${!poolAvailable(c)?`<button class="secondary" onclick="adminUnsuspendChallenge('${c.id}')">▶ Entsperren</button>`:''}<button class="secondary danger" onclick="adminDeleteChallenge('${c.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`}
@@ -1620,6 +1670,24 @@ async function submitProposal(e){
  closeModal();await loadData();await render();toast('Vorschlag ist jetzt im Feed angepinnt 📌')
 }
 function trend4(id){let ws=[];for(let i=3;i>=0;i--){let d=startOfWeek();d.setDate(d.getDate()-i*7);let from=weekKey(d),to=fmtDate(endOfWeek(d));ws.push({d,pts:pointsBetween(id,from,to)})}let mx=Math.max(1,...ws.map(x=>x.pts));return `<div class="card pad section"><h3>📈 Deine letzten 4 Wochen</h3><div class="trend">${ws.map(x=>`<div><i style="height:${Math.max(5,x.pts/mx*64)}px"></i><b>${x.pts}</b><small>KW${isoWeek(x.d)}</small></div>`).join('')}</div></div>`}
+
+function setRewardUiTab(tab){rewardUiTab=tab;render()}
+function rewardTabsHTML(){return `<div class="movoTabs rewardTabs"><button class="${rewardUiTab==='rewards'?'active':''}" onclick="setRewardUiTab('rewards')">Prämien</button><button class="${rewardUiTab==='mine'?'active':''}" onclick="setRewardUiTab('mine')">Meine Einlösungen</button></div>`}
+function rewardSceneClass(name=''){
+ let n=String(name).toLowerCase();
+ if(n.includes('film')||n.includes('kino'))return 'cinema';
+ if(n.includes('früh')||n.includes('essen')||n.includes('meal')||n.includes('snack'))return 'food';
+ if(n.includes('wander')||n.includes('ausflug')||n.includes('erlebnis')||n.includes('date'))return 'hike';
+ return 'surprise';
+}
+function rewardVisualTileHTML(reward,featured=false){
+ let name=rewardName(reward.reward_key),cls=rewardSceneClass(name),pts=reward.milestone||reward.points_required||0;
+ return `<article class="mockRewardTile ${featured?'featured':''} ${cls}">
+  <div class="mockRewardImage"></div>
+  <div class="mockRewardOverlay"><b>${escapeHtml(name)}</b><span>🔥 ${pts} Punkte</span>${featured?`<button onclick="redeemReward('${reward.id||''}')">Einlösen</button>`:''}</div>
+ </article>`;
+}
+
 async function rewardGroupCardHTML(p){
  let av=await avatarHTML(p,48),
      balance=wishCreditBalanceCents(p.id),
@@ -1636,26 +1704,53 @@ async function rewardGroupCardHTML(p){
 }
 async function rewardsHTML(){
  let bal=wishCreditBalanceCents(me.id),life=lifetimePoints(me.id),next=highestWishThreshold(me.id)+100,
-     remaining=Math.max(0,next-life),rewardMonth=monthRewardPoints(),reached=MILESTONES.filter(m=>rewardMonth>=m),group='';
- for(let p of profiles.filter(x=>x.approved))group+=await rewardGroupCardHTML(p);
- return `<div class="pageHead"><div><small>MOVO REWARDS</small><h1>Belohnungen</h1></div><span class="pill">Punkte werden nicht ausgegeben</span></div>
- <div class="wishHero card"><div><small>💰 DEIN WUNSCH-GUTHABEN</small><div class="wishHeroAmount">${euro(bal)}</div><p>Je 100 Lifetime-Belohnungspunkte kommen dauerhaft 5,00 € hinzu.</p></div><div class="wishHeroSide"><div><b>${life} P</b><span>Belohnungspunkte</span></div><div><b>${remaining} P</b><span>bis +5,00 €</span></div><button class="cta" ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></div></div>
- <div class="sectionTitle compactTitle"><h2>Deine offenen Belohnungen</h2><span class="pill">${rewardMonth} Belohnungs-P diesen Monat</span></div>
- <div class="card pad">${reached.length?reached.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="muted">Noch keine Monatsbelohnung freigeschaltet.</div>'}${openRewardsInventoryHTML()}</div>
- <div class="sectionTitle compactTitle"><h2>Belohnungen der Crew</h2><span class="tiny muted">Einlösen kann jeder nur selbst</span></div><div class="grid grid2 rewardPeopleGrid">${group}</div>
- <details class="card pad section disclosureCard"><summary><b>🎁 Alle Belohnungen & Stufen</b><span class="tiny muted">Pool, Bewertungen & Vorschläge</span></summary><div class="section">${rewardsRulesHTML()}</div></details>
- <details class="card pad section disclosureCard"><summary><b>💳 Mein Guthaben-Verlauf</b><span class="tiny muted">Verdient & eingelöst</span></summary><div class="section">${ownWishHistoryHTML()}</div></details>`;
+     remaining=Math.max(0,next-life),rewardMonth=monthRewardPoints(),reached=MILESTONES.filter(m=>rewardMonth>=m),
+     mine=openRewardChoices(),body='';
+ let visualItems=mine.slice(0,5);
+ if(rewardUiTab==='rewards'){
+  let featured=visualItems[0],rest=visualItems.slice(1);
+  body=`<div class="mockRewardGrid">${featured?rewardVisualTileHTML(featured,true):`<article class="mockRewardTile featured hike"><div class="mockRewardImage"></div><div class="mockRewardOverlay"><b>Nächste Belohnung</b><span>Noch ${Math.max(0,50-rewardMonth)} Punkte</span></div></article>`}${rest.map(r=>rewardVisualTileHTML(r,false)).join('')}</div>
+   <section class="mockWhiteCard rewardInventoryMock"><div class="mockCardTitle"><h2>Deine offenen Belohnungen</h2><span>${rewardMonth} P diesen Monat</span></div>${reached.length?reached.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="mockEmpty">Noch keine Monatsbelohnung freigeschaltet.</div>'}${openRewardsInventoryHTML()}</section>
+   <details class="mockCompactDetails"><summary>🎁 Alle Stufen & Vorschläge <span>›</span></summary><div>${rewardsRulesHTML()}</div></details>`;
+ }else{
+  body=`<section class="mockWhiteCard"><div class="mockCardTitle"><h2>Meine Einlösungen</h2></div>${ownWishHistoryHTML()}${mine.length?`<div class="mockOpenRewards">${mine.map(r=>`<div><span>🎁</span><div><b>${escapeHtml(rewardName(r.reward_key))}</b><small>${r.month_key||''}</small></div></div>`).join('')}</div>`:'<div class="mockEmpty">Noch keine offenen Belohnungen.</div>'}</section>`;
+ }
+ return `<section class="mockMobileScreen rewardsMockScreen">
+  <div class="mockScene mockSceneRewards"><div class="mockPageTitle"><div><h1>Rewards</h1><p>Dein Einsatz wird belohnt.</p></div><div class="mockPointsPill">💎 ${life} P</div></div></div>
+  <div class="mockSheet rewardsMockSheet">
+   <div class="mockSegmented">${rewardTabsHTML()}</div>
+   <section class="mockCreditStrip"><div><small>Wunsch-Guthaben</small><b>${euro(bal)}</b><span>${remaining} P bis +5,00 €</span></div><button ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></section>
+   ${body}
+  </div>
+ </section>`;
+}
+
+
+function mockBadgeGridHTML(){
+ let s=streak(),milestones=[3,7,14,30,60,100];
+ let streakBadges=milestones.map(n=>`<div class="mockBadge ${s>=n?'unlocked':'locked'}"><span>${s>=n?'🔥':'🔒'}</span><b>${n} Tage</b></div>`).join('');
+ let extras=achievements.filter(a=>a.user_id===me.id).slice(0,4).map(a=>`<div class="mockBadge unlocked"><span>${escapeHtml(a.emoji||'🏅')}</span><b>${escapeHtml(a.title)}</b></div>`).join('');
+ return `<div class="mockBadgeGrid">${streakBadges}${extras}</div>`;
 }
 
 function setProfileUiTab(tab){profileUiTab=tab;render()}
 function profileTabsHTML(){return `<div class="movoTabs profileTabs"><button class="${profileUiTab==='stats'?'active':''}" onclick="setProfileUiTab('stats')">Statistiken</button><button class="${profileUiTab==='badges'?'active':''}" onclick="setProfileUiTab('badges')">Badges</button><button class="${profileUiTab==='settings'?'active':''}" onclick="setProfileUiTab('settings')">Einstellungen</button></div>`}
 async function meHTML(){
  let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);
- let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,96),pts=monthPoints(),body='';
- if(profileUiTab==='stats')body=`<div class="grid grid2 profilePrimary"><div><div class="card pad"><div class="challengeTop"><div><small>KONTINUITÄT</small><h3>🔥 Dein Streak</h3></div><span class="pill">Rekord ${maxStreakEver()} Tage</span></div><div class="section">${streakHeatmapHTML()}</div></div><div class="card pad"><div><small>BESTLEISTUNGEN</small><h3>🏅 Persönliche Rekorde</h3></div>${personalRecordsHTML()}</div>${trend4(me.id)}</div><div><div class="card pad"><div><small>VERGLEICH</small><h3>Diese Woche vs. Vorwoche</h3></div>${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱️ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div>${weeklyReviewHTML()}<div class="card pad rewardProfileLink"><div><small>MOTIVATION</small><h3>🎁 Belohnungen</h3><div class="muted small">${euro(wishCreditBalanceCents(me.id))} Wunsch-Guthaben · ${openRewardChoices().length} offen</div></div><button class="react" onclick="go('rewards')">Öffnen</button></div></div></div><details class="card pad disclosureCard"><summary><b>📊 Monatsrückblick & Hall of Fame</b></summary><div class="section">${monthlyReviewHTML()}<h3 class="section">Hall of Fame</h3>${hallOfFameHTML()}</div></details>`;
- if(profileUiTab==='badges')body=`<section class="card pad badgeShowcase"><div class="sectionTitle"><div><small>DEINE MEILENSTEINE</small><h2>Badges & Achievements</h2></div><span class="pill">${achievements.filter(a=>a.user_id===me.id).length} erreicht</span></div><div class="section">${achievementHTML()}</div><h3 class="section">Hall of Fame</h3>${hallOfFameHTML()}</section>`;
- if(profileUiTab==='settings')body=`${await settingsHTML()}<details class="card pad disclosureCard"><summary><b>📝 Meine Einträge – aktueller Monat</b><span class="tiny muted">bearbeiten oder löschen</span></summary><div class="grid section">${await ownEntriesHTML()}</div></details>`;
- return `<section class="profileStage sceneSurface"><div class="profileHero">${av}<div class="profileIdentity"><small>DEIN WEG · DEINE ERFOLGE</small><h1>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)}</h1><span>@${escapeHtml(me.username)}</span></div><button class="glassButton" onclick="openProfile()">✎ Bearbeiten</button></div><div class="profileHeroStats"><div><small>Monat</small><b>${pts} P</b></div><div><small>Streak</small><b>🔥 ${streak()}</b><span>Tage</span></div><div><small>Rekord</small><b>${maxStreakEver()}</b><span>Tage</span></div><div><small>Guthaben</small><b>${euro(wishCreditBalanceCents(me.id))}</b></div></div></section><div class="profileFlow"><div class="profileTabDock card">${profileTabsHTML()}</div>${body}</div>`;
+ let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=lifetimePoints(me.id),body='';
+ if(profileUiTab==='stats')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><h2>Statistiken</h2></div><div class="mockStatList">${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></section>${trend4(me.id)}<details class="mockCompactDetails"><summary>📊 Monatsrückblick & Hall of Fame <span>›</span></summary><div>${monthlyReviewHTML()}${hallOfFameHTML()}</div></details>`;
+ if(profileUiTab==='badges')body=`<section class="mockWhiteCard mockBadgesCard"><div class="mockCardTitle"><h2>Deine Badges</h2><span>${achievements.filter(a=>a.user_id===me.id).length} Achievements</span></div>${mockBadgeGridHTML()}<div class="mockProfileQuote">Disziplin ist die Brücke<br>zwischen Zielen und Erfolgen.</div></section>`;
+ if(profileUiTab==='settings')body=`<section class="mockWhiteCard settingsMock">${await settingsHTML()}</section><details class="mockCompactDetails"><summary>📝 Meine Einträge – aktueller Monat <span>›</span></summary><div>${await ownEntriesHTML()}</div></details>`;
+ return `<section class="mockMobileScreen profileMockScreen">
+  <div class="mockScene mockSceneProfile"><div class="mockPageTitle"><div><h1>Dein Profil</h1><p>Dein Weg. Deine Erfolge.</p></div><button class="mockIconBtn" onclick="openProfile()">⚙</button></div></div>
+  <div class="mockSheet profileMockSheet">
+   <section class="mockProfileCard">${av}<div class="mockProfileName"><h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)} <button onclick="openProfile()">✎</button></h2><span>@${escapeHtml(me.username)}</span></div>
+    <div class="mockProfileStats"><div><span>🔥</span><b>${streak()}</b><small>Tage<br>Streak</small></div><div><span>⭐</span><b>${pts}</b><small>Gesamt-<br>punkte</small></div><div><span>🏆</span><b>${achievements.filter(a=>a.user_id===me.id).length}</b><small>Achievements</small></div></div>
+    <div class="mockSegmented">${profileTabsHTML()}</div>
+   </section>
+   ${body}
+  </div>
+ </section>`;
 }
 
 function achievementHTML(){let list=achievements.filter(a=>a.user_id===me.id);if(!list.length)return '<div class="muted">Noch keine Achievements.</div>';return `<div class="grid grid2">${list.map(a=>`<div class="choice"><b>${escapeHtml(a.emoji)} ${escapeHtml(a.title)}</b><div class="tiny muted">Erreicht am ${new Date(a.achieved_on+'T12:00').toLocaleDateString('de-DE')}</div></div>`).join('')}</div>`}
@@ -1807,40 +1902,73 @@ function rewardProposalFeedHTML(){
  let list=rewardProposals.filter(p=>p.status==='voting');if(!list.length)return '';
  return `<div class="sectionTitle"><h2>📌 Belohnungsvorschläge</h2><span class="pill">Abstimmung</span></div>${list.map(p=>{let v=rewardVoteCounts(p.id),mine=rewardProposalVotes.find(x=>x.proposal_id===p.id&&x.user_id===me.id),who=profileById(p.proposer_id);return `<div class="card pad section rewardProposalVotingCard"><h3>🎁 ${escapeHtml(p.name)}</h3><p class="small muted">${escapeHtml(p.description)}</p><div class="tiny muted">${p.points_required} P · vorgeschlagen von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no}</div><div class="reactions"><button class="react ${mine?.vote===true?'active':''}" onclick="voteRewardProposal('${p.id}',true)">👍 Dafür</button><button class="react ${mine?.vote===false?'active':''}" onclick="voteRewardProposal('${p.id}',false)">👎 Dagegen</button></div></div>`}).join('')}`
 }
-function rulesHTML(){return `<div class="pageHead"><div><small>SO FUNKTIONIERT MOVO</small><h1>Punkte & Regeln</h1></div></div>
- <div class="card pad rulesIntro"><b>Fair, motivierend und transparent</b><div class="small muted">Die Rangliste belohnt echte Leistung. Streak-Meilensteine geben kleine Movo-Bonuspunkte für Belohnungen und Wunsch-Guthaben, aber keinen zusätzlichen Ranglisten-Vorteil.</div></div>
- <details class="card pad section disclosureCard" open><summary><b>⭐ Ranglistenpunkte</b></summary><div class="section">
-  <div class="grid grid2"><div><h3>👟 Schritte</h3><p>5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P · danach je weitere 5.000 = +1 P.</p></div><div><h3>🥗 Ernährung</h3><p>1–2 erfüllte Ziele = 1 P · 3–4 = 2 P · 5–6 = 3 P · alle 7 = 4 P. So bleibt Ernährung wertvoll, ohne Sport und Bewegung zu überholen.</p></div></div>
-  <h3>🏃 Aktivitäten</h3><div class="grid grid2">${Object.entries(ACTIVITIES).map(([k,a])=>`<div class="choice"><b>${a.icon} ${a.name}</b><div class="tiny muted">${a.mode==='distance'?`${a.step} km = ${a.points} P`:`${a.step} Minuten = ${a.points} P`}${['garden','house'].includes(k)?' · Haus/Garten zusammen max. 4 P pro Tag':''}</div></div>`).join('')}</div>
- </div></details>
- <details class="card pad section disclosureCard"><summary><b>🔥 Streak & Movo-Bonus</b></summary><div class="section">
-  <p><b>Ein Streak-Tag muss qualifiziert sein.</b> Dafür reicht eine der folgenden Bedingungen:</p>
-  <div class="grid grid2"><div class="choice">🏃 Aktivität mit mindestens <b>2 Basispunkten</b></div><div class="choice">👟 mindestens <b>7.500 Schritte</b></div><div class="choice">🥗 mindestens <b>3 Ernährungsziele</b></div><div class="choice">☀️ Daily + mindestens <b>1 weiterer Gesundheitspunkt</b></div></div>
-  <p>Wird ein kompletter Tag nicht qualifiziert, startet der aktuelle Streak wieder bei 0. Dein persönlicher Rekord bleibt erhalten.</p>
-  <p><b>3 Tage +1 · 7 Tage +2 · 14 Tage +3 · 30 Tage +5 · 60 Tage +7 · 100 Tage +10 Movo-Bonuspunkte.</b></p>
-  <div class="notice small"><b>Fairness:</b> Diese Streak-Boni zählen für Belohnungen und Gesamtfortschritt, aber <b>nicht</b> für Wochen-/Monatsranglisten.</div>
- </div></details>
- <details class="card pad section disclosureCard"><summary><b>🎯 Challenges</b></summary><div class="section"><p><b>Tageschallenge:</b> jeden Tag persönlich und zufällig, +1 P. Rund 20 % beziehen eine andere Person ein.</p><p><b>Wochenchallenge:</b> +5 P. Der Gewinner der Vorwoche bekommt drei zufällige Optionen. Erfolgt innerhalb von 18 Stunden nach Wochenbeginn keine Wahl, wählt Movo automatisch aus diesen drei.</p><p><b>Monatsmission:</b> gemeinsame Crew-Mission. Bei Erfolg erhält jedes Crew-Mitglied +15 P.</p><p><b>Wiederholschutz:</b> Tagesaufgaben, Wochen- und Monatschallenges versuchen kürzlich verwendete Aufgaben zu vermeiden.</p></div></details>
- <details class="card pad section disclosureCard"><summary><b>🎁 Belohnungen: machbar, aber verdient</b></summary><div class="section"><p>Monatliche Belohnungsstufen: <b>50 · 100 · 150 · 200 · 250 · 300 Punkte</b>. Kleine Extras kommen früh, größere gemeinsame Erlebnisse sind bewusst Stretch-Ziele.</p><p>Für die Belohnungsstufen zählen Ranglistenpunkte <b>plus</b> kleine Streak-Bonuspunkte. Bereits gewählte Belohnungen bleiben erhalten und Punkte werden nicht ausgegeben.</p><p>Zusätzlich gibt es weiterhin je 100 Lifetime-Belohnungspunkte +5,00 € persönliches Wunsch-Guthaben.</p></div></details>
- <div class="card pad section rewardRuleLink"><div><h3>🎁 Belohnungen & Wunsch-Guthaben</h3><p class="muted small">Belohnungspool, offene Belohnungen, Guthaben und Einlösen sind vollständig im Reiter „Belohnungen“ gebündelt.</p></div><button class="react" onclick="go('rewards')">Belohnungen öffnen</button></div>`}
-function historyHTML(){let ms=completedMonths();if(!historyMonth||!ms.includes(historyMonth))historyMonth=ms[0]||null;return `<div class="historyTop"><div><small>MOVO ARCHIV</small><h1>Historie</h1></div><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div>${historyMode==='all'?allTimeView():ms.length?`<div class="monthNav"><button onclick="shiftHistory(-1)">‹</button><div><b>${monthLabel(historyMonth)}</b><select onchange="setHistoryMonth(this.value)">${ms.map(m=>`<option value="${m}" ${m===historyMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}</select></div><button onclick="shiftHistory(1)">›</button></div>${monthView(historyMonth)}`:'<div class="card pad muted">Nach dem ersten abgeschlossenen Monat erscheint hier automatisch der Monatsrückblick.</div>'}` }
+
+function rulesPointsCoreHTML(){return `<p><b>Schritte:</b> 5.000 = 1 P · 7.500 = 2 P · 10.000 = 3 P · 12.500 = 4 P · 15.000 = 5 P; danach +1 je 5.000.</p><p><b>Ernährung:</b> 1–2 Ziele = 1 P · 3–4 = 2 P · 5–6 = 3 P · alle 7 = 4 P.</p><p><b>Aktivitäten:</b> Punkte nach Dauer/Distanz gemäß Aktivitätsart.</p>`}
+function rulesStreakCoreHTML(){return `<p>Ein Streak-Tag muss qualifiziert sein: Aktivität mit mindestens 2 Basispunkten, mindestens 7.500 Schritte, mindestens 3 Ernährungsziele oder Daily + mindestens 1 weiterer Gesundheitspunkt.</p><p><b>Meilensteine:</b> 3 Tage +1 · 7 Tage +2 · 14 Tage +3 · 30 Tage +5 · 60 Tage +7 · 100 Tage +10 Movo-Bonuspunkte. Diese zählen nicht zur Rangliste.</p>`}
+function rulesChallengeCoreHTML(){return `<p><b>Daily:</b> +1 P · <b>Weekly:</b> +5 P · <b>Crew-Mission:</b> +15 P je Mitglied bei Erfolg. Wochenchallenge und Crew-Mission werden aus dem aktiven Pool gewählt bzw. zugeordnet.</p>`}
+
+function rulesHTML(){
+ return `<section class="mockMobileScreen rulesMockScreen">
+  <div class="mockScene mockSceneSecondary"><div class="mockPageTitle"><div><h1>Regeln</h1><p>Fair. Einfach. Gemeinsam.</p></div></div></div>
+  <div class="mockSheet rulesMockSheet">
+   <section class="mockWhiteCard mockRuleList">
+    <details><summary><span>🛡️</span><b>Punkte sammeln</b><em>›</em></summary><div>${rulesPointsCoreHTML()}</div></details>
+    <details><summary><span>🔥</span><b>Streak & Movo-Bonus</b><em>›</em></summary><div>${rulesStreakCoreHTML()}</div></details>
+    <details><summary><span>💎</span><b>Challenges</b><em>›</em></summary><div>${rulesChallengeCoreHTML()}</div></details>
+    <details><summary><span>🥗</span><b>Ernährung</b><em>›</em></summary><div><p>1–2 Ziele = 1 P · 3–4 = 2 P · 5–6 = 3 P · alle 7 = 4 P.</p></div></details>
+    <details><summary><span>🏃</span><b>Aktivität</b><em>›</em></summary><div><p>Aktivitäten zählen nach ihrer hinterlegten Basislogik. Haus & Garten sind gemeinsam auf 4 P pro Tag begrenzt.</p></div></details>
+    <details><summary><span>⚖️</span><b>Faire Wertung</b><em>›</em></summary><div><p>Streak-Bonuspunkte zählen bewusst nicht zur Rangliste. Die Rangliste zeigt echte Leistungs- und Challengepunkte.</p></div></details>
+    <details><summary><span>👥</span><b>Crew & Community</b><em>›</em></summary><div><p>Feed, Reaktionen, Kommentare, gemeinsame Missionen und Zeugenbestätigungen dienen der gegenseitigen Motivation – ohne Bestrafung.</p></div></details>
+    <details><summary><span>🔐</span><b>Datenschutz & Sicherheit</b><em>›</em></summary><div><p>Deine Crew ist privat. Sichtbarkeit und Push-Kategorien kannst du in den Einstellungen anpassen.</p></div></details>
+   </section>
+   <div class="mockQuoteCard light">♡ Unser Ziel: nicht perfekt sein,<br>sondern gemeinsam besser.</div>
+  </div>
+ </section>`;
+}
+function historyHTML(){
+ let ms=completedMonths();if(!historyMonth||!ms.includes(historyMonth))historyMonth=ms[0]||null;
+ let content=historyMode==='all'?allTimeView():ms.length?`<div class="mockMonthNav"><button onclick="shiftHistory(-1)">‹</button><b>${monthLabel(historyMonth)}</b><button onclick="shiftHistory(1)">›</button><select onchange="setHistoryMonth(this.value)">${ms.map(m=>`<option value="${m}" ${m===historyMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}</select></div>${monthView(historyMonth)}`:'<div class="mockEmpty">Nach dem ersten abgeschlossenen Monat erscheint hier automatisch der Monatsrückblick.</div>';
+ return `<section class="mockMobileScreen historyMockScreen">
+  <div class="mockScene mockSceneSecondary"><div class="mockPageTitle"><div><h1>Historie</h1><p>Deine bisherigen Erfolge.</p></div></div></div>
+  <div class="mockSheet historyMockSheet"><div class="mockSegmented"><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div><section class="mockWhiteCard historyContentMock">${content}</section></div>
+ </section>`;
+}
+
+async function moreHTML(){
+ return `<section class="mockMobileScreen moreMockScreen">
+  <div class="mockScene mockSceneMore"><div class="mockPageTitle"><div><h1>Mehr</h1><p>Entdecke alle Bereiche.</p></div></div></div>
+  <div class="mockSheet moreMockSheet">
+   <section class="mockWhiteCard mockMoreList">
+    <button onclick="go('history')"><span>◷</span><b>Historie</b><em>›</em></button>
+    <button onclick="go('rewards')"><span>◇</span><b>Rewards</b><em>›</em></button>
+    <button onclick="go('rules')"><span>◎</span><b>Regeln</b><em>›</em></button>
+    ${me?.is_admin?`<button onclick="go('admin')"><span>♜</span><b>Admin</b><em>›</em></button>`:''}
+    <button onclick="setProfileUiTab('settings');go('me')"><span>⚙</span><b>Einstellungen</b><em>›</em></button>
+    <button onclick="sendTestPush()"><span>🔔</span><b>Push-Diagnose</b><em>›</em></button>
+    <button onclick="alert('Movo V'+FIT4US_VERSION+'\\nMove. Motivate. Together.')"><span>ⓘ</span><b>Über Movo</b><em>›</em></button>
+   </section>
+   <div class="mockMorePoster"><div><b>Move a little more.</b><span>Be a little happier.</span><strong>Together. ♡</strong></div></div>
+  </div>
+ </section>`;
+}
+
 async function adminHTML(){
  if(!me.is_admin)return '<div class="error">Kein Admin-Zugriff.</div>';
  let pending=profiles.filter(p=>!p.approved),active=profiles.filter(p=>p.approved);
- let pendingHtml=pending.length?pending.map(p=>`<div class="card pad" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:center"><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><button class="cta" onclick="setApproval('${p.id}',true)">✓ Freischalten</button></div></div>`).join(''):'<div class="muted">Keine offenen Registrierungen.</div>';
- let activeHtml=active.map(p=>`<div class="rankRow"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><div class="tiny muted">@${escapeHtml(p.username)}</div></div><div>${p.is_admin?'<b>Admin</b>':`<button class="react danger" onclick="setApproval('${p.id}',false)">Zugriff sperren</button>`}</div></div>`).join('');
- let prop=proposals.filter(p=>p.status==='voting').map(p=>{let v=proposalVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>${escapeHtml(p.emoji)} ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Challenge-Vorschläge.</div>';
- let rewardProp=rewardProposals.filter(p=>p.status==='voting').map(p=>{let v=rewardVoteCounts(p.id),who=profileById(p.proposer_id);return `<div class="card pad section"><h3>🎁 ${escapeHtml(p.name)}</h3><div class="small muted">${escapeHtml(p.description)}</div><div class="tiny muted">${p.points_required} P · von ${escapeHtml(firstName(who))} · 👍 ${v.yes} / 👎 ${v.no} · ${v.total}/${active.length} abgestimmt</div><div class="uploadBtns" style="margin-top:10px"><button class="cta" onclick="decideRewardProposal('${p.id}',true)">✓ Genehmigen</button><button class="secondary danger" onclick="decideRewardProposal('${p.id}',false)">✕ Ablehnen</button></div></div>`}).join('')||'<div class="muted">Keine offenen Belohnungsvorschläge.</div>';
- let auditHtml=adminAudit.length?adminAudit.slice(0,50).map(a=>{let p=profileById(a.admin_user_id);return `<div class="rankRow"><span>🧾</span><div><b>${escapeHtml(a.action)}</b><div class="tiny muted">${new Date(a.created_at).toLocaleString('de-DE')} · ${escapeHtml(firstName(p))}</div></div><button class="react" onclick='alert(${JSON.stringify(JSON.stringify(a.details||{},null,2))})'>Details</button></div>`}).join(''):'<div class="muted">Noch keine Admin-Aktionen protokolliert.</div>';
- return `<h1>Admin</h1>
- <div class="notice"><b>🔐 Private Movo-Crew</b></div>
- <div class="section"><h2>Offene Registrierungen ${pending.length?`(${pending.length})`:''}</h2>${pendingHtml}</div>
- <div class="section"><h2>Challenge-Vorschläge</h2>${prop}</div><div class="section"><h2>Belohnungsvorschläge</h2>${rewardProp}</div>
- <div class="card pad adminOnly section"><h3>Freigegebene Benutzer</h3>${activeHtml}</div>
- <div class="card pad section"><h3>💾 Backup & Restore</h3><div class="uploadBtns"><button class="cta" onclick="exportBackup()">Komplett-Backup herunterladen</button><button class="secondary" onclick="openRestoreDialog()">Backup wiederherstellen</button></div><div class="tiny muted" style="margin-top:8px">Backup enthält alle zentralen Movo-Daten (intern weiterhin Fit4Us-Tabellen). Bilder in Supabase Storage werden derzeit nicht in die JSON-Datei eingebettet.</div></div>
- <div class="card pad section resetDangerCard"><h3>⚠️ Daten zurücksetzen</h3><p class="small muted">Jeder Reset erstellt zuerst automatisch ein Komplett-Backup und verlangt eine eindeutige Bestätigung.</p><div class="grid"><button class="secondary" onclick="openResetDialog('test')">🧪 Testdaten zurücksetzen</button><button class="secondary" onclick="openResetDialog('season')">🏁 Saison-/Wettbewerbsdaten zurücksetzen</button><button class="secondary danger" onclick="openResetDialog('full')">☢ Kompletter Datenreset</button></div></div>
- <div class="card pad section"><h3>Datenbank</h3><div>Profile: ${active.length}</div><div>Einträge: ${entries.length}</div><div>Challenges im Pool: ${challengePool.length}</div><div>Offene Vorschläge: ${proposals.filter(p=>p.status==='voting').length}</div></div>
- <div class="card pad section"><h3>🧾 Admin-Auditlog</h3>${auditHtml}</div>`
+ let pendingHtml=pending.length?pending.map(p=>`<div class="mockAdminUser"><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><small>@${escapeHtml(p.username)}</small></div><button onclick="setApproval('${p.id}',true)">Freischalten</button></div>`).join(''):'<div class="mockAdminEmpty">Keine offenen Registrierungen.</div>';
+ let activeHtml=active.map(p=>`<div class="mockAdminUser"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><small>@${escapeHtml(p.username)}</small></div>${p.is_admin?'<em>Admin</em>':`<button onclick="setApproval('${p.id}',false)">•••</button>`}</div>`).join('');
+ let propCount=proposals.filter(p=>p.status==='voting').length,rewardCount=rewardProposals.filter(p=>p.status==='voting').length;
+ return `<section class="mockMobileScreen adminMockScreen">
+  <div class="mockScene mockSceneSecondary"><div class="mockPageTitle"><div><h1>Admin</h1><p>Verwalte deine Crew.</p></div></div></div>
+  <div class="mockSheet adminMockSheet">
+   <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Offene Registrierungen</h2><span>${pending.length}</span></div>${pendingHtml}</section>
+   <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Challenge-Vorschläge</h2><span>${propCount}</span></div><div class="mockAdminEmpty">${propCount?'Offene Vorschläge unten prüfen.':'Keine offenen Vorschläge.'}</div></section>
+   <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Belohnungsvorschläge</h2><span>${rewardCount}</span></div><div class="mockAdminEmpty">${rewardCount?'Offene Vorschläge unten prüfen.':'Keine offenen Vorschläge.'}</div></section>
+   <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Freigegebene Benutzer</h2></div>${activeHtml}</section>
+   <details class="mockCompactDetails"><summary>💾 Backup & Restore <span>›</span></summary><div class="mockAdminActions"><button onclick="exportBackup()">Komplett-Backup herunterladen</button><button onclick="openRestoreDialog()">Backup wiederherstellen</button></div></details>
+   <details class="mockCompactDetails danger"><summary>⚠️ Daten zurücksetzen <span>›</span></summary><div class="mockAdminActions"><button onclick="openResetDialog('test')">Testdaten zurücksetzen</button><button onclick="openResetDialog('season')">Saisondaten zurücksetzen</button><button class="danger" onclick="openResetDialog('full')">Kompletter Datenreset</button></div></details>
+  </div>
+ </section>`;
 }
 async function logAdmin(action,details={}){
  if(!me?.is_admin)return;
@@ -2119,7 +2247,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.21.0';
+const FIT4US_VERSION='1.22.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
