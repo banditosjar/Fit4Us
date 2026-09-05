@@ -446,3 +446,13 @@ html[data-theme="dark"] .movo122Shell .main{background:#e8efeb!important}
 @media(prefers-reduced-motion:reduce){
  .pageContent.pageEntered,.mockRing{animation:none!important}
 }
+
+
+/* V1.22.1 – preserve approved mobile composition */
+@media(min-width:761px){
+ .mockMobileScreen{max-width:680px;margin:24px auto 48px;border-radius:30px;overflow:hidden;box-shadow:0 26px 70px rgba(4,48,43,.16)}
+ .mockMobileScreen .mockSheet{margin-left:0;margin-right:0}
+ .mockRewardGrid{grid-template-columns:1fr 1fr}
+ .mockRewardTile.featured{grid-column:1/-1;grid-row:auto}
+ .mockRankingStack{grid-template-columns:1fr}
+}
