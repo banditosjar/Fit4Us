@@ -747,44 +747,60 @@ function stopRealtime(){
  clearTimeout(realtimeRefreshTimer);realtimeRefreshTimer=null;realtimeRefreshPending=false;
  realtimeChannels.forEach(c=>sb?.removeChannel(c));realtimeChannels=[]
 }
+
+function movoIcon(name,cls=''){
+ const icons={
+  home:'<path d="M3 11.5 12 4l9 7.5v8a1.5 1.5 0 0 1-1.5 1.5h-5v-6h-5v6h-5A1.5 1.5 0 0 1 3 19.5z"/>',
+  crew:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20c.4-4 2.5-6 5.5-6s5.1 2 5.5 6M14 15c1-.7 2-1 3.2-1 2.4 0 4 1.6 4.3 4.5"/>',
+  challenge:'<path d="M8 4h8v3a4 4 0 0 1-8 0zM6 4H4v2a4 4 0 0 0 4 4m10-6h2v2a4 4 0 0 1-4 4M12 11v5m-4 4h8m-6-4h4"/>',
+  profile:'<circle cx="12" cy="8" r="4"/><path d="M5 21c.5-4.5 3-7 7-7s6.5 2.5 7 7"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  steps:'<path d="M8 4c2 0 3 1 3 3v4c0 2-1 3-3 3H6c-2 0-3-1-3-3V8c0-2 1-4 5-4Zm8 7c3 0 5 2 5 5v1c0 2-1 3-3 3h-3c-2 0-3-1-3-3v-2c0-2 1-4 4-4Z"/>',
+  food:'<path d="M6 3v8m4-8v8M4 7h8M8 11v10M17 3c3 3 3 8 0 11v7"/>',
+  activity:'<circle cx="13" cy="4" r="2"/><path d="m10 8 3 2 2-3m-5 1-3 5 4 2-2 6m4-11 4 4 4-1m-10 2 5 5"/>',
+  daily:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/>',
+  reward:'<path d="M4 10h16v11H4zM2 7h20v4H2zM12 7v14M12 7c-5 0-6-5-3-5 2 0 3 3 3 5Zm0 0c5 0 6-5 3-5-2 0-3 3-3 5Z"/>',
+  history:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2M4 4 2 8h4"/>',
+  rules:'<path d="M5 4h14v17H5zM8 8h8M8 12h8M8 16h5"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/>'
+ };
+ return `<svg class="movoSvg ${cls}" viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.home}</svg>`;
+}
+
 function renderShell(){
- $('#boot').innerHTML=`<div class="shell movoShell movo122Shell">
- <aside class="side movoSide">
+ $('#boot').innerHTML=`<div class="shell movoShell movo123Shell">
+ <aside class="side movoDesktopRail">
    <button class="sideBrandButton" onclick="go('home')" aria-label="Movo Home">
-     <img class="sideBrandSymbol" src="assets/movo-symbol.svg" alt="">
-     <span class="movoBrandText light"><b>Movo</b><small>Move. Motivate. Together.</small></span>
+    <img src="assets/movo-wordmark-white.svg" class="desktopWordmark" alt="Movo">
    </button>
-   <div class="sideClaim">Mehr als Fitness.<br>Eine Crew.</div>
-   <div class="sideNav" id="sideNav"></div>
-   <div class="sideBottom" id="sideUser"></div>
+   <div class="desktopNav" id="sideNav"></div>
+   <div class="desktopRailBottom"><div id="sideUser"></div><div class="desktopClaim">Move. Motivate.<br><b>Together.</b></div></div>
  </aside>
- <main class="main">
-   <header class="top movoTop">
-     <button class="topBrandBtn" onclick="go('home')" aria-label="Movo Home">
-       <img class="brandSymbolMini" src="assets/movo-symbol.svg" alt="">
-       <span class="movoBrandText"><b>Movo</b><small>Move. Motivate. Together.</small></span>
-     </button>
-     <div class="topUser" id="topUser"></div>
-   </header>
-   <div id="content" class="pageContent"></div>
+ <main class="main movoMain">
+  <header class="top movoDesktopTop">
+   <button class="topBrandBtn" onclick="go('home')"><img src="assets/movo-wordmark-dark.svg" alt="Movo"></button>
+   <div class="topUser" id="topUser"></div>
+  </header>
+  <div id="content" class="pageContent movoPage"></div>
  </main>
  <nav class="bottom movoBottomNav" id="bottomNav"></nav>
  </div><div id="modalRoot"></div>`;
  navs()
 }
 async function navs(){
- let nav=[['home','⌂','Home'],['group','♧','Crew'],['add','＋',''],['challenges','♜','Challenges'],['me','♙','Profil']];
+ let nav=[['home','home','Home'],['group','crew','Crew'],['add','plus',''],['challenges','challenge','Challenges'],['me','profile','Profil']];
  $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'
-  ?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">＋</button>`
-  :`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')"><span>${ic}</span>${t}</button>`).join('');
- $('#sideNav').innerHTML=[
-  ['home','⌂  Home'],['group','♧  Crew'],['challenges','♜  Challenges'],['rewards','◇  Rewards'],
-  ['me','♙  Profil'],['history','◷  Historie'],['rules','◎  Regeln'],['more','•••  Mehr'],
-  ...(me?.is_admin?[['admin','◇  Admin']]:[])
- ].map(([id,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${t}</button>`).join('');
+  ?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">${movoIcon('plus')}</button>`
+  :`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')">${movoIcon(ic)}<span>${t}</span></button>`).join('');
+ let desktop=[
+  ['home','home','Home'],['group','crew','Crew'],['challenges','challenge','Challenges'],
+  ['rewards','reward','Rewards'],['me','profile','Profil'],['history','history','Historie'],
+  ['rules','rules','Regeln'],['more','settings','Mehr'],...(me?.is_admin?[['admin','settings','Admin']]:[])
+ ];
+ $('#sideNav').innerHTML=desktop.map(([id,ic,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${movoIcon(ic)}<span>${t}</span></button>`).join('');
  let av=await avatarHTML(me,42);
- $('#topUser').innerHTML=`<button class="topUserBtn" onclick="go('more')" aria-label="Movo Menü öffnen">${av}<div><b>${escapeHtml(firstName(me))}</b><div class="tiny muted">@${escapeHtml(me.username)}</div></div><span class="topUserMenu">•••</span></button>`;
- $('#sideUser').innerHTML=`<div class="sideUserMini"><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div><button class="secondary" style="width:100%" onclick="logout()">Abmelden</button>`
+ $('#topUser').innerHTML=`<button class="topUserBtn" onclick="go('more')">${av}<div><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div><span>•••</span></button>`;
+ $('#sideUser').innerHTML=`<button class="desktopUserCard" onclick="go('me')">${av}<div><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div></button>`
 }
 function openMobileMenu(){
  let root=$('#mobileMenuRoot');if(!root)return;
@@ -1300,15 +1316,14 @@ function groupChallengeHTML(){let ch=groupChallengeForPeriod(monthKey()),v=group
 function homeMetricsHTML(){
  let today=fmtDate(),pts=pointsBetween(me.id,today,today),rewardBonus=streakBonusPointsBetween(me.id,today,today),
      steps=entries.filter(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='steps').reduce((s,e)=>Math.max(s,+e.steps||0),0),
-     food=entries.find(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='food'),
-     secured=activeDay(today,me.id),s=streak(),visual=Math.min(96,18+Math.min(78,pts*7));
- return `<section class="movoPulseCard mockMomentum">
-   <div class="momentumStreak mockGlass"><span class="streakFlame">🔥</span><div><b>${s}</b><small>Tage<br>Streak</small></div></div>
-   <div class="movoProgressRing mockRing" style="--ring:${visual}%"><div><b>${pts} P</b><small>heute gesammelt</small><span>♻</span></div></div>
-   <div class="momentumToday mockToday"><strong>+${pts} P</strong><small>heute</small>${rewardBonus?`<span>✨ +${rewardBonus} Bonus</span>`:''}</div>
-   <div class="momentumQuote mockQuote">„Jeder Schritt zählt.<br>Für dich. Für uns.“</div>
-   <div class="momentumMeta mockMeta"><span>👟 ${steps.toLocaleString('de-DE')}</span><span>🍴 ${(food?.food_items||[]).length}/7</span><span>${secured?'✓ aktiv':'○ offen'}</span></div>
-  </section>`;
+     food=entries.find(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='food'),s=streak(),secured=activeDay(today,me.id),
+     ring=Math.min(92,Math.max(8,pts?28+pts*5:8));
+ return `<div class="heroMetrics">
+  <div class="heroStreak"><span>🔥</span><div><b>${s}</b><small>Tage Streak</small></div></div>
+  <div class="heroRing" style="--ring:${ring}%"><div><strong>${pts} P</strong><small>heute gesammelt</small></div></div>
+  <div class="heroScore"><strong>+${pts} P</strong><span>heute</span>${rewardBonus?`<small>✨ +${rewardBonus} Bonus</small>`:''}</div>
+  <div class="heroQuickStats"><span>${movoIcon('steps')}<b>${steps.toLocaleString('de-DE')}</b></span><span>${movoIcon('food')}<b>${(food?.food_items||[]).length}/7</b></span><span class="${secured?'ok':''}">● <b>${secured?'aktiv':'offen'}</b></span></div>
+ </div>`;
 }
 function homeChallengesHTML(){
  let dc=dailyChallengeFor(),dd=dailyCompletedBy(me.id),sel=currentSelection(),wc=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,
@@ -1346,42 +1361,46 @@ function todayNudgeHTML(){
  let ds=fmtDate(),stepEntry=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='steps').sort((a,b)=>(+b.steps||0)-(+a.steps||0))[0],
      steps=+stepEntry?.steps||0,next=nextStepTarget(steps),remain=Math.max(0,next-steps),
      food=entries.find(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='food'),foodCount=(food?.food_items||[]).length,
-     dailyDone=!!dailyCompletedBy(me.id,ds),
-     acts=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='activity'),
-     actDone=acts.some(e=>(+e.points||0)>=2);
- let stepPct=Math.min(100,steps/next*100),foodPct=Math.min(100,foodCount/7*100);
- return `<section class="todayNudge mockWhiteCard">
-   <div class="mockCardTitle"><h2>Was fehlt mir noch?</h2></div>
-   <div class="mockNudgeList">
-    <button onclick="openEntry('steps')" class="mockNudgeRow"><span class="mockNudgeIcon mint">👟</span><div><b>Schritte</b><small>${remain?`Noch ${remain.toLocaleString('de-DE')} bis zum nächsten Punkt`:'Nächstes Schrittziel erreicht'}</small><i><em style="width:${stepPct}%"></em></i></div></button>
-    <button onclick="openEntry('food')" class="mockNudgeRow"><span class="mockNudgeIcon green">🍴</span><div><b>Ernährung</b><small>${foodCount} / 7 Ziele</small><i><em style="width:${foodPct}%"></em></i></div></button>
-    <button onclick="${dailyDone?`go('challenges')`:`openDailyComplete()`}" class="mockNudgeRow"><span class="mockNudgeIcon sun">☀️</span><div><b>Daily</b><small>${dailyDone?'Erledigt ✓':'Noch offen'}</small></div>${dailyDone?'':'<span class="miniAction">Jetzt machen</span>'}</button>
-    <button onclick="openEntry('activity')" class="mockNudgeRow"><span class="mockNudgeIcon sport">🏋️</span><div><b>Aktivität</b><small>${actDone?'Aktiver Tag qualifiziert ✓':'Noch offen'}</small></div></button>
-   </div>
-  </section>`;
+     dailyDone=!!dailyCompletedBy(me.id,ds),acts=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='activity'),
+     actDone=acts.some(e=>(+e.points||0)>=2),stepPct=Math.min(100,steps/next*100),foodPct=Math.min(100,foodCount/7*100);
+ let rows=[
+  ['steps','Schritte',remain?`Noch ${remain.toLocaleString('de-DE')} bis zum nächsten Punkt`:'Nächstes Schrittziel erreicht',stepPct,`openEntry('steps')`],
+  ['food','Ernährung',`${foodCount} / 7 Ziele`,foodPct,`openEntry('food')`],
+  ['daily','Daily',dailyDone?'Erledigt ✓':'Noch offen',dailyDone?100:0,dailyDone?`go('challenges')`:`openDailyComplete()`],
+  ['activity','Aktivität',actDone?'Aktiver Tag qualifiziert ✓':'Noch offen',actDone?100:0,`openEntry('activity')`]
+ ];
+ return `<section class="movoCard todayFocusCard">
+  <div class="sectionEyebrow">DEIN HEUTE</div><h2>Was fehlt mir noch?</h2>
+  <div class="focusRows">${rows.map(([ic,title,sub,pct,act],i)=>`<button onclick="${act}" class="focusRow">
+   <span class="focusIcon tone${i}">${movoIcon(ic)}</span><div><b>${title}</b><small>${sub}</small><i><em style="width:${pct}%"></em></i></div><span class="rowArrow">›</span>
+  </button>`).join('')}</div>
+ </section>`;
 }
 
 async function homeHTML(){
  resetFeedCount();
- let hr=new Date().getHours(),greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend';
- let av=await avatarHTML(me,58);
- return `<section class="mockMobileScreen homeMockScreen">
-   <div class="mockScene mockSceneMorning">
-    <div class="mockGreeting">${av}<div><small>${greet},</small><h1>${escapeHtml(firstName(me))}! 👋</h1><p>Dranbleiben. Du machst das stark!</p></div></div>
-    ${homeMetricsHTML()}
-   </div>
-   <div class="mockSheet homeMockSheet">
+ let hr=new Date().getHours(),greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend',av=await avatarHTML(me,58);
+ return `<section class="appScreen homeScreen">
+  <div class="homeHero scenicHero">
+   <div class="heroGreeting">${av}<div><span>${greet},</span><h1>${escapeHtml(firstName(me))}! 👋</h1><p>Dranbleiben. Du machst das stark!</p></div></div>
+   ${homeMetricsHTML()}
+   <div class="heroQuote">„Jeder Schritt zählt. <b>Für dich. Für uns.</b>“</div>
+  </div>
+  <div class="screenBody homeBody">
+   <div class="homePrimary">
     ${todayNudgeHTML()}
     ${outboxHTML()}${pendingWitnessHTML()}${votingBannerHTML()}
-    <div class="mockSectionHead"><div><small>HEUTE</small><h2>Deine Challenges</h2></div><button onclick="go('challenges')">Alle →</button></div>
-    ${homeChallengesHTML()}
-    <div class="mockSectionHead"><div><small>SCHNELL</small><h2>Eintragen</h2></div></div>
-    ${quickAddModernHTML()}
-    ${quickTemplatesHTML()}
-    <div class="mockSectionHead"><div><small>DEINE CREW</small><h2>Neu bei euch</h2></div><button onclick="go('group')">Crew →</button></div>
-    <div class="homeFeed mockFeed">${await feedHTML(2)}</div>
-    <details class="mockCompactDetails"><summary>📝 Meine Einträge heute <span>›</span></summary><div>${await todayOwnEntriesHTML()}</div></details>
+    <div class="sectionHeader"><div><span>HEUTE</span><h2>Deine Challenges</h2></div><button onclick="go('challenges')">Alle →</button></div>
+    <div class="homeChallengesWrap">${homeChallengesHTML()}</div>
+    <details class="movoDetails"><summary>📝 Meine Einträge heute <span>›</span></summary><div>${await todayOwnEntriesHTML()}</div></details>
    </div>
+   <aside class="homeSecondary">
+    <div class="sectionHeader"><div><span>SCHNELL</span><h2>Eintragen</h2></div></div>
+    ${quickAddModernHTML()}${quickTemplatesHTML()}
+    <div class="sectionHeader"><div><span>DEINE CREW</span><h2>Neu bei euch</h2></div><button onclick="go('group')">Crew →</button></div>
+    <div class="homeFeed">${await feedHTML(2)}</div>
+   </aside>
+  </div>
  </section>`;
 }
 
@@ -1439,18 +1458,12 @@ function setCrewUiTab(tab){crewUiTab=tab;render()}
 function crewTabsHTML(){return `<div class="movoTabs crewTabs"><button class="${crewUiTab==='feed'?'active':''}" onclick="setCrewUiTab('feed')">Feed</button><button class="${crewUiTab==='moment'?'active':''}" onclick="setCrewUiTab('moment')">Crew-Moment</button><button class="${crewUiTab==='ranking'?'active':''}" onclick="setCrewUiTab('ranking')">Rangliste</button></div>`}
 async function groupHTML(){
  let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk),body='';
- if(crewUiTab==='feed')body=`<div class="mockCrewFeed">${await feedHTML(feedVisibleCount)}</div>`;
- if(crewUiTab==='moment')body=`<div class="mockMomentWrap">${crewMomentHTML()}${c?`<div class="mockLastWinner"><span>🏆</span><div><small>LETZTER WOCHENABSCHLUSS</small><b>${escapeHtml(firstName(c.p))} · ${c.pts} P</b><p>KW ${isoWeek(d)}</p></div><strong>👑</strong></div>`:''}</div>`;
- if(crewUiTab==='ranking')body=`<div class="mockRankingStack"><section class="mockWhiteCard"><div class="mockCardTitle"><h2>Diese Woche</h2></div>${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</section><section class="mockWhiteCard"><div class="mockCardTitle"><h2>Dieser Monat</h2></div>${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</section></div>`;
- return `<section class="mockMobileScreen crewMockScreen">
-  <div class="mockScene mockSceneCrew">
-   <div class="mockPageTitle"><div><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div><button class="mockIconBtn" onclick="go('more')">♙＋</button></div>
-   ${await crewSnapshotHTML()}
-  </div>
-  <div class="mockSheet crewMockSheet">
-   <div class="mockSegmented">${crewTabsHTML()}</div>
-   ${body}
-  </div>
+ if(crewUiTab==='feed')body=`<div class="crewFeedGrid">${await feedHTML(feedVisibleCount)}</div>`;
+ if(crewUiTab==='moment')body=`<div class="crewMomentGrid"><div>${crewMomentHTML()}</div>${c?`<article class="movoCard winnerCard"><span>🏆</span><div><small>LETZTER WOCHENABSCHLUSS</small><h3>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h3><p>KW ${isoWeek(d)}</p></div><strong>👑</strong></article>`:''}</div>`;
+ if(crewUiTab==='ranking')body=`<div class="rankingColumns"><section class="movoCard"><div class="cardTitle"><h2>Diese Woche</h2></div>${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</section><section class="movoCard"><div class="cardTitle"><h2>Dieser Monat</h2></div>${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</section></div>`;
+ return `<section class="appScreen crewScreen">
+  <div class="compactHero scenicHero"><div class="pageHeroTitle"><div><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div><button class="heroIconBtn" onclick="go('more')">${movoIcon('crew')}</button></div>${await crewSnapshotHTML()}</div>
+  <div class="screenBody"><div class="movoTabsPanel">${crewTabsHTML()}</div>${body}</div>
  </section>`;
 }
 
@@ -1625,9 +1638,9 @@ async function challengesHTML(){
  </div>${pick}<div class="mockQuoteCard">“ Gemeinsam schaffen wir mehr,<br>als jeder allein. ♡ ”</div>`;
  if(challengeUiTab==='proposals')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><div><small>CREW-IDEEN</small><h2>Vorschläge & Abstimmungen</h2></div><button class="mockPrimaryMini" onclick="openProposal()">＋ Vorschlag</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()||'<div class="mockEmpty">Aktuell keine offenen Vorschläge.</div>'}</section>`;
  if(challengeUiTab==='pool')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><div><small>IDEEN FÜR SPÄTER</small><h2>Challenge-Pool</h2></div><span>${challengePool.filter(poolAvailable).length} verfügbar</span></div>${challengePoolHTML()}</section>`;
- return `<section class="mockMobileScreen challengeMockScreen">
-  <div class="mockScene mockSceneChallenge"><div class="mockPageTitle"><div><h1>Challenges</h1><p>Kleine Challenges. Große Wirkung.</p></div><button class="mockIconBtn" onclick="openProposal()">＋</button></div></div>
-  <div class="mockSheet challengeMockSheet">
+ return `<section class="appScreen challengeScreen">
+  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Challenges</h1><p>Kleine Challenges. Große Wirkung.</p></div><button class="mockIconBtn" onclick="openProposal()">＋</button></div></div>
+  <div class="screenBody challengeBody">
    <div class="mockSegmented">${challengeTabsHTML()}</div>
    ${body}
   </div>
@@ -1715,9 +1728,9 @@ async function rewardsHTML(){
  }else{
   body=`<section class="mockWhiteCard"><div class="mockCardTitle"><h2>Meine Einlösungen</h2></div>${ownWishHistoryHTML()}${mine.length?`<div class="mockOpenRewards">${mine.map(r=>`<div><span>🎁</span><div><b>${escapeHtml(rewardName(r.reward_key))}</b><small>${r.month_key||''}</small></div></div>`).join('')}</div>`:'<div class="mockEmpty">Noch keine offenen Belohnungen.</div>'}</section>`;
  }
- return `<section class="mockMobileScreen rewardsMockScreen">
-  <div class="mockScene mockSceneRewards"><div class="mockPageTitle"><div><h1>Rewards</h1><p>Dein Einsatz wird belohnt.</p></div><div class="mockPointsPill">💎 ${life} P</div></div></div>
-  <div class="mockSheet rewardsMockSheet">
+ return `<section class="appScreen rewardsScreen">
+  <div class="compactHero scenicHero rewardHero"><div class="mockPageTitle"><div><h1>Rewards</h1><p>Dein Einsatz wird belohnt.</p></div><div class="mockPointsPill">💎 ${life} P</div></div></div>
+  <div class="screenBody rewardsBody">
    <div class="mockSegmented">${rewardTabsHTML()}</div>
    <section class="mockCreditStrip"><div><small>Wunsch-Guthaben</small><b>${euro(bal)}</b><span>${remaining} P bis +5,00 €</span></div><button ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></section>
    ${body}
@@ -1738,17 +1751,17 @@ function profileTabsHTML(){return `<div class="movoTabs profileTabs"><button cla
 async function meHTML(){
  let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);
  let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=lifetimePoints(me.id),body='';
- if(profileUiTab==='stats')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><h2>Statistiken</h2></div><div class="mockStatList">${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></section>${trend4(me.id)}<details class="mockCompactDetails"><summary>📊 Monatsrückblick & Hall of Fame <span>›</span></summary><div>${monthlyReviewHTML()}${hallOfFameHTML()}</div></details>`;
- if(profileUiTab==='badges')body=`<section class="mockWhiteCard mockBadgesCard"><div class="mockCardTitle"><h2>Deine Badges</h2><span>${achievements.filter(a=>a.user_id===me.id).length} Achievements</span></div>${mockBadgeGridHTML()}<div class="mockProfileQuote">Disziplin ist die Brücke<br>zwischen Zielen und Erfolgen.</div></section>`;
- if(profileUiTab==='settings')body=`<section class="mockWhiteCard settingsMock">${await settingsHTML()}</section><details class="mockCompactDetails"><summary>📝 Meine Einträge – aktueller Monat <span>›</span></summary><div>${await ownEntriesHTML()}</div></details>`;
- return `<section class="mockMobileScreen profileMockScreen">
-  <div class="mockScene mockSceneProfile"><div class="mockPageTitle"><div><h1>Dein Profil</h1><p>Dein Weg. Deine Erfolge.</p></div><button class="mockIconBtn" onclick="openProfile()">⚙</button></div></div>
-  <div class="mockSheet profileMockSheet">
-   <section class="mockProfileCard">${av}<div class="mockProfileName"><h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)} <button onclick="openProfile()">✎</button></h2><span>@${escapeHtml(me.username)}</span></div>
-    <div class="mockProfileStats"><div><span>🔥</span><b>${streak()}</b><small>Tage<br>Streak</small></div><div><span>⭐</span><b>${pts}</b><small>Gesamt-<br>punkte</small></div><div><span>🏆</span><b>${achievements.filter(a=>a.user_id===me.id).length}</b><small>Achievements</small></div></div>
-    <div class="mockSegmented">${profileTabsHTML()}</div>
-   </section>
-   ${body}
+ if(profileUiTab==='stats')body=`<section class="movoCard profileStatsCard"><div class="cardTitle"><h2>Statistiken</h2><span>Diese Woche</span></div><div class="mockStatList">${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></section>${trend4(me.id)}<details class="movoDetails"><summary>📊 Monatsrückblick & Hall of Fame <span>›</span></summary><div>${monthlyReviewHTML()}${hallOfFameHTML()}</div></details>`;
+ if(profileUiTab==='badges')body=`<section class="movoCard"><div class="cardTitle"><h2>Deine Badges</h2><span>${achievements.filter(a=>a.user_id===me.id).length} Achievements</span></div>${mockBadgeGridHTML()}<div class="profileQuote">Disziplin ist die Brücke<br>zwischen Zielen und Erfolgen.</div></section>`;
+ if(profileUiTab==='settings')body=`<section class="movoCard settingsMock">${await settingsHTML()}</section><details class="movoDetails"><summary>📝 Meine Einträge – aktueller Monat <span>›</span></summary><div>${await ownEntriesHTML()}</div></details>`;
+ return `<section class="appScreen profileScreen">
+  <div class="compactHero scenicHero"><div class="pageHeroTitle"><div><h1>Dein Profil</h1><p>Dein Weg. Deine Erfolge.</p></div><button class="heroIconBtn" onclick="openProfile()">${movoIcon('settings')}</button></div></div>
+  <div class="screenBody profileBody">
+   <aside class="profileIdentity movoCard">${av}<div class="profileName"><h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)} <button onclick="openProfile()">✎</button></h2><span>@${escapeHtml(me.username)}</span></div>
+    <div class="profileKpis"><div><span>🔥</span><b>${streak()}</b><small>Tage Streak</small></div><div><span>⭐</span><b>${pts}</b><small>Gesamtpunkte</small></div><div><span>🏆</span><b>${achievements.filter(a=>a.user_id===me.id).length}</b><small>Achievements</small></div></div>
+    <div class="movoTabsPanel">${profileTabsHTML()}</div>
+   </aside>
+   <div class="profileContent">${body}</div>
   </div>
  </section>`;
 }
@@ -1908,9 +1921,9 @@ function rulesStreakCoreHTML(){return `<p>Ein Streak-Tag muss qualifiziert sein:
 function rulesChallengeCoreHTML(){return `<p><b>Daily:</b> +1 P · <b>Weekly:</b> +5 P · <b>Crew-Mission:</b> +15 P je Mitglied bei Erfolg. Wochenchallenge und Crew-Mission werden aus dem aktiven Pool gewählt bzw. zugeordnet.</p>`}
 
 function rulesHTML(){
- return `<section class="mockMobileScreen rulesMockScreen">
-  <div class="mockScene mockSceneSecondary"><div class="mockPageTitle"><div><h1>Regeln</h1><p>Fair. Einfach. Gemeinsam.</p></div></div></div>
-  <div class="mockSheet rulesMockSheet">
+ return `<section class="appScreen rulesScreen">
+  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Regeln</h1><p>Fair. Einfach. Gemeinsam.</p></div></div></div>
+  <div class="screenBody rulesBody">
    <section class="mockWhiteCard mockRuleList">
     <details><summary><span>🛡️</span><b>Punkte sammeln</b><em>›</em></summary><div>${rulesPointsCoreHTML()}</div></details>
     <details><summary><span>🔥</span><b>Streak & Movo-Bonus</b><em>›</em></summary><div>${rulesStreakCoreHTML()}</div></details>
@@ -1928,16 +1941,16 @@ function rulesHTML(){
 function historyHTML(){
  let ms=completedMonths();if(!historyMonth||!ms.includes(historyMonth))historyMonth=ms[0]||null;
  let content=historyMode==='all'?allTimeView():ms.length?`<div class="mockMonthNav"><button onclick="shiftHistory(-1)">‹</button><b>${monthLabel(historyMonth)}</b><button onclick="shiftHistory(1)">›</button><select onchange="setHistoryMonth(this.value)">${ms.map(m=>`<option value="${m}" ${m===historyMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}</select></div>${monthView(historyMonth)}`:'<div class="mockEmpty">Nach dem ersten abgeschlossenen Monat erscheint hier automatisch der Monatsrückblick.</div>';
- return `<section class="mockMobileScreen historyMockScreen">
-  <div class="mockScene mockSceneSecondary"><div class="mockPageTitle"><div><h1>Historie</h1><p>Deine bisherigen Erfolge.</p></div></div></div>
-  <div class="mockSheet historyMockSheet"><div class="mockSegmented"><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div><section class="mockWhiteCard historyContentMock">${content}</section></div>
+ return `<section class="appScreen historyScreen">
+  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Historie</h1><p>Deine bisherigen Erfolge.</p></div></div></div>
+  <div class="screenBody historyBody"><div class="mockSegmented"><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div><section class="mockWhiteCard historyContentMock">${content}</section></div>
  </section>`;
 }
 
 async function moreHTML(){
- return `<section class="mockMobileScreen moreMockScreen">
-  <div class="mockScene mockSceneMore"><div class="mockPageTitle"><div><h1>Mehr</h1><p>Entdecke alle Bereiche.</p></div></div></div>
-  <div class="mockSheet moreMockSheet">
+ return `<section class="appScreen moreScreen">
+  <div class="compactHero scenicHero eveningHero"><div class="mockPageTitle"><div><h1>Mehr</h1><p>Entdecke alle Bereiche.</p></div></div></div>
+  <div class="screenBody moreBody">
    <section class="mockWhiteCard mockMoreList">
     <button onclick="go('history')"><span>◷</span><b>Historie</b><em>›</em></button>
     <button onclick="go('rewards')"><span>◇</span><b>Rewards</b><em>›</em></button>
@@ -1958,9 +1971,9 @@ async function adminHTML(){
  let pendingHtml=pending.length?pending.map(p=>`<div class="mockAdminUser"><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><small>@${escapeHtml(p.username)}</small></div><button onclick="setApproval('${p.id}',true)">Freischalten</button></div>`).join(''):'<div class="mockAdminEmpty">Keine offenen Registrierungen.</div>';
  let activeHtml=active.map(p=>`<div class="mockAdminUser"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><small>@${escapeHtml(p.username)}</small></div>${p.is_admin?'<em>Admin</em>':`<button onclick="setApproval('${p.id}',false)">•••</button>`}</div>`).join('');
  let propCount=proposals.filter(p=>p.status==='voting').length,rewardCount=rewardProposals.filter(p=>p.status==='voting').length;
- return `<section class="mockMobileScreen adminMockScreen">
-  <div class="mockScene mockSceneSecondary"><div class="mockPageTitle"><div><h1>Admin</h1><p>Verwalte deine Crew.</p></div></div></div>
-  <div class="mockSheet adminMockSheet">
+ return `<section class="appScreen adminScreen">
+  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Admin</h1><p>Verwalte deine Crew.</p></div></div></div>
+  <div class="screenBody adminBody">
    <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Offene Registrierungen</h2><span>${pending.length}</span></div>${pendingHtml}</section>
    <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Challenge-Vorschläge</h2><span>${propCount}</span></div><div class="mockAdminEmpty">${propCount?'Offene Vorschläge unten prüfen.':'Keine offenen Vorschläge.'}</div></section>
    <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Belohnungsvorschläge</h2><span>${rewardCount}</span></div><div class="mockAdminEmpty">${rewardCount?'Offene Vorschläge unten prüfen.':'Keine offenen Vorschläge.'}</div></section>
@@ -2247,7 +2260,7 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.22.1';
+const FIT4US_VERSION='1.23.0';
 let fit4usReloading=false;
 
 function cleanFit4UsUrl(){
