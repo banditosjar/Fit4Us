@@ -1,11 +1,11 @@
 
-const CFG=window.FIT4US_CONFIG||{};
+const CFG=window.MOVO_CONFIG||window.FIT4US_CONFIG||{};
 const configured=CFG.supabaseUrl && !CFG.supabaseUrl.startsWith('DEINE_') && CFG.supabaseKey && !CFG.supabaseKey.startsWith('DEIN_');
-let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], feedDayPosts=[], currentView='home', crewUiTab='feed', challengeUiTab='current', profileUiTab='stats', rewardUiTab='rewards', pendingProof=null, pendingAvatar=null, signedCache={};
+let sb=null, session=null, me=null, profiles=[], entries=[], reactions=[], rewardChoices=[], challengePool=[], proposals=[], proposalVotes=[], ratings=[], groupAssignments=[], dailyAssignments=[], dailyUserAssignments=[], dailyCompletions=[], achievements=[], challengeCompletions=[], adminAudit=[], rewardPool=[], rewardProposals=[], rewardProposalVotes=[], rewardPoolVotes=[], feedComments=[], witnessConfirmations=[], userPreferences=[], wishCreditTransactions=[], feedReactions=[], weeklyChoiceWindows=[], feedDayPosts=[], currentView='home', crewUiTab='feed', challengeUiTab='current', profileUiTab='overview', rewardUiTab='rewards', pendingProof=null, pendingAvatar=null, signedCache={};
 let realtimeRefreshTimer=null,realtimeRefreshRunning=false,realtimeRefreshPending=false;
 let bootInFlight=null,bootUserId=null,authReady=false;
 let realtimeChannels=[];
-let feedVisibleCount=8,feedCommentOpen=new Set();
+let feedVisibleCount=8,feedCommentOpen=new Set(),challengePoolSearch='',challengePoolType='all',challengePoolCategory='all',reactionHoldTimer=null,reactionHoldOpened=false,feedTapState={id:null,time:0},entryHubDate=null;
 
 const ACTIVITIES={
  walk:{name:'Spaziergang',icon:'🚶',mode:'time',step:15,points:1,distance:true},
@@ -78,6 +78,8 @@ function activityPoints(a,minutes,distance){let x=ACTIVITIES[a]; if(!x)return 0;
 function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function toast(msg){let t=document.createElement('div');t.textContent=msg;t.style='position:fixed;z-index:999;left:50%;bottom:95px;transform:translateX(-50%);background:#10283d;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 8px 25px #0003';document.body.append(t);setTimeout(()=>t.remove(),2500)}
 function showError(el,msg){el.innerHTML=`<div class="error">${escapeHtml(msg)}</div>`}
+function floatPoints(amount){amount=+amount||0;if(amount<=0)return;let n=document.createElement('div');n.className='pointFloat';n.textContent=`+${amount} P`;document.body.append(n);setTimeout(()=>n.remove(),1100)}
+
 function firstName(p){return p?.first_name||'User'}
 function own(e){return e.user_id===me?.id}
 function currentMonthEntries(){let mk=monthKey();return entries.filter(e=>e.entry_date.startsWith(mk))}
@@ -308,13 +310,14 @@ async function avatarHTML(p,size=42){
 }
 
 
-const REMEMBER_LOGIN_KEY='fit4us_remember_login';
+const REMEMBER_LOGIN_KEY='movo_remember_login';
+if(localStorage.getItem(REMEMBER_LOGIN_KEY)==null&&localStorage.getItem('fit4us_remember_login')!=null)localStorage.setItem(REMEMBER_LOGIN_KEY,localStorage.getItem('fit4us_remember_login'));
 function rememberLoginEnabled(){
  let v=localStorage.getItem(REMEMBER_LOGIN_KEY);
  return v===null?true:v==='1';
 }
 function setRememberLogin(enabled){localStorage.setItem(REMEMBER_LOGIN_KEY,enabled?'1':'0')}
-const fit4usAuthStorage={
+const movoAuthStorage={
  getItem(key){
   return rememberLoginEnabled()?localStorage.getItem(key):sessionStorage.getItem(key);
  },
@@ -326,8 +329,8 @@ const fit4usAuthStorage={
 };
 
 async function init(){
- if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
- sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:fit4usAuthStorage}});
+ if(!configured){$('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-wordmark-dark.svg"><div class="error"><b>Supabase noch nicht verbunden.</b><br><br>Öffne <code>config.js</code> und trage Project URL + publishable/anon Key ein. Danach <code>supabase-setup.sql</code> einmal im Supabase SQL Editor ausführen.</div></div></div>`;return}
+ sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,storage:movoAuthStorage}});
  sb.auth.onAuthStateChange((evt,s)=>{
   session=s;
   if(evt==='SIGNED_OUT'||!s){authReady=true;bootInFlight=null;bootUserId=null;me=null;stopRealtime();showAuth();return}
@@ -340,7 +343,7 @@ async function init(){
  if(session)await safeBootApp('startup');else showAuth();
 }
 function showAuth(){
- $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-logo.png">
+ $('#boot').innerHTML=`<div class="auth"><div class="authCard"><img class="authLogo" src="assets/movo-wordmark-dark.svg">
  <div class="tabs"><button id="tabLogin" class="active" onclick="authTab('login')">Anmelden</button><button id="tabReg" onclick="authTab('reg')">Konto erstellen</button></div>
  <div id="authBody"></div></div></div>`; authTab('login')
 }
@@ -399,7 +402,7 @@ async function loadOwnProfileWithRetry(userId,attempts=3){
 function showLoadProblem(message='Movo konnte deine Daten gerade nicht vollständig laden.'){
  stopRealtime();
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-  <img class="authLogo" src="assets/movo-logo.png"><div style="font-size:44px">📡</div>
+  <img class="authLogo" src="assets/movo-wordmark-dark.svg"><div style="font-size:44px">📡</div>
   <h2>Verbindung kurz unterbrochen</h2><p>${escapeHtml(message)}</p>
   <div class="notice small" style="text-align:left"><b>Du bleibst angemeldet.</b><br>Movo zeigt bei einem kurzen Ladefehler keine leeren Ersatzdaten mehr an.</div>
   <div class="grid" style="margin-top:18px"><button class="cta" onclick="safeBootApp('manual-retry',true)">Erneut laden</button><button class="secondary" onclick="logout()">Abmelden</button></div>
@@ -412,7 +415,7 @@ async function safeBootApp(reason='unknown',force=false){
  bootUserId=uid;
  bootInFlight=(async()=>{
   try{return await bootApp(reason)}
-  catch(err){console.error('Fit4Us boot failed:',reason,err);showLoadProblem('Deine Sitzung ist weiterhin gültig, aber die Movo-Daten konnten gerade nicht vollständig geladen werden. Bitte erneut versuchen.')}
+  catch(err){console.error('Movo boot failed:',reason,err);showLoadProblem('Deine Sitzung ist weiterhin gültig, aber die Movo-Daten konnten gerade nicht vollständig geladen werden. Bitte erneut versuchen.')}
   finally{bootInFlight=null}
  })();
  return bootInFlight;
@@ -436,7 +439,7 @@ async function bootApp(reason='unknown'){
 }
 function showPendingApproval(){
  $('#boot').innerHTML=`<div class="auth"><div class="authCard" style="text-align:center">
-   <img class="authLogo" src="assets/movo-logo.png">
+   <img class="authLogo" src="assets/movo-wordmark-dark.svg">
    <div style="font-size:48px">🔒</div>
    <h2>Freischaltung ausstehend</h2>
    <p>Hallo <b>${escapeHtml(me.first_name)}</b>! Dein Movo-Konto wurde erstellt, muss aber zuerst von einem Admin freigeschaltet werden.</p>
@@ -503,8 +506,8 @@ const DEFAULT_PREFS={
 };
 function prefFor(userId=me?.id){return {...DEFAULT_PREFS,...(userPreferences.find(x=>x.user_id===userId)||{})}}
 function applyTheme(){
- let t=prefFor()?.theme||localStorage.getItem('fit4us-theme')||'system';
- localStorage.setItem('fit4us-theme',t);
+ let t=prefFor()?.theme||localStorage.getItem('movo-theme')||localStorage.getItem('fit4us-theme')||'system';
+ localStorage.setItem('movo-theme',t);
  let dark=t==='dark'||(t==='system'&&window.matchMedia?.('(prefers-color-scheme: dark)').matches);
  document.documentElement.dataset.theme=dark?'dark':'light';
 }
@@ -520,8 +523,8 @@ async function changeTheme(v){await savePreferencePatch({theme:v});toast('Darste
 async function togglePref(key,val){await savePreferencePatch({[key]:!!val});await render()}
 function feedAllowed(userId,type){let p=prefFor(userId);return type==='activity'?p.feed_activity:type==='food'?p.feed_food:type==='steps'?p.feed_steps:type==='daily'?p.feed_daily:type==='achievement'?p.feed_achievements:true}
 
-function getOutbox(){try{return JSON.parse(localStorage.getItem('fit4us-outbox')||'[]')}catch{return []}}
-function setOutbox(q){localStorage.setItem('fit4us-outbox',JSON.stringify(q))}
+function getOutbox(){try{return JSON.parse(localStorage.getItem('movo-outbox')||localStorage.getItem('fit4us-outbox')||'[]')}catch{return []}}
+function setOutbox(q){localStorage.setItem('movo-outbox',JSON.stringify(q))}
 function queueEntry(payload,mode='insert',id=null){let q=getOutbox();q.push({id:crypto.randomUUID?.()||String(Date.now()+Math.random()),kind:'entry',mode,entryId:id,payload,queuedAt:new Date().toISOString()});setOutbox(q)}
 function outboxHTML(){let n=getOutbox().length;return n?`<div class="notice section outboxNotice"><b>📡 ${n} Eintrag${n===1?'':'e'} wartet${n===1?'':'n'} auf Synchronisierung.</b><button class="react" onclick="flushOutbox(true)">Jetzt versuchen</button></div>`:''}
 function likelyOffline(err){return !navigator.onLine||/fetch|network|offline|failed to fetch/i.test(String(err?.message||err||''))}
@@ -555,7 +558,7 @@ function celebrate(title,text,emoji='🎉'){
 function maybeCelebrate(before){
  let after=celebrationSnapshot(),cross=MILESTONES.find(m=>before.pts<m&&after.pts>=m);
  if(cross){notifyUser(me.id,'🎁 Neue Belohnung freigeschaltet',`${cross} Punkte diesen Monat – du kannst jetzt eine Belohnung auswählen.`,'rewards',true);return celebrate(`${cross} Punkte erreicht!`,'Du hast eine neue Belohnung freigeschaltet.','🎁')}
- let sm=STREAK_MARKS.find(x=>before.st<x[0]&&after.st>=x[0]);if(sm)return celebrate(`${sm[0]}-Tage-Streak!`,`+${sm[1]} Bonuspunkte für deine Serie.`,'🔥');
+ let sm=STREAK_MARKS.find(x=>x[0]>=7&&before.st<x[0]&&after.st>=x[0]);if(sm)return celebrate(`${sm[0]}-Tage-Streak!`,`+${sm[1]} Bonuspunkte für deine Serie.`,'🔥');
  if(after.maxSteps>before.maxSteps&&after.maxSteps>=10000)return celebrate('Neuer Schritt-Rekord!',`${after.maxSteps.toLocaleString('de-DE')} Schritte – dein neuer persönlicher Bestwert.`,'👟');
  if(!before.wcDone&&after.wcDone)return celebrate('Wochenchallenge geschafft!','Stark – die Wochenchallenge ist im Ziel.','🎯');
  if(!before.gcDone&&after.gcDone){notifyGroup('Monatsmission geschafft 🎉',`${firstName(me)} hat die Crew-Mission ins Ziel gebracht.`);return celebrate('Crew-Mission geschafft!','Ihr habt die Monatsmission gemeinsam erreicht.','👥')}
@@ -582,15 +585,17 @@ function personalRecordsHTML(){let r=personalRecords();return `<div class="grid 
 
 function quickTemplates(){let cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);let from=fmtDate(cutoff),map=new Map();entries.filter(e=>e.user_id===me.id&&e.kind==='activity'&&e.entry_date>=from).forEach(e=>{let min=Math.max(5,Math.round((+e.minutes||0)/5)*5),dist=e.distance?Math.round(+e.distance*10)/10:null,key=`${e.activity}|${min}|${dist||''}`,x=map.get(key)||{activity:e.activity,minutes:min,distance:dist,count:0};x.count++;map.set(key,x)});return [...map.values()].sort((a,b)=>b.count-a.count).slice(0,3)}
 function quickTemplatesHTML(){let q=quickTemplates();if(!q.length)return '';return `<div class="sectionTitle"><h2>⚡ Schnell eintragen</h2><span class="pill">aus deinen letzten 30 Tagen</span></div><div class="quickTemplates">${q.map(x=>`<button class="quickTemplate" onclick="openQuickTemplate('${x.activity}',${x.minutes},${x.distance??'null'})"><span>${ACTIVITIES[x.activity]?.icon||'⚡'}</span><b>${escapeHtml(ACTIVITIES[x.activity]?.name||'Aktivität')}</b><small>${x.minutes} Min.${x.distance?` · ${x.distance} km`:''}</small></button>`).join('')}</div>`}
-function openQuickTemplate(activity,minutes,distance){
- let a=ACTIVITIES[activity],b=entryDateBounds();
- $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard">
-  <div class="modalHead"><h2>${a?.icon||'⚡'} Schnell eintragen</h2><button class="x" onclick="closeModal()">×</button></div>
-  <p><b>${escapeHtml(a?.name||'Aktivität')}</b> · ${minutes} Min.${distance?` · ${distance} km`:''}</p>
-  <div class="field"><label>Datum</label><input id="quickEntryDate" type="date" min="${b.min}" max="${b.max}" value="${b.max}" required><div class="tiny muted">Heute oder bis zu 3 Tage rückwirkend.</div></div>
-  <div class="notice small">Zeuge: <b>Ehrenkodex</b> – dafür ist keine Bestätigung nötig.</div>
-  <button class="cta section" onclick="saveQuickActivity('${activity}',${minutes},${distance??'null'})">Jetzt eintragen</button>
- </div></div>`;
+
+function openEntryHub(preferred=null,date=null){
+ let b=entryDateBounds();entryHubDate=date||entryHubDate||b.max;let q=quickTemplates();
+ $('#modalRoot').innerHTML=`<div class="modal sheetModal" onclick="if(event.target===this)closeModal()"><div class="modalCard entryHubSheet"><div class="modalHead"><div><small>DEIN TAG</small><h2>Was möchtest du eintragen?</h2></div><button class="x" onclick="closeModal()">${movoIcon('close')}</button></div><div class="field"><label>Datum</label><input id="entryHubDate" type="date" min="${b.min}" max="${b.max}" value="${entryHubDate}" onchange="entryHubDate=this.value"></div><div class="entryHubChoices"><button onclick="entryHubChoose('activity')"><span>${movoIcon('activity')}</span><b>Aktivität</b><small>Sport, Spaziergang & mehr</small></button><button onclick="entryHubChoose('steps')"><span>${movoIcon('steps')}</span><b>Schritte</b><small>Tagesstand aktualisieren</small></button><button onclick="entryHubChoose('food')"><span>${movoIcon('food')}</span><b>Ernährung</b><small>Tagesziele abhaken</small></button></div>${q.length?`<div class="hubTemplates"><span>SCHNELLVORLAGEN</span>${q.map(x=>`<button onclick="entryHubQuick('${x.activity}',${x.minutes},${x.distance??'null'})"><b>${escapeHtml(ACTIVITIES[x.activity]?.name||'Aktivität')}</b><small>${x.minutes} Min.${x.distance?` · ${x.distance} km`:''}</small></button>`).join('')}</div>`:''}</div></div>`;
+ if(preferred)setTimeout(()=>entryHubChoose(preferred),0);
+}
+function entryHubChoose(kind){let d=$('#entryHubDate')?.value||entryHubDate||entryDateBounds().max;entryHubDate=d;closeModal();openEntry(kind,null,d)}
+function entryHubQuick(activity,minutes,distance){let d=$('#entryHubDate')?.value||entryHubDate||entryDateBounds().max;closeModal();openQuickTemplate(activity,minutes,distance,d)}
+
+function openQuickTemplate(activity,minutes,distance,dateOverride=null){
+ let a=ACTIVITIES[activity],b=entryDateBounds(),d=dateOverride||b.max;$('#modalRoot').innerHTML=`<div class="modal sheetModal"><div class="modalCard entrySheet"><div class="modalHead"><div><small>SCHNELLVORLAGE</small><h2>${escapeHtml(a?.name||'Aktivität')}</h2></div><button class="x" onclick="closeModal()">${movoIcon('close')}</button></div><p>${minutes} Min.${distance?` · ${distance} km`:''}</p><div class="field"><label>Datum</label><input id="quickEntryDate" type="date" min="${b.min}" max="${b.max}" value="${d}" required></div><div class="notice small">Zeuge: <b>Ehrenkodex</b></div><button class="cta section" onclick="saveQuickActivity('${activity}',${minutes},${distance??'null'})">Jetzt eintragen</button></div></div>`;
 }
 async function saveQuickActivity(activity,minutes,distance){
  let before=celebrationSnapshot(),entryDate=selectedEntryDate('quickEntryDate'),
@@ -608,7 +613,7 @@ function almostThereHTML(){let items=[],sel=currentSelection(),c=sel?WEEKLY.find
 function todayEnoughHTML(){let p=pointsCollectedOnDate(fmtDate()),dc=dailyCompletedBy(me.id);if(p>=8||((todayEntry('steps')?.steps||0)>=10000&&todayActivityMinutes()>=30))return `<div class="todayEnough"><b>🌿 Starker Tag.</b><span>Dein Streak ist gesichert und du hast heute ${p} Punkt${p===1?'':'e'} gesammelt. Alles Weitere ist Bonus.</span></div>`;return ''}
 function previousWeekSummary(userId=me.id){let d=startOfWeek();d.setDate(d.getDate()-7),wk=weekKey(d),from=wk,to=fmtDate(endOfWeek(d)),es=entriesForWeek(wk).filter(e=>e.user_id===userId),days=0;for(let x=new Date(from+'T12:00');fmtDate(x)<=to;x.setDate(x.getDate()+1))if(activeDay(fmtDate(x),userId))days++;return {wk,pts:pointsBetween(userId,from,to),steps:es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),minutes:es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),days}}
 function weeklyReviewHTML(){let w=previousWeekSummary();return `<div class="card pad"><div class="challengeTop"><h3>📅 Deine letzte Woche</h3><span class="pill">KW ${isoWeek(new Date(w.wk+'T12:00'))}</span></div><div class="grid kpis section"><div class="kpi"><b>${w.pts}</b><div class="tiny muted">Punkte</div></div><div class="kpi"><b>${w.steps.toLocaleString('de-DE')}</b><div class="tiny muted">Schritte</div></div><div class="kpi"><b>${w.minutes}</b><div class="tiny muted">Aktivmin.</div></div></div></div>`}
-function crewMomentHTML(){let es=currentWeekEntries(),steps=es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),mins=es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),activeUsers=profiles.filter(p=>p.approved&&es.some(e=>e.user_id===p.id&&(+e.points||0)>0)).length;let text=steps>=100000?`Ihr habt diese Woche schon ${steps.toLocaleString('de-DE')} Schritte gesammelt.`:mins>=300?`Die Crew kommt diese Woche auf ${mins} aktive Minuten.`:`${activeUsers} von ${profiles.filter(p=>p.approved).length} sind diese Woche bereits im Streak aktiv.`;return `<div class="card crewMoment"><span>❤️</span><div><small>CREW-MOMENT DER WOCHE</small><b>${text}</b></div></div>`}
+function crewMomentHTML(){let es=currentWeekEntries(),steps=es.filter(e=>e.kind==='steps').reduce((s,e)=>s+(+e.steps||0),0),mins=es.filter(e=>e.kind==='activity').reduce((s,e)=>s+(+e.minutes||0),0),activeUsers=profiles.filter(p=>p.approved&&es.some(e=>e.user_id===p.id&&(+e.points||0)>0)).length,text=steps>=100000?`Schon ${steps.toLocaleString('de-DE')} gemeinsame Schritte diese Woche.`:mins>=300?`${mins} aktive Minuten als Crew – stark.`:`${activeUsers} von ${profiles.filter(p=>p.approved).length} sind diese Woche bereits aktiv.`;return `<article class="crewMomentBlock"><span>${movoIcon('heart')}</span><div><small>CREW-MOMENT</small><b>${text}</b></div></article>`}
 
 function witnessStatusFor(entryId){return witnessConfirmations.find(x=>x.entry_id===entryId)}
 function witnessBadge(e){if(!e.witness_user_id)return `<span class="witnessBadge honor">🤝 Ehrenkodex</span>`;let w=witnessStatusFor(e.id),name=escapeHtml(e.witness||firstName(profileById(e.witness_user_id)));if(!w||w.status==='pending')return `<span class="witnessBadge pending">👀 ${name}: offen</span>`;if(w.status==='confirmed')return `<span class="witnessBadge confirmed">✓ von ${name} bestätigt</span>`;return `<span class="witnessBadge declined">? ${name} nicht bestätigt</span>`}
@@ -616,13 +621,7 @@ function pendingWitnessHTML(){let req=witnessConfirmations.filter(x=>x.witness_u
 async function answerWitness(id,status){let w=witnessConfirmations.find(x=>x.id===id);if(!w)return;let {data,error}=await sb.from('witness_confirmations').update({status,responded_at:new Date().toISOString()}).eq('id',id).eq('witness_user_id',me.id).select().single();if(error)return toast(error.message);let e=entries.find(x=>x.id===w.entry_id);if(e)prefFor(e.user_id).notify_witness&&notifyUser(e.user_id,status==='confirmed'?'Zeuge bestätigt ✓':`${firstName(me)} konnte den Eintrag nicht bestätigen`,`${firstName(me)} hat auf deine Zeugenanfrage reagiert.`,'witness');await loadData();await render();toast(status==='confirmed'?'Bestätigt ✓':'Antwort gespeichert')}
 
 function commentsFor(type,id){return feedComments.filter(c=>c.item_type===type&&c.item_id===id).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)))}
-function commentsHTML(type,id,ownerId){
- let cs=commentsFor(type,id),key=`${type}:${id}`,open=feedCommentOpen.has(key);
- return `<div class="feedSocial">
-  <button class="socialAction ${open?'active':''}" onclick="toggleFeedComments('${type}','${id}')">💬 ${cs.length||''}<span>${cs.length?'Kommentare':'Kommentieren'}</span></button>
- </div>
- ${open?`<div class="comments">${cs.map(c=>{let p=profileById(c.user_id);return `<div class="comment"><b>${escapeHtml(firstName(p))}</b><span>${escapeHtml(c.comment)}</span>${c.user_id===me.id?`<button onclick="deleteComment('${c.id}')">×</button>`:''}</div>`}).join('')}<form onsubmit="addComment(event,'${type}','${id}','${ownerId||''}')"><input maxlength="240" placeholder="Kommentar schreiben…" required><button>➤</button></form></div>`:''}`;
-}
+function commentsHTML(type,id,ownerId){return commentPreviewHTML(type,id,ownerId)}
 function toggleFeedComments(type,id){let k=`${type}:${id}`;feedCommentOpen.has(k)?feedCommentOpen.delete(k):feedCommentOpen.add(k);render()}
 async function addComment(ev,type,id,ownerId){ev.preventDefault();let input=ev.target.querySelector('input'),comment=input.value.trim();if(!comment)return;let {error}=await sb.from('feed_comments').insert({user_id:me.id,item_type:type,item_id:id,comment});if(error)return toast(error.message);if(ownerId&&ownerId!==me.id)prefFor(ownerId).notify_reactions&&notifyUser(ownerId,`${firstName(me)} hat kommentiert 💬`,comment,'reactions');await loadData();await render()}
 async function deleteComment(id){let {error}=await sb.from('feed_comments').delete().eq('id',id).eq('user_id',me.id);if(error)return toast(error.message);await loadData();await render()}
@@ -678,7 +677,7 @@ async function pushDeviceStatusHTML(){
      </div>`;
  if(hint)return `<div class="pushStatus warning"><b>🔔 Push noch nicht verfügbar</b><span>${escapeHtml(hint)}</span>${rows}</div>`;
  if(ok)return `<div class="pushStatus success"><b>✅ Push auf diesem Gerät technisch aktiv</b><span>${d.platform==='Android'?'Android Web Push ist korrekt registriert. Mit dem Test-Push prüfst du zusätzlich die tatsächliche Zustellung.':'Movo darf echte System-Benachrichtigungen senden.'}</span>${rows}<div class="uploadBtns"><button class="secondary" onclick="sendTestPush()">Test-Push senden</button><button class="secondary danger" onclick="disablePushNotifications()">Auf diesem Gerät deaktivieren</button></div></div>`;
- if(d.perm==='denied')return `<div class="pushStatus error"><b>🔕 Benachrichtigungen blockiert</b><span>Erlaube Mitteilungen in den System-/Browser-Einstellungen und öffne Fit4Us danach erneut.</span>${rows}</div>`;
+ if(d.perm==='denied')return `<div class="pushStatus error"><b>🔕 Benachrichtigungen blockiert</b><span>Erlaube Mitteilungen in den System-/Browser-Einstellungen und öffne Movo danach erneut.</span>${rows}</div>`;
  return `<div class="pushStatus"><b>🔔 Push auf diesem Gerät</b><span>Web Push wird auf iOS und Android unterstützt. Die Diagnose unten zeigt, welcher Teil auf diesem Gerät noch fehlt.</span>${rows}<button class="cta" onclick="enablePushNotifications()">Push-Benachrichtigungen aktivieren</button></div>`;
 }
 async function enablePushNotifications(){
@@ -711,35 +710,23 @@ async function sendTestPush(){
 async function notifyUser(targetUserId,title,body,category='challenges',allowSelf=false){
  if(!targetUserId||(!allowSelf&&targetUserId===me?.id))return false;
  try{
-  let {data,error}=await sb.functions.invoke('push-notification',{body:{target_user_id:targetUserId,title,body,category,url:'https://banditosjar.github.io/Fit4Us/'}});
+  let {data,error}=await sb.functions.invoke('push-notification',{body:{target_user_id:targetUserId,title,body,category,url:'https://banditosjar.github.io/Movo/'}});
   if(error)throw error;return data||true;
  }catch(e){console.warn('push',e);return false}
 }
 async function notifyGroup(title,body,category='challenges'){for(let p of profiles.filter(p=>p.approved&&p.id!==me.id))await notifyUser(p.id,title,body,category)}
 
-async function settingsHTML(){
- let p=prefFor();
- return `<div class="mockSettingsList">
-  <div class="mockSettingsGroup"><h3>Allgemein</h3>
-   <button onclick="openProfile()"><span>♙</span><b>Profil bearbeiten</b><em>›</em></button>
-   <div class="mockSettingsSelect"><span>◐</span><b>Design</b><select onchange="changeTheme(this.value)"><option value="system" ${p.theme==='system'?'selected':''}>System</option><option value="light" ${p.theme==='light'?'selected':''}>Hell</option><option value="dark" ${p.theme==='dark'?'selected':''}>Dunkel</option></select></div>
-  </div>
-  <div class="mockSettingsGroup"><h3>Im Feed teilen</h3>${[['feed_activity','Aktivitäten'],['feed_food','Ernährung'],['feed_steps','Schritte'],['feed_daily','Tageschallenges'],['feed_achievements','Achievements']].map(([k,l])=>`<label><span>${l}</span><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"></label>`).join('')}</div>
-  <div class="mockSettingsGroup"><h3>Benachrichtigungen</h3>${[['notify_reactions','Reaktionen & Kommentare'],['notify_witness','Zeugenanfragen'],['notify_challenges','Challenges & Crew-Missionen'],['notify_votes','Abstimmungen'],['notify_streak','Streak-Erinnerung'],['notify_rewards','Belohnungen & Guthaben']].map(([k,l])=>`<label><span>${l}</span><input type="checkbox" ${p[k]!==false?'checked':''} onchange="togglePref('${k}',this.checked)"></label>`).join('')}</div>
-  <div class="mockSettingsGroup pushGroup">${await pushDeviceStatusHTML()}</div>
-  <button class="mockLogoutBtn" onclick="logout()">Abmelden</button>
- </div>`;
-}
+async function settingsHTML(){let p=prefFor();return `<div class="settingsList"><div class="settingsGroup"><h3>Allgemein</h3><button onclick="openProfile()">${movoIcon('profile')}<span><b>Profil bearbeiten</b><small>Name, Bild und Profilinformationen</small></span><em>›</em></button><label class="settingSelect">${movoIcon('settings')}<span><b>Design</b><small>Light, Dark oder System</small></span><select onchange="changeTheme(this.value)"><option value="system" ${p.theme==='system'?'selected':''}>System</option><option value="light" ${p.theme==='light'?'selected':''}>Hell</option><option value="dark" ${p.theme==='dark'?'selected':''}>Dunkel</option></select></label></div><div class="settingsGroup"><h3>Im Feed teilen</h3>${[['feed_activity','Aktivitäten'],['feed_food','Ernährung'],['feed_steps','Schritte'],['feed_daily','Tageschallenges'],['feed_achievements','Achievements']].map(([k,l])=>`<label class="switchRow"><span>${l}</span><input type="checkbox" ${p[k]?'checked':''} onchange="togglePref('${k}',this.checked)"></label>`).join('')}</div><div class="settingsGroup"><h3>Benachrichtigungen</h3>${[['notify_reactions','Reaktionen & Kommentare'],['notify_witness','Zeugenanfragen'],['notify_challenges','Challenges & Crew-Missionen'],['notify_votes','Abstimmungen'],['notify_streak','Streak-Erinnerung'],['notify_rewards','Belohnungen & Guthaben']].map(([k,l])=>`<label class="switchRow"><span>${l}</span><input type="checkbox" ${p[k]!==false?'checked':''} onchange="togglePref('${k}',this.checked)"></label>`).join('')}</div><div class="settingsGroup pushGroup">${await pushDeviceStatusHTML()}</div><button class="logoutButton" onclick="logout()">Abmelden</button></div>`}
 async function maybeShowOnboarding(){
  if(prefFor().onboarded)return;
- $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-logo.png"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard onboarding"><img class="onboardingBrand" src="assets/movo-wordmark-dark.svg"><div class="celebrateEmoji">👋</div><h2>Willkommen bei Movo</h2><p class="muted">Move. Motivate. Together.</p><div class="onboardingGrid"><div><span>⭐</span><b>Leistung sammeln</b><p>Bewegung, Ernährung und Challenges bringen faire Ranglistenpunkte.</p></div><div><span>🔥</span><b>Dranbleiben</b><p>Ein Streak zählt nur an einem echten aktiven Tag – nicht durch einen einzelnen Haken.</p></div><div><span>🎁</span><b>Belohnungen erreichen</b><p>Streak-Meilensteine geben kleine Movo-Boni für Belohnungen, aber keinen Ranglisten-Vorteil.</p></div></div><button class="cta" onclick="finishOnboarding()">Movo starten</button></div></div>`
 }
 async function finishOnboarding(){await savePreferencePatch({onboarded:true});closeModal()}
 
 function startRealtime(){
  stopRealtime();
  ['entries','reactions','profiles','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows','feed_day_posts'].forEach(table=>{
-  let ch=sb.channel('fit4us-'+table).on('postgres_changes',{event:'*',schema:'public',table},scheduleRealtimeRefresh).subscribe();
+  let ch=sb.channel('movo-'+table).on('postgres_changes',{event:'*',schema:'public',table},scheduleRealtimeRefresh).subscribe();
   realtimeChannels.push(ch)
  })
 }
@@ -762,45 +749,38 @@ function movoIcon(name,cls=''){
   reward:'<path d="M4 10h16v11H4zM2 7h20v4H2zM12 7v14M12 7c-5 0-6-5-3-5 2 0 3 3 3 5Zm0 0c5 0 6-5 3-5-2 0-3 3-3 5Z"/>',
   history:'<circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2M4 4 2 8h4"/>',
   rules:'<path d="M5 4h14v17H5zM8 8h8M8 12h8M8 16h5"/>',
-  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/>'
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/>',
+  more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+  heart:'<path d="M20.8 4.6a5.4 5.4 0 0 0-7.7 0L12 5.7l-1.1-1.1a5.4 5.4 0 0 0-7.7 7.7L12 21l8.8-8.7a5.4 5.4 0 0 0 0-7.7Z"/>',
+  comment:'<path d="M21 12a8 8 0 0 1-8 8H8l-5 3 1.5-5A8 8 0 1 1 21 12Z"/>',
+  smile:'<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+  filter:'<path d="M4 6h16M7 12h10M10 18h4"/>',
+  edit:'<path d="m4 20 4-1 10-10-3-3L5 16zM14 7l3 3"/>',
+  check:'<path d="m5 12 4 4L19 6"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+  camera:'<path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/>',
+  close:'<path d="m6 6 12 12M18 6 6 18"/>',
+  admin:'<path d="M12 3 4 6v6c0 5 3 8 8 10 5-2 8-5 8-10V6zM9 12l2 2 4-4"/>'
  };
  return `<svg class="movoSvg ${cls}" viewBox="0 0 24 24" aria-hidden="true">${icons[name]||icons.home}</svg>`;
 }
 
 function renderShell(){
- $('#boot').innerHTML=`<div class="shell movoShell movo123Shell">
- <aside class="side movoDesktopRail">
-   <button class="sideBrandButton" onclick="go('home')" aria-label="Movo Home">
-    <img src="assets/movo-wordmark-white.svg" class="desktopWordmark" alt="Movo">
-   </button>
-   <div class="desktopNav" id="sideNav"></div>
-   <div class="desktopRailBottom"><div id="sideUser"></div><div class="desktopClaim">Move. Motivate.<br><b>Together.</b></div></div>
- </aside>
- <main class="main movoMain">
-  <header class="top movoDesktopTop">
-   <button class="topBrandBtn" onclick="go('home')"><img src="assets/movo-wordmark-dark.svg" alt="Movo"></button>
-   <div class="topUser" id="topUser"></div>
-  </header>
-  <div id="content" class="pageContent movoPage"></div>
- </main>
- <nav class="bottom movoBottomNav" id="bottomNav"></nav>
- </div><div id="modalRoot"></div>`;
- navs()
+ $('#boot').innerHTML=`<div class="shell movoShell movo124Shell">
+ <aside class="side movoRail"><button class="railBrand" onclick="go('home')"><img src="assets/movo-symbol.svg" alt=""><img class="railWord" src="assets/movo-wordmark-white.svg" alt="Movo"></button><div class="railNav" id="sideNav"></div><div class="railBottom" id="sideUser"></div></aside>
+ <main class="main movoMain"><header class="top movoTopbar"><button class="topBrandBtn" onclick="go('home')"><img src="assets/movo-wordmark-dark.svg" alt="Movo"></button><div id="topUser"></div></header><div id="content" class="pageContent movoPage"></div></main>
+ <nav class="bottom movoBottomNav" id="bottomNav"></nav></div><div id="modalRoot"></div>`;navs();
 }
 async function navs(){
- let nav=[['home','home','Home'],['group','crew','Crew'],['add','plus',''],['challenges','challenge','Challenges'],['me','profile','Profil']];
- $('#bottomNav').innerHTML=nav.map(([id,ic,t])=>id==='add'
-  ?`<button class="plus" aria-label="Eintrag hinzufügen" onclick="openEntry()">${movoIcon('plus')}</button>`
-  :`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')">${movoIcon(ic)}<span>${t}</span></button>`).join('');
- let desktop=[
-  ['home','home','Home'],['group','crew','Crew'],['challenges','challenge','Challenges'],
-  ['rewards','reward','Rewards'],['me','profile','Profil'],['history','history','Historie'],
-  ['rules','rules','Regeln'],['more','settings','Mehr'],...(me?.is_admin?[['admin','settings','Admin']]:[])
- ];
+ const mobile=[['home','home','Home'],['group','crew','Crew'],['challenges','challenge','Challenges'],['me','profile','Profil']];
+ $('#bottomNav').innerHTML=mobile.map(([id,ic,t])=>`<button class="navBtn ${currentView===id?'active':''}" onclick="go('${id}')">${movoIcon(ic)}<span>${t}</span></button>`).join('');
+ const desktop=[['home','home','Home'],['group','crew','Crew'],['challenges','challenge','Challenges'],['rewards','reward','Rewards'],['me','profile','Profil'],['history','history','Historie'],['rules','rules','Regeln'],['more','more','Mehr']];
  $('#sideNav').innerHTML=desktop.map(([id,ic,t])=>`<button class="${currentView===id?'active':''}" onclick="go('${id}')">${movoIcon(ic)}<span>${t}</span></button>`).join('');
- let av=await avatarHTML(me,42);
- $('#topUser').innerHTML=`<button class="topUserBtn" onclick="go('more')">${av}<div><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div><span>•••</span></button>`;
- $('#sideUser').innerHTML=`<button class="desktopUserCard" onclick="go('me')">${av}<div><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div></button>`
+ let av=await avatarHTML(me,40);
+ $('#topUser').innerHTML=`<button class="topUserBtn" onclick="go('more')">${av}<div><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></div>${movoIcon('more')}</button>`;
+ $('#sideUser').innerHTML=`<button class="railUser" onclick="go('me')">${av}<span><b>${escapeHtml(firstName(me))}</b><small>@${escapeHtml(me.username)}</small></span></button>`;
 }
 function openMobileMenu(){
  let root=$('#mobileMenuRoot');if(!root)return;
@@ -822,17 +802,9 @@ async function logout(){
  catch(err){console.warn('Logout:',err);showAuth()}
 }
 async function render(){
- let c=$('#content'); if(!c)return;
- if(currentView==='home')c.innerHTML=await homeHTML();
- if(currentView==='group')c.innerHTML=await groupHTML();
- if(currentView==='challenges')c.innerHTML=await challengesHTML();
- if(currentView==='rewards')c.innerHTML=await rewardsHTML();
- if(currentView==='me')c.innerHTML=await meHTML();
- if(currentView==='rules')c.innerHTML=rulesHTML();
- if(currentView==='history')c.innerHTML=historyHTML();
- if(currentView==='admin')c.innerHTML=await adminHTML();
- if(currentView==='more')c.innerHTML=await moreHTML();
- requestAnimationFrame(()=>document.querySelector('.pageContent')?.classList.add('pageEntered'));
+ let c=$('#content');if(!c)return;
+ const views={home:homeHTML,group:groupHTML,challenges:challengesHTML,rewards:rewardsHTML,me:meHTML,rules:()=>rulesHTML(),history:()=>historyHTML(),admin:adminHTML,more:moreHTML,settings:settingsPageHTML};
+ let fn=views[currentView]||homeHTML;c.innerHTML=await fn();requestAnimationFrame(()=>c.classList.add('pageEntered'));
 }
 function ranking(list){
  return profiles.map(p=>({p,pts:pointsOf(p.id,list)})).sort((a,b)=>b.pts-a.pts||firstName(a.p).localeCompare(firstName(b.p)))
@@ -1313,17 +1285,21 @@ function groupChallengeValueMonth(mk){
 
 function groupChallengeHTML(){let ch=groupChallengeForPeriod(monthKey()),v=groupChallengeValueMonth(monthKey());return `<div class="progress"><i style="width:${Math.min(100,v/ch.target*100)}%"></i></div>`}
 
+
+function activeDayRoute(date=fmtDate(),userId=me.id){
+ const es=entries.filter(e=>e.user_id===userId&&e.entry_date===date),acts=es.filter(e=>e.kind==='activity'),steps=Math.max(0,...es.filter(e=>e.kind==='steps').map(e=>+e.steps||0)),food=es.find(e=>e.kind==='food'),foodCount=(food?.food_items||[]).length,daily=!!dailyCompletions.find(x=>x.user_id===userId&&x.challenge_date===date),bestAct=Math.max(0,...acts.map(e=>+e.points||0)),other=es.some(e=>(+e.points||0)>0);
+ const routes=[
+  {key:'steps',title:'Schritte',icon:'steps',value:steps,target:7500,pct:Math.min(1,steps/7500),detail:`${steps.toLocaleString('de-DE')} / 7.500 Schritte`},
+  {key:'food',title:'Ernährung',icon:'food',value:foodCount,target:3,pct:Math.min(1,foodCount/3),detail:`${foodCount} / 3 Ernährungsziele`},
+  {key:'activity',title:'Aktivität',icon:'activity',value:bestAct,target:2,pct:Math.min(1,bestAct/2),detail:bestAct>=2?'Aktivität qualifiziert':`${bestAct} / 2 Basispunkte`},
+  {key:'daily',title:'Daily + Gesundheit',icon:'daily',value:(daily?1:0)+(other?1:0),target:2,pct:((daily?1:0)+(other?1:0))/2,detail:`${daily?'Daily ✓':'Daily offen'} · ${other?'Gesundheitspunkt ✓':'+ 1 Gesundheitspunkt'}`}
+ ];
+ let done=routes.find(r=>r.pct>=1),best=done||routes.slice().sort((a,b)=>b.pct-a.pct)[0];return {qualified:!!done,best,routes,steps,foodCount,daily,bestAct};
+}
+
 function homeMetricsHTML(){
- let today=fmtDate(),pts=pointsBetween(me.id,today,today),rewardBonus=streakBonusPointsBetween(me.id,today,today),
-     steps=entries.filter(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='steps').reduce((s,e)=>Math.max(s,+e.steps||0),0),
-     food=entries.find(e=>e.user_id===me.id&&e.entry_date===today&&e.kind==='food'),s=streak(),secured=activeDay(today,me.id),
-     ring=Math.min(92,Math.max(8,pts?28+pts*5:8));
- return `<div class="heroMetrics">
-  <div class="heroStreak"><span>🔥</span><div><b>${s}</b><small>Tage Streak</small></div></div>
-  <div class="heroRing" style="--ring:${ring}%"><div><strong>${pts} P</strong><small>heute gesammelt</small></div></div>
-  <div class="heroScore"><strong>+${pts} P</strong><span>heute</span>${rewardBonus?`<small>✨ +${rewardBonus} Bonus</small>`:''}</div>
-  <div class="heroQuickStats"><span>${movoIcon('steps')}<b>${steps.toLocaleString('de-DE')}</b></span><span>${movoIcon('food')}<b>${(food?.food_items||[]).length}/7</b></span><span class="${secured?'ok':''}">● <b>${secured?'aktiv':'offen'}</b></span></div>
- </div>`;
+ let today=fmtDate(),pts=pointsBetween(me.id,today,today),s=streak(),route=activeDayRoute(today),pct=route.qualified?100:Math.round(route.best.pct*100);
+ return `<div class="dayHeroMetrics"><div class="streakCapsule"><span>🔥</span><div><b>${s}</b><small>Tage Streak</small></div></div><div class="activeRing ${route.qualified?'done':''}" style="--progress:${pct}%"><div>${route.qualified?movoIcon('check'):`<strong>${pct}%</strong>`}<b>${route.qualified?'Aktiver Tag':'Auf Kurs'}</b><small>${escapeHtml(route.best.detail)}</small></div></div><div class="todayPoints"><strong>+${pts} P</strong><span>heute</span></div></div>`;
 }
 function homeChallengesHTML(){
  let dc=dailyChallengeFor(),dd=dailyCompletedBy(me.id),sel=currentSelection(),wc=sel?WEEKLY.find(x=>x.id===sel.challenge_id):null,
@@ -1358,50 +1334,13 @@ function nextStepTarget(steps){
  return 15000+(Math.floor((steps-15000)/5000)+1)*5000;
 }
 function todayNudgeHTML(){
- let ds=fmtDate(),stepEntry=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='steps').sort((a,b)=>(+b.steps||0)-(+a.steps||0))[0],
-     steps=+stepEntry?.steps||0,next=nextStepTarget(steps),remain=Math.max(0,next-steps),
-     food=entries.find(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='food'),foodCount=(food?.food_items||[]).length,
-     dailyDone=!!dailyCompletedBy(me.id,ds),acts=entries.filter(e=>e.user_id===me.id&&e.entry_date===ds&&e.kind==='activity'),
-     actDone=acts.some(e=>(+e.points||0)>=2),stepPct=Math.min(100,steps/next*100),foodPct=Math.min(100,foodCount/7*100);
- let rows=[
-  ['steps','Schritte',remain?`Noch ${remain.toLocaleString('de-DE')} bis zum nächsten Punkt`:'Nächstes Schrittziel erreicht',stepPct,`openEntry('steps')`],
-  ['food','Ernährung',`${foodCount} / 7 Ziele`,foodPct,`openEntry('food')`],
-  ['daily','Daily',dailyDone?'Erledigt ✓':'Noch offen',dailyDone?100:0,dailyDone?`go('challenges')`:`openDailyComplete()`],
-  ['activity','Aktivität',actDone?'Aktiver Tag qualifiziert ✓':'Noch offen',actDone?100:0,`openEntry('activity')`]
- ];
- return `<section class="movoCard todayFocusCard">
-  <div class="sectionEyebrow">DEIN HEUTE</div><h2>Was fehlt mir noch?</h2>
-  <div class="focusRows">${rows.map(([ic,title,sub,pct,act],i)=>`<button onclick="${act}" class="focusRow">
-   <span class="focusIcon tone${i}">${movoIcon(ic)}</span><div><b>${title}</b><small>${sub}</small><i><em style="width:${pct}%"></em></i></div><span class="rowArrow">›</span>
-  </button>`).join('')}</div>
- </section>`;
+ let route=activeDayRoute();
+ return `<section class="panel todayPanel"><div class="panelHead"><div><span>DEIN HEUTE</span><h2>${route.qualified?'Streak gesichert ✓':'Was fehlt mir noch?'}</h2></div>${route.qualified?'<span class="statusPill ok">qualifiziert</span>':''}</div><div class="routeRows">${route.routes.map(r=>`<button onclick="${r.key==='daily'?`go('challenges')`:`openEntryHub('${r.key==='food'?'food':r.key==='steps'?'steps':'activity'}')`}" class="routeRow ${r.pct>=1?'done':''}"><span class="routeIcon">${movoIcon(r.icon)}</span><div><b>${r.title}</b><small>${escapeHtml(r.detail)}</small><i><em style="width:${Math.round(r.pct*100)}%"></em></i></div>${r.pct>=1?movoIcon('check'):'<span>›</span>'}</button>`).join('')}</div><button class="entryHubCta" onclick="openEntryHub()">${movoIcon('plus')}<span>Eintragen</span></button></section>`;
 }
 
 async function homeHTML(){
- resetFeedCount();
- let hr=new Date().getHours(),greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend',av=await avatarHTML(me,58);
- return `<section class="appScreen homeScreen">
-  <div class="homeHero scenicHero">
-   <div class="heroGreeting">${av}<div><span>${greet},</span><h1>${escapeHtml(firstName(me))}! 👋</h1><p>Dranbleiben. Du machst das stark!</p></div></div>
-   ${homeMetricsHTML()}
-   <div class="heroQuote">„Jeder Schritt zählt. <b>Für dich. Für uns.</b>“</div>
-  </div>
-  <div class="screenBody homeBody">
-   <div class="homePrimary">
-    ${todayNudgeHTML()}
-    ${outboxHTML()}${pendingWitnessHTML()}${votingBannerHTML()}
-    <div class="sectionHeader"><div><span>HEUTE</span><h2>Deine Challenges</h2></div><button onclick="go('challenges')">Alle →</button></div>
-    <div class="homeChallengesWrap">${homeChallengesHTML()}</div>
-    <details class="movoDetails"><summary>📝 Meine Einträge heute <span>›</span></summary><div>${await todayOwnEntriesHTML()}</div></details>
-   </div>
-   <aside class="homeSecondary">
-    <div class="sectionHeader"><div><span>SCHNELL</span><h2>Eintragen</h2></div></div>
-    ${quickAddModernHTML()}${quickTemplatesHTML()}
-    <div class="sectionHeader"><div><span>DEINE CREW</span><h2>Neu bei euch</h2></div><button onclick="go('group')">Crew →</button></div>
-    <div class="homeFeed">${await feedHTML(2)}</div>
-   </aside>
-  </div>
- </section>`;
+ resetFeedCount();let hr=new Date().getHours(),greet=hr<11?'Guten Morgen':hr<18?'Hallo':'Guten Abend',av=await avatarHTML(me,58);
+ return `<section class="screen homeScreen"><div class="homeDashboardTop"><header class="hero heroHome"><div class="heroGreeting">${av}<div><span>${greet},</span><h1>${escapeHtml(firstName(me))}! 👋</h1><p>Dranbleiben. Du machst das stark!</p></div></div>${homeMetricsHTML()}<div class="heroQuote">„Jeder Schritt zählt. <b>Für dich. Für uns.</b>“</div></header><div class="homeFocusColumn">${todayNudgeHTML()}<section class="panel desktopQuickEntry"><div class="panelHead"><div><span>SCHNELL</span><h2>Eintragen</h2></div></div><p class="muted small">Aktivität, Schritte oder Ernährung – auch bis zu 3 Tage rückwirkend.</p><button class="entryHubCta large" onclick="openEntryHub()">${movoIcon('plus')}<span>Eintrag hinzufügen</span></button></section></div></div><div class="homeDashboardBottom"><main class="homeMain">${outboxHTML()}${pendingWitnessHTML()}${votingBannerHTML()}<div class="sectionHead"><div><span>HEUTE</span><h2>Deine Challenges</h2></div><button onclick="go('challenges')">Alle →</button></div>${homeChallengesHTML()}<details class="softDetails"><summary>Meine Einträge heute <span>›</span></summary><div>${await todayOwnEntriesHTML()}</div></details></main><aside class="homeAside"><div class="sectionHead"><div><span>DEINE CREW</span><h2>Neu bei euch</h2></div><button onclick="go('group')">Crew →</button></div><div class="homeFeed">${await feedHTML(2)}</div></aside></div></section>`;
 }
 
 function crewPointBreakdown(userId,from=weekKey(),to=fmtDate(endOfWeek())){
@@ -1455,16 +1394,20 @@ async function crewSnapshotHTML(){
  return `<div class="mockCrewPeople">${cards}</div>`;
 }
 function setCrewUiTab(tab){crewUiTab=tab;render()}
-function crewTabsHTML(){return `<div class="movoTabs crewTabs"><button class="${crewUiTab==='feed'?'active':''}" onclick="setCrewUiTab('feed')">Feed</button><button class="${crewUiTab==='moment'?'active':''}" onclick="setCrewUiTab('moment')">Crew-Moment</button><button class="${crewUiTab==='ranking'?'active':''}" onclick="setCrewUiTab('ranking')">Rangliste</button></div>`}
+function crewTabsHTML(){return `<div class="movoTabs crewTabs"><button class="${crewUiTab==='feed'?'active':''}" onclick="setCrewUiTab('feed')">Feed</button><button class="${crewUiTab==='ranking'?'active':''}" onclick="setCrewUiTab('ranking')">Rangliste</button></div>`}
+
+async function podiumHTML(from,to){let r=rankingBetween(from,to),top=r.slice(0,3),rest=r.slice(3),order=[top[1],top[0],top[2]].filter(Boolean),places=[2,1,3].slice(0,order.length),cards='';for(let i=0;i<order.length;i++){let x=order[i],av=await avatarHTML(x.p,places[i]===1?62:50);cards+=`<div class="podium p${places[i]}"><span class="place">${places[i]===1?'👑':places[i]+'.'}</span>${av}<b>${escapeHtml(firstName(x.p))}</b><strong>${x.pts} P</strong><i></i></div>`}let restHtml='';for(let i=0;i<rest.length;i++){let x=rest[i],av=await avatarHTML(x.p,34);restHtml+=`<div class="rankRow"><b>${i+4}.</b>${av}<span>${escapeHtml(firstName(x.p))}</span><strong>${x.pts} P</strong></div>`}return `<div class="podiumWrap">${cards}</div>${restHtml?`<div class="rankList">${restHtml}</div>`:''}`}
+async function crewRankingHTML(){return `<div class="crewRankingLayout"><section class="panel rankingPanel"><div class="panelHead"><div><span>FAIRE LEISTUNG</span><h2>Diese Woche</h2></div></div>${await podiumHTML(weekKey(),fmtDate(endOfWeek()))}</section><section class="panel monthlyRank"><div class="panelHead"><div><span>DIESER MONAT</span><h2>Monatsstand</h2></div></div>${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</section></div>`}
+
+async function crewContextHTML(){
+ let weekly=await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()));
+ return `<aside class="crewContext"><section class="panel crewContextCard"><div class="panelHead"><div><span>FAIRE LEISTUNG</span><h2>Diese Woche</h2></div><button onclick="setCrewUiTab('ranking')">Ranking →</button></div><div class="contextRanking">${weekly}</div></section><section class="panel crewContextCard"><div class="panelHead"><div><span>GEMEINSAM</span><h2>Aktuelle Challenges</h2></div><button onclick="go('challenges')">Alle →</button></div>${homeChallengesHTML()}</section></aside>`;
+}
 async function groupHTML(){
- let d=startOfWeek();d.setDate(d.getDate()-7);let wk=weekKey(d),c=weekChamp(wk),body='';
- if(crewUiTab==='feed')body=`<div class="crewFeedGrid">${await feedHTML(feedVisibleCount)}</div>`;
- if(crewUiTab==='moment')body=`<div class="crewMomentGrid"><div>${crewMomentHTML()}</div>${c?`<article class="movoCard winnerCard"><span>🏆</span><div><small>LETZTER WOCHENABSCHLUSS</small><h3>${escapeHtml(firstName(c.p))} gewinnt mit ${c.pts} P</h3><p>KW ${isoWeek(d)}</p></div><strong>👑</strong></article>`:''}</div>`;
- if(crewUiTab==='ranking')body=`<div class="rankingColumns"><section class="movoCard"><div class="cardTitle"><h2>Diese Woche</h2></div>${await rankingHTML(currentWeekEntries(),weekKey(),fmtDate(endOfWeek()))}</section><section class="movoCard"><div class="cardTitle"><h2>Dieser Monat</h2></div>${await rankingHTML(currentMonthEntries(),monthKey()+'-01',monthKey()+'-31')}</section></div>`;
- return `<section class="appScreen crewScreen">
-  <div class="compactHero scenicHero"><div class="pageHeroTitle"><div><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div><button class="heroIconBtn" onclick="go('more')">${movoIcon('crew')}</button></div>${await crewSnapshotHTML()}</div>
-  <div class="screenBody"><div class="movoTabsPanel">${crewTabsHTML()}</div>${body}</div>
- </section>`;
+ let body='';
+ if(crewUiTab==='ranking')body=await crewRankingHTML();
+ else body=`<div class="crewDesktopLayout"><main class="crewFeedColumn">${crewMomentHTML()}<div class="crewFeedList">${await feedHTML(feedVisibleCount)}</div></main>${await crewContextHTML()}</div>`;
+ return `<section class="screen crewScreen"><header class="hero heroCrew"><div class="pageHero"><div><h1>Unsere Crew</h1><p>Gemeinsam stärker. Jeden Tag.</p></div></div>${await crewSnapshotHTML()}</header><div class="screenBody"><div class="tabsPanel">${crewTabsHTML()}</div>${body}</div></section>`;
 }
 
 function feedDateTime(item){
@@ -1505,84 +1448,21 @@ function dayPostParts(post){
  let streakEvent=streakBonusEvents(uid).find(x=>x.date===ds)||null;
  return {es,dailies,ch,ach,streakEvent};
 }
-function daySummaryRowHTML(row){
- if(row.type==='entry'){
-  let e=row.obj;
-  if(e.kind==='food'){
-   let selected=(e.food_items||[]).map(id=>FOOD.find(f=>f.id===id)).filter(Boolean);
-   return `<div class="dayFeedRow"><span class="dayFeedIcon">🥗</span><div><b>Ernährung · ${selected.length}/${FOOD.length}</b><small>${selected.map(f=>f.icon).join(' ')||'Check-in ohne Ziel'}</small></div><strong>+${+e.points||0} P</strong></div>`;
-  }
-  if(e.kind==='steps')return `<div class="dayFeedRow"><span class="dayFeedIcon">👟</span><div><b>${(+e.steps||0).toLocaleString('de-DE')} Schritte</b><small>Schrittziel des Tages</small></div><strong>+${+e.points||0} P</strong></div>`;
-  let a=ACTIVITIES[e.activity];
-  return `<div class="dayFeedRow"><span class="dayFeedIcon">${a?.icon||'⚡'}</span><div><b>${escapeHtml(a?.name||e.activity)}</b><small>${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}${e.witness?` · ${escapeHtml(e.witness)}`:''}</small></div><strong>+${+e.points||0} P</strong></div>`;
- }
- if(row.type==='daily'){
-  let d=row.obj,c=challengePool.find(x=>x.id===d.challenge_pool_id),target=d.target_user_id?profileById(d.target_user_id):null;
-  return `<div class="dayFeedRow accentDaily"><span class="dayFeedIcon">${escapeHtml(c?.emoji||'☀️')}</span><div><b>${escapeHtml(dailyTemplateText(c?.name||'Tageschallenge',target))}</b><small>☀️ Tageschallenge · „${escapeHtml(d.completion_text)}“</small></div><strong>+${+d.points||1} P</strong></div>`;
- }
- if(row.type==='challenge'){
-  let c=row.obj;
-  return `<div class="dayFeedRow accentChallenge"><span class="dayFeedIcon">${escapeHtml(c.emoji||'🎯')}</span><div><b>${escapeHtml(c.title)}</b><small>${c.challenge_kind==='group'?'Crew-Mission geschafft':'Wochenchallenge geschafft'}</small></div><strong>+${+c.points||0} P</strong></div>`;
- }
- if(row.type==='achievement'){
-  let a=row.obj;
-  return `<div class="dayFeedRow accentAchievement"><span class="dayFeedIcon">${escapeHtml(a.emoji||'🏅')}</span><div><b>${escapeHtml(a.title)}</b><small>Achievement erreicht</small></div><strong>🏅</strong></div>`;
- }
- let s=row.obj;
- return `<div class="dayFeedRow accentStreak"><span class="dayFeedIcon">🔥</span><div><b>${s.days}-Tage-Streak</b><small>Movo-Bonus · zählt nicht zur Rangliste</small></div><strong>+${s.points} Bonus</strong></div>`;
+function daySummaryRowHTML(row,primary=false){
+ let cls=primary?' primary':'';
+ if(row.type==='entry'){let e=row.obj;if(e.kind==='food'){let selected=(e.food_items||[]).map(id=>FOOD.find(f=>f.id===id)).filter(Boolean);return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon">${movoIcon('food')}</span><div><b>Ernährung · ${selected.length}/${FOOD.length}</b><small>${selected.map(f=>f.icon).join(' ')||'Check-in'}</small></div><strong>+${+e.points||0} P</strong></div>`}if(e.kind==='steps')return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon">${movoIcon('steps')}</span><div><b>${(+e.steps||0).toLocaleString('de-DE')} Schritte</b><small>Schritte des Tages</small></div><strong>+${+e.points||0} P</strong></div>`;let a=ACTIVITIES[e.activity];return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon">${movoIcon('activity')}</span><div><b>${escapeHtml(a?.name||e.activity)}</b><small>${e.minutes||0} Min.${e.distance?` · ${e.distance} km`:''}</small></div><strong>+${+e.points||0} P</strong></div>`}
+ if(row.type==='daily'){let d=row.obj,c=challengePool.find(x=>x.id===d.challenge_pool_id),target=d.target_user_id?profileById(d.target_user_id):null;return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon">${movoIcon('daily')}</span><div><b>${escapeHtml(dailyTemplateText(c?.name||'Tageschallenge',target))}</b><small>${escapeHtml(d.completion_text)}</small></div><strong>+${+d.points||1} P</strong></div>`}
+ if(row.type==='challenge'){let c=row.obj;return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon">${movoIcon('challenge')}</span><div><b>${escapeHtml(c.title)}</b><small>${c.challenge_kind==='group'?'Crew-Mission':'Wochenchallenge'} geschafft</small></div><strong>+${+c.points||0} P</strong></div>`}
+ if(row.type==='achievement'){let a=row.obj;return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon badgeMini"><img src="assets/badges/achievement.svg" alt=""></span><div><b>${escapeHtml(a.title)}</b><small>Achievement erreicht</small></div><strong>🏅</strong></div>`}
+ let s=row.obj;return `<div class="dayFeedRow${cls}"><span class="dayFeedIcon badgeMini"><img src="assets/badges/streak.svg" alt=""></span><div><b>${s.days}-Tage-Streak</b><small>Movo-Bonus · nicht in der Rangliste</small></div><strong>+${s.points}</strong></div>`;
 }
 async function dayPhotoGalleryHTML(parts){
- let paths=[
-  ...parts.es.filter(e=>e.photo_path).map(e=>e.photo_path),
-  ...parts.dailies.filter(d=>d.photo_path).map(d=>d.photo_path)
- ];
- let uniq=[...new Set(paths)].slice(0,6);
- if(!uniq.length)return '';
- let urls=[];
- for(let path of uniq){let u=await signed('proofs',path);if(u)urls.push(u)}
- if(!urls.length)return '';
- return `<div class="dayPhotoStrip">${urls.map((u,i)=>`<button onclick="openPhotoLightbox('${u}')" aria-label="Foto ${i+1} öffnen"><img src="${u}" alt="Tagesfoto"></button>`).join('')}</div>`;
+ let paths=[...parts.es.filter(e=>e.photo_path).map(e=>e.photo_path),...parts.dailies.filter(d=>d.photo_path).map(d=>d.photo_path)],uniq=[...new Set(paths)].slice(0,5);if(!uniq.length)return '';let urls=[];for(let p of uniq){let u=await signed('proofs',p);if(u)urls.push(u)}if(!urls.length)return '';return `<div class="feedMedia media${urls.length}">${urls.map((u,i)=>`<button onclick="openPhotoLightbox('${u}')"><img src="${u}" alt="Foto ${i+1}">${i===3&&urls.length>4?`<span>+${urls.length-4}</span>`:''}</button>`).join('')}</div>`;
 }
 async function feedHTML(limit=feedVisibleCount){
- let posts=feedDayPosts.slice().filter(post=>{
-  let p=profileById(post.user_id);if(!p?.approved)return false;
-  let parts=dayPostParts(post);
-  return parts.es.length||parts.dailies.length||parts.ch.length||parts.ach.length||parts.streakEvent;
- }).sort((a,b)=>String(b.post_date).localeCompare(String(a.post_date))||String(b.updated_at||'').localeCompare(String(a.updated_at||'')));
- let total=posts.length;posts=posts.slice(0,limit);
- if(!posts.length)return `<div class="card pad muted">Noch keine Feed-Tage.</div>`;
- let out='';
- for(let post of posts){
-  let p=profileById(post.user_id),av=await avatarHTML(p),parts=dayPostParts(post),rows=[
-   ...parts.es.map(x=>({type:'entry',obj:x})),
-   ...parts.dailies.map(x=>({type:'daily',obj:x})),
-   ...parts.ch.map(x=>({type:'challenge',obj:x})),
-   ...parts.ach.map(x=>({type:'achievement',obj:x})),
-   ...(parts.streakEvent?[{type:'streak',obj:parts.streakEvent}]:[])
-  ];
-  rows.sort((a,b)=>{
-   let rank={entry:1,daily:2,challenge:3,achievement:4,streak:5};
-   return rank[a.type]-rank[b.type];
-  });
-  let visible=rows.slice(0,4),hidden=rows.slice(4),
-      pts=pointsBetween(post.user_id,post.post_date,post.post_date),
-      run=streakOnDate(post.user_id,post.post_date),
-      photos=await dayPhotoGalleryHTML(parts),
-      dateText=dayLabel(post.post_date),
-      details=hidden.length?`<details class="dayFeedMore"><summary>+ ${hidden.length} weitere ${hidden.length===1?'Aktivität':'Einträge'}</summary><div class="dayFeedRows">${hidden.map(daySummaryRowHTML).join('')}</div></details>`:'';
-  out+=`<article class="card feedItem dayFeedCard">
-   <div class="feedContent">
-    <div class="dayFeedHead">${av}<div class="dayFeedWho"><b>${escapeHtml(firstName(p))}</b><small>${escapeHtml(dateText)} · ${new Date(post.post_date+'T12:00').toLocaleDateString('de-DE')}</small></div>
-     <div class="dayFeedScore"><span class="dayStreak">🔥 ${run} ${run===1?'Tag':'Tage'}</span><strong>+${pts} P</strong></div>
-    </div>
-    <div class="dayFeedRows">${visible.map(daySummaryRowHTML).join('')}</div>
-    ${details}
-    ${photos}
-    <div class="feedActions">${feedReactionBar('day',post.id,post.user_id)}${commentsHTML('day',post.id,post.user_id)}</div>
-   </div>
-  </article>`;
- }
- return out+`${total>limit?`<div class="feedMore"><button class="secondary" onclick="loadMoreFeed()">Weitere Tage laden</button><span class="tiny muted">${Math.min(limit,total)} von ${total} Tagesblöcken</span></div>`:''}`;
+ let posts=feedDayPosts.slice().filter(post=>{let p=profileById(post.user_id);if(!p?.approved)return false;let x=dayPostParts(post);return x.es.length||x.dailies.length||x.ch.length||x.ach.length||x.streakEvent}).sort((a,b)=>String(b.post_date).localeCompare(String(a.post_date))||String(b.updated_at||'').localeCompare(String(a.updated_at||''))),total=posts.length;posts=posts.slice(0,limit);if(!posts.length)return `<div class="panel emptyState">Noch keine Crew-Aktivität.</div>`;let out='';
+ for(let post of posts){let p=profileById(post.user_id),av=await avatarHTML(p),parts=dayPostParts(post),rows=[...parts.es.map(x=>({type:'entry',obj:x})),...parts.dailies.map(x=>({type:'daily',obj:x})),...parts.ch.map(x=>({type:'challenge',obj:x})),...parts.ach.map(x=>({type:'achievement',obj:x})),...(parts.streakEvent?[{type:'streak',obj:parts.streakEvent}]:[])];let priority=r=>r.type==='entry'&&r.obj.kind==='activity'?0:r.type==='daily'||r.type==='challenge'?1:r.type==='entry'&&r.obj.kind==='steps'?2:r.type==='entry'&&r.obj.kind==='food'?3:4;rows.sort((a,b)=>priority(a)-priority(b));let main=rows[0],secondary=rows.slice(1,3),hidden=rows.slice(3),pts=pointsBetween(post.user_id,post.post_date,post.post_date),run=streakOnDate(post.user_id,post.post_date),photos=await dayPhotoGalleryHTML(parts),dateText=dayLabel(post.post_date);out+=`<article class="feedCard" onpointerup="feedCardTap(event,'day','${post.id}','${post.user_id}')" ondblclick="if(!event.target.closest('button,input,summary,a,select,textarea'))ensureHeart('day','${post.id}','${post.user_id}')"><header class="feedHeader">${av}<div><b>${escapeHtml(firstName(p))}</b><small>${escapeHtml(dateText)} · ${new Date(post.post_date+'T12:00').toLocaleDateString('de-DE')}</small></div><button class="feedMoreBtn" aria-label="Mehr">${movoIcon('more')}</button></header>${photos}<div class="feedStory">${main?daySummaryRowHTML(main,true):''}${secondary.length?`<div class="feedSecondary">${secondary.map(r=>daySummaryRowHTML(r)).join('')}</div>`:''}${hidden.length?`<details class="feedMoreRows"><summary>+ ${hidden.length} weitere</summary>${hidden.map(r=>daySummaryRowHTML(r)).join('')}</details>`:''}</div><div class="feedMeta"><span>🔥 ${run} ${run===1?'Tag':'Tage'}</span><strong>+${pts} P</strong></div>${feedReactionBar('day',post.id,post.user_id)}${commentsHTML('day',post.id,post.user_id)}</article>`}
+ return out+(total>limit?`<div class="feedLoad"><button onclick="loadMoreFeed()">Weitere Tage laden</button><span>${Math.min(limit,total)} von ${total}</span></div>`:'');
 }
 
 async function toggleFeedReaction(type,itemId,emoji,ownerId){
@@ -1594,10 +1474,29 @@ async function toggleFeedReaction(type,itemId,emoji,ownerId){
  if(!old&&ownerId&&ownerId!==me.id&&prefFor(ownerId).notify_reactions)notifyUser(ownerId,`${firstName(me)} reagiert ${emoji}`,'Auf deinen Movo-Tag','reactions');
  await loadData();await render();
 }
-function feedReactionBar(type,id,ownerId){
- let icons=['👏','🔥','💪','❤️'],rows=feedReactions.filter(r=>r.item_type===type&&r.item_id===id);
- return `<div class="reactions compactReactions">${icons.map(em=>{let us=rows.filter(r=>r.emoji===em).map(r=>r.user_id),active=us.includes(me.id);return `<button class="react ${active?'active':''}" title="${us.map(x=>firstName(profileById(x))).join(', ')}" onclick="toggleFeedReaction('${type}','${id}','${em}','${ownerId||''}')">${em}<span>${us.length||''}</span></button>`}).join('')}</div>`;
+
+function reactionRows(type,id){return feedReactions.filter(r=>r.item_type===type&&r.item_id===id)}
+function reactionSummaryHTML(type,id){let rows=reactionRows(type,id);if(!rows.length)return '';let unique=[...new Set(rows.map(r=>r.emoji))].slice(0,3);return `<button class="reactionSummary" onclick="openReactionDetails('${type}','${id}')"><span>${unique.join('')}</span><b>${rows.length}</b></button>`}
+function feedCardTap(ev,type,id,ownerId){
+ if(ev.pointerType&&ev.pointerType!=='touch'&&ev.pointerType!=='pen')return;
+ if(ev.target.closest('button,input,summary,a,select,textarea'))return;
+ const now=Date.now();
+ if(feedTapState.id===id&&now-feedTapState.time<=330){feedTapState={id:null,time:0};ev.preventDefault();ensureHeart(type,id,ownerId);return}
+ feedTapState={id,time:now};
 }
+function startReactionHold(ev,type,id,ownerId){clearTimeout(reactionHoldTimer);reactionHoldOpened=false;reactionHoldTimer=setTimeout(()=>{reactionHoldOpened=true;openReactionPicker(type,id,ownerId)},420)}
+function cancelReactionHold(){clearTimeout(reactionHoldTimer);reactionHoldTimer=null}
+function reactionButtonClick(type,id,ownerId){if(reactionHoldOpened){reactionHoldOpened=false;return}openReactionPicker(type,id,ownerId)}
+function openReactionPicker(type,id,ownerId){cancelReactionHold();let rows=reactionRows(type,id),mine=new Set(rows.filter(r=>r.user_id===me.id).map(r=>r.emoji));$('#modalRoot').innerHTML=`<div class="reactionOverlay" onclick="closeModal()"><div class="reactionPicker" onclick="event.stopPropagation()">${['❤️','🔥','👏','💪','😂'].map(em=>`<button class="${mine.has(em)?'active':''}" onclick="toggleFeedReaction('${type}','${id}','${em}','${ownerId||''}');closeModal()">${em}</button>`).join('')}</div></div>`}
+async function ensureHeart(type,id,ownerId){let exists=feedReactions.find(r=>r.item_type===type&&r.item_id===id&&r.user_id===me.id&&r.emoji==='❤️');if(exists)return;let {error}=await sb.from('feed_reactions').insert({item_type:type,item_id:id,user_id:me.id,emoji:'❤️'});if(error)return toast(error.message);if(ownerId&&ownerId!==me.id&&prefFor(ownerId).notify_reactions)notifyUser(ownerId,`${firstName(me)} gefällt dein Tag ❤️`,'Auf deinen Movo-Tag','reactions');await loadData();await render();pointlessHeartBurst()}
+function pointlessHeartBurst(){let e=document.createElement('div');e.className='heartBurst';e.textContent='❤️';document.body.append(e);setTimeout(()=>e.remove(),800)}
+function openReactionDetails(type,id){let rows=reactionRows(type,id);$('#modalRoot').innerHTML=`<div class="modal sheetModal" onclick="if(event.target===this)closeModal()"><div class="modalCard socialSheet"><div class="modalHead"><h2>Reaktionen</h2><button class="x" onclick="closeModal()">${movoIcon('close')}</button></div><div class="reactionPeople">${rows.map(r=>{let p=profileById(r.user_id);return `<div><span>${r.emoji}</span><b>${escapeHtml(firstName(p))}</b></div>`}).join('')}</div></div></div>`}
+function commentPreviewHTML(type,id,ownerId){let cs=commentsFor(type,id),last=cs.at(-1);return `<div class="commentPreview">${last?`<button class="lastComment" onclick="openCommentsSheet('${type}','${id}','${ownerId||''}')"><b>${escapeHtml(firstName(profileById(last.user_id)))}</b><span>${escapeHtml(last.comment)}</span></button>`:''}<button class="commentLink" onclick="openCommentsSheet('${type}','${id}','${ownerId||''}')">${movoIcon('comment')}<span>${cs.length?cs.length===1?'1 Kommentar':`Alle ${cs.length} Kommentare ansehen`:'Kommentar hinzufügen'}</span></button></div>`}
+function openCommentsSheet(type,id,ownerId){let cs=commentsFor(type,id);$('#modalRoot').innerHTML=`<div class="modal sheetModal" onclick="if(event.target===this)closeModal()"><div class="modalCard commentSheet"><div class="modalHead"><h2>Kommentare</h2><button class="x" onclick="closeModal()">${movoIcon('close')}</button></div><div class="commentList">${cs.length?cs.map(c=>{let p=profileById(c.user_id);return `<div class="commentItem"><div class="commentAvatar">${escapeHtml(firstName(p).slice(0,1))}</div><div><b>${escapeHtml(firstName(p))}</b><p>${escapeHtml(c.comment)}</p></div>${c.user_id===me.id?`<button onclick="deleteCommentFromSheet('${c.id}','${type}','${id}','${ownerId||''}')">${movoIcon('close')}</button>`:''}</div>`}).join(''):'<div class="emptySocial">Noch keine Kommentare. Starte die Unterhaltung.</div>'}</div><form class="commentComposer" onsubmit="addCommentFromSheet(event,'${type}','${id}','${ownerId||''}')"><input maxlength="240" placeholder="Kommentar hinzufügen …" required><button>${movoIcon('plus')}</button></form></div></div>`}
+async function addCommentFromSheet(ev,type,id,ownerId){ev.preventDefault();let input=ev.target.querySelector('input'),comment=input.value.trim();if(!comment)return;let {error}=await sb.from('feed_comments').insert({user_id:me.id,item_type:type,item_id:id,comment});if(error)return toast(error.message);if(ownerId&&ownerId!==me.id&&prefFor(ownerId).notify_reactions)notifyUser(ownerId,`${firstName(me)} hat kommentiert`,comment,'reactions');await loadData();await render();openCommentsSheet(type,id,ownerId)}
+async function deleteCommentFromSheet(commentId,type,id,ownerId){let {error}=await sb.from('feed_comments').delete().eq('id',commentId).eq('user_id',me.id);if(error)return toast(error.message);await loadData();await render();openCommentsSheet(type,id,ownerId)}
+
+function feedReactionBar(type,id,ownerId){let rows=reactionRows(type,id),myHeart=rows.some(r=>r.user_id===me.id&&r.emoji==='❤️');return `<div class="socialBar"><div>${reactionSummaryHTML(type,id)}</div><div class="socialActions"><button class="socialIcon ${myHeart?'active':''}" onclick="${myHeart?`toggleFeedReaction('${type}','${id}','❤️','${ownerId||''}')`:`ensureHeart('${type}','${id}','${ownerId||''}')`}" aria-label="Gefällt mir">${movoIcon('heart')}</button><button class="socialIcon" onpointerdown="startReactionHold(event,'${type}','${id}','${ownerId||''}')" onpointerup="cancelReactionHold()" onpointercancel="cancelReactionHold()" onclick="reactionButtonClick('${type}','${id}','${ownerId||''}')" aria-label="Reagieren">${movoIcon('smile')}</button><button class="socialIcon" onclick="openCommentsSheet('${type}','${id}','${ownerId||''}')" aria-label="Kommentieren">${movoIcon('comment')}</button></div></div>`}
 async function toggleReaction(entryId,emoji){let e=entries.find(x=>x.id===entryId);return toggleFeedReaction('entry',entryId,emoji,e?.user_id)}
 
 
@@ -1637,16 +1536,22 @@ async function challengesHTML(){
   <section class="mockChallengeCard group"><div class="mockChallengeTop"><span>Crew-Mission</span><em>${new Date().toLocaleDateString('de-DE',{month:'long'})}</em></div><div class="mockChallengeBody"><span class="mockChallengeIcon">👥</span><div><h2>${escapeHtml(gc.title)}</h2><p>${escapeHtml(gc.desc)}</p><div class="mockProgress"><i style="width:${gp}%"></i></div><b>${Math.round(gp)} % · ${gv.toLocaleString('de-DE')} / ${gc.target.toLocaleString('de-DE')}</b></div></div><div class="mockCrewMini">👤 👤 👤 👤 <span>gemeinsam dran</span></div></section>
  </div>${pick}<div class="mockQuoteCard">“ Gemeinsam schaffen wir mehr,<br>als jeder allein. ♡ ”</div>`;
  if(challengeUiTab==='proposals')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><div><small>CREW-IDEEN</small><h2>Vorschläge & Abstimmungen</h2></div><button class="mockPrimaryMini" onclick="openProposal()">＋ Vorschlag</button></div>${await pinnedProposalsHTML()}${rewardProposalFeedHTML()||'<div class="mockEmpty">Aktuell keine offenen Vorschläge.</div>'}</section>`;
- if(challengeUiTab==='pool')body=`<section class="mockWhiteCard"><div class="mockCardTitle"><div><small>IDEEN FÜR SPÄTER</small><h2>Challenge-Pool</h2></div><span>${challengePool.filter(poolAvailable).length} verfügbar</span></div>${challengePoolHTML()}</section>`;
+ if(challengeUiTab==='pool')body=`<section class="panel poolPanel"><div class="panelHead"><div><span>IDEEN FÜR SPÄTER</span><h2>Challenge-Pool</h2></div></div>${challengePoolHTML()}</section>`;
  return `<section class="appScreen challengeScreen">
-  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Challenges</h1><p>Kleine Challenges. Große Wirkung.</p></div><button class="mockIconBtn" onclick="openProposal()">＋</button></div></div>
+  <div class="hero heroSecondary"><div class="pageHero"><div><h1>Challenges</h1><p>Kleine Challenges. Große Wirkung.</p></div><button class="mockIconBtn" onclick="openProposal()">＋</button></div></div>
   <div class="screenBody challengeBody">
    <div class="mockSegmented">${challengeTabsHTML()}</div>
    ${body}
   </div>
  </section>`;
 }
-function challengePoolHTML(){return ['weekly','group','daily'].map(type=>{let title=type==='weekly'?'🎯 Wochenchallenges':type==='group'?'👥 Crewn-Monatschallenges':'☀️ Tageschallenges',list=challengePool.filter(c=>c.challenge_type===type);return `<h3>${title}</h3><div class="grid grid2">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by);return `<button class="choice ${!poolAvailable(c)?'disabled':''}" onclick="openChallengeDetail('${c.id}')"><div><b>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</b>${!poolAvailable(c)?' 🔒':''}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?' 👥':''}</div><div class="tiny muted">${escapeHtml(dailyTemplateText(c.description,null))}</div><div class="tiny muted" style="margin-top:5px">+${c.points} P · 👍 ${r.filter(x=>x.rating==='again').length} · 😐 ${r.filter(x=>x.rating==='okay').length} · 👎 ${r.filter(x=>x.rating==='never').length}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</div></button>`}).join('')}</div>`}).join('')}
+
+function challengeCategory(c){let t=((c?.name||'')+' '+(c?.description||'')+' '+(c?.metric||'')).toLowerCase();if(c?.daily_target_mode==='group_other'||/gemeinsam|dank|kompliment|treff|anruf|nachricht|foto|crew|person/.test(t))return 'social';if(/ernähr|gesund|wasser|obst|gemüse|essen|food|protein/.test(t))return 'food';if(/schritt|beweg|sport|aktiv|wander|spazier|fahrr|gym|minute|kilometer|draußen/.test(t))return 'move';return 'other'}
+function setPoolFilter(kind,val){if(kind==='type')challengePoolType=val;else challengePoolCategory=val;render()}
+function setPoolSearch(v){challengePoolSearch=v;let el=$('#challengePoolResults');if(el)el.innerHTML=challengePoolResultsHTML()}
+function challengePoolResultsHTML(){let q=challengePoolSearch.trim().toLowerCase(),list=challengePool.filter(c=>poolAvailable(c)&&(challengePoolType==='all'||c.challenge_type===challengePoolType)&&(challengePoolCategory==='all'||challengeCategory(c)===challengePoolCategory)&&(!q||((c.name||'')+' '+(c.description||'')).toLowerCase().includes(q)));return `<div class="poolCount">${list.length} von ${challengePool.filter(poolAvailable).length}</div><div class="poolList">${list.map(c=>{let r=ratings.filter(x=>x.challenge_pool_id===c.id),creator=profileById(c.created_by),cat=challengeCategory(c);return `<button class="poolItem" onclick="openChallengeDetail('${c.id}')"><span class="poolIcon">${c.challenge_type==='daily'?movoIcon('daily'):c.challenge_type==='weekly'?movoIcon('challenge'):movoIcon('crew')}</span><div><b>${escapeHtml(c.name)}</b><small>${escapeHtml(dailyTemplateText(c.description,null))}</small><em>${c.challenge_type==='group'?'Crew':c.challenge_type==='weekly'?'Weekly':'Daily'} · ${cat==='move'?'Bewegung':cat==='food'?'Ernährung':cat==='social'?'Sozial':'Sonstiges'}${creator?` · von ${escapeHtml(firstName(creator))}`:''}</em></div><span class="poolRating">👍 ${r.filter(x=>x.rating==='again').length}</span></button>`}).join('')||'<div class="emptyState">Keine Challenges für diesen Filter.</div>'}</div>`}
+
+function challengePoolHTML(){return `<div class="poolToolbar"><label class="poolSearch">${movoIcon('search')}<input type="search" value="${escapeHtml(challengePoolSearch)}" placeholder="Challenges durchsuchen …" oninput="setPoolSearch(this.value)"></label><div class="filterGroup"><span>Typ</span>${[['all','Alle'],['daily','Daily'],['weekly','Weekly'],['group','Crew']].map(([v,l])=>`<button class="${challengePoolType===v?'active':''}" onclick="setPoolFilter('type','${v}')">${l}</button>`).join('')}</div><div class="filterGroup"><span>Kategorie</span>${[['all','Alle'],['move','Bewegung'],['food','Ernährung'],['social','Sozial'],['other','Sonstiges']].map(([v,l])=>`<button class="${challengePoolCategory===v?'active':''}" onclick="setPoolFilter('category','${v}')">${l}</button>`).join('')}</div></div><div id="challengePoolResults">${challengePoolResultsHTML()}</div>`}
 function openChallengeDetail(id){let c=challengePool.find(x=>x.id===id),r=ratings.filter(x=>x.challenge_pool_id===id),creator=profileById(c.created_by),poolDesc=dailyTemplateText(c.description,null);$('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</h2><button class="x" onclick="closeModal()">×</button></div><p>${escapeHtml(poolDesc)}</p><div class="notice"><b>Typ:</b> ${escapeHtml(c.challenge_type)}<br><b>Punkte:</b> +${c.points}${c.challenge_type==='daily'&&c.daily_target_mode==='group_other'?'<br><b>Crew-Bezug:</b> Movo lost täglich eine andere Person aus.':''}${c.target_value?`<br><b>Ziel:</b> ${c.target_value} ${escapeHtml(c.target_unit||'')}`:''}${creator?`<br><b>Vorgeschlagen von:</b> ${escapeHtml(firstName(creator))}`:''}</div><div class="section"><b>Bewertungen nach Durchführung</b><div class="reactions"><span class="react">👍 ${r.filter(x=>x.rating==='again').length}</span><span class="react">😐 ${r.filter(x=>x.rating==='okay').length}</span><span class="react">👎 ${r.filter(x=>x.rating==='never').length}</span></div></div><div class="section"><b>Wie fandest du diese Challenge?</b><div class="reactions"><button class="react" onclick="rateChallenge('${c.id}','again')">👍 Gerne wieder</button><button class="react" onclick="rateChallenge('${c.id}','okay')">😐 War okay</button><button class="react" onclick="rateChallenge('${c.id}','never')">👎 Nicht nochmal</button></div></div>${me.is_admin?`<div class="section"><b>Admin</b><div class="uploadBtns"><button class="secondary" onclick="adminSuspendChallenge('${c.id}')">⏸ Sperren</button>${!poolAvailable(c)?`<button class="secondary" onclick="adminUnsuspendChallenge('${c.id}')">▶ Entsperren</button>`:''}<button class="secondary danger" onclick="adminDeleteChallenge('${c.id}')">🗑 Entfernen</button></div></div>`:''}</div></div>`}
 async function rateChallenge(id,rating){let old=ratings.find(x=>x.challenge_pool_id===id&&x.user_id===me.id&&x.week_key===weekKey()),payload={challenge_pool_id:id,user_id:me.id,week_key:weekKey(),rating},q=old?sb.from('challenge_ratings').update({rating}).eq('id',old.id):sb.from('challenge_ratings').insert(payload),{error}=await q;if(error)return toast(error.message);closeModal();await loadData();await render();toast('Bewertung gespeichert')}
 function openProposal(){
@@ -1684,6 +1589,11 @@ async function submitProposal(e){
 }
 function trend4(id){let ws=[];for(let i=3;i>=0;i--){let d=startOfWeek();d.setDate(d.getDate()-i*7);let from=weekKey(d),to=fmtDate(endOfWeek(d));ws.push({d,pts:pointsBetween(id,from,to)})}let mx=Math.max(1,...ws.map(x=>x.pts));return `<div class="card pad section"><h3>📈 Deine letzten 4 Wochen</h3><div class="trend">${ws.map(x=>`<div><i style="height:${Math.max(5,x.pts/mx*64)}px"></i><b>${x.pts}</b><small>KW${isoWeek(x.d)}</small></div>`).join('')}</div></div>`}
 
+
+function rewardArtClass(name=''){let n=name.toLowerCase();if(/film|kino/.test(n))return 'cinema';if(/früh|essen|snack|meal/.test(n))return 'food';if(/ausflug|wander|erlebnis|date/.test(n))return 'hike';return 'surprise'}
+function rewardReadyCard(r){let name=rewardName(r.reward_key);return `<article class="experienceCard ${rewardArtClass(name)}"><div class="experienceArt"></div><div class="experienceCopy"><span>BEREIT ZUM EINLÖSEN</span><h3>${escapeHtml(name)}</h3><small>${r.milestone} Punkte · ${r.month_key||''}</small><button onclick="redeemReward('${r.id}')">Einlösen</button></div></article>`}
+function rewardMilestoneCatalogHTML(points){return MILESTONES.map(m=>{let reached=points>=m,got=rewardChoices.find(r=>r.user_id===me.id&&r.month_key===monthKey()&&r.milestone===m),next=activeRewardsForMilestone(m)[0],name=got?rewardName(got.reward_key):next?.name||`Belohnung bei ${m} Punkten`;return `<article class="milestoneCard ${reached?'reached':''}"><span>${m} P</span><h3>${escapeHtml(name)}</h3><div class="milestoneProgress"><i style="width:${Math.min(100,points/m*100)}%"></i></div><small>${reached?(got?'Freigeschaltet':'Jetzt Belohnung wählen'):`Noch ${m-points} P`}</small>${reached&&!got?`<button onclick="openReward(${m})">Auswählen</button>`:''}</article>`}).join('')}
+
 function setRewardUiTab(tab){rewardUiTab=tab;render()}
 function rewardTabsHTML(){return `<div class="movoTabs rewardTabs"><button class="${rewardUiTab==='rewards'?'active':''}" onclick="setRewardUiTab('rewards')">Prämien</button><button class="${rewardUiTab==='mine'?'active':''}" onclick="setRewardUiTab('mine')">Meine Einlösungen</button></div>`}
 function rewardSceneClass(name=''){
@@ -1715,55 +1625,22 @@ async function rewardGroupCardHTML(p){
   ${unchosen.length?`<div class="notice small sectionTiny">${unchosen.length} Belohnung${unchosen.length===1?'':'en'} noch auszuwählen.</div>`:''}
  </div>`;
 }
-async function rewardsHTML(){
- let bal=wishCreditBalanceCents(me.id),life=lifetimePoints(me.id),next=highestWishThreshold(me.id)+100,
-     remaining=Math.max(0,next-life),rewardMonth=monthRewardPoints(),reached=MILESTONES.filter(m=>rewardMonth>=m),
-     mine=openRewardChoices(),body='';
- let visualItems=mine.slice(0,5);
- if(rewardUiTab==='rewards'){
-  let featured=visualItems[0],rest=visualItems.slice(1);
-  body=`<div class="mockRewardGrid">${featured?rewardVisualTileHTML(featured,true):`<article class="mockRewardTile featured hike"><div class="mockRewardImage"></div><div class="mockRewardOverlay"><b>Nächste Belohnung</b><span>Noch ${Math.max(0,50-rewardMonth)} Punkte</span></div></article>`}${rest.map(r=>rewardVisualTileHTML(r,false)).join('')}</div>
-   <section class="mockWhiteCard rewardInventoryMock"><div class="mockCardTitle"><h2>Deine offenen Belohnungen</h2><span>${rewardMonth} P diesen Monat</span></div>${reached.length?reached.map(m=>rewardMilestoneHTML(m)).join(''):'<div class="mockEmpty">Noch keine Monatsbelohnung freigeschaltet.</div>'}${openRewardsInventoryHTML()}</section>
-   <details class="mockCompactDetails"><summary>🎁 Alle Stufen & Vorschläge <span>›</span></summary><div>${rewardsRulesHTML()}</div></details>`;
- }else{
-  body=`<section class="mockWhiteCard"><div class="mockCardTitle"><h2>Meine Einlösungen</h2></div>${ownWishHistoryHTML()}${mine.length?`<div class="mockOpenRewards">${mine.map(r=>`<div><span>🎁</span><div><b>${escapeHtml(rewardName(r.reward_key))}</b><small>${r.month_key||''}</small></div></div>`).join('')}</div>`:'<div class="mockEmpty">Noch keine offenen Belohnungen.</div>'}</section>`;
- }
- return `<section class="appScreen rewardsScreen">
-  <div class="compactHero scenicHero rewardHero"><div class="mockPageTitle"><div><h1>Rewards</h1><p>Dein Einsatz wird belohnt.</p></div><div class="mockPointsPill">💎 ${life} P</div></div></div>
-  <div class="screenBody rewardsBody">
-   <div class="mockSegmented">${rewardTabsHTML()}</div>
-   <section class="mockCreditStrip"><div><small>Wunsch-Guthaben</small><b>${euro(bal)}</b><span>${remaining} P bis +5,00 €</span></div><button ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></section>
-   ${body}
-  </div>
- </section>`;
-}
+async function rewardsHTML(){let bal=wishCreditBalanceCents(me.id),life=lifetimePoints(me.id),next=highestWishThreshold(me.id)+100,remaining=Math.max(0,next-life),monthPts=monthRewardPoints(),open=openRewardChoices(),body='';if(rewardUiTab==='rewards')body=`${open.length?`<div class="sectionHead"><div><span>JETZT</span><h2>Bereit zum Einlösen</h2></div></div><div class="readyRewards">${open.map(rewardReadyCard).join('')}</div>`:''}<div class="sectionHead"><div><span>DIESER MONAT</span><h2>Deine nächsten Erlebnisse</h2></div><span>${monthPts} P</span></div><div class="milestoneCatalog">${rewardMilestoneCatalogHTML(monthPts)}</div><details class="softDetails"><summary>Alle Belohnungen & Vorschläge <span>›</span></summary><div>${rewardsRulesHTML()}</div></details>`;else body=`<section class="panel"><div class="panelHead"><div><span>VERLAUF</span><h2>Meine Einlösungen</h2></div></div>${ownWishHistoryHTML()}</section>`;return `<section class="screen rewardsScreen"><header class="hero heroRewards"><div class="pageHero"><div><h1>Rewards</h1><p>Dein Einsatz wird zu gemeinsamen Erlebnissen.</p></div><span class="heroPoints">${life} P</span></div></header><div class="rewardsLayout"><section class="creditCard"><div><span>WUNSCH-GUTHABEN</span><b>${euro(bal)}</b><small>${remaining} P bis +5,00 €</small></div><button ${bal<=0?'disabled':''} onclick="openWishRedeem()">Einlösen</button></section><div class="tabsPanel">${rewardTabsHTML()}</div>${body}</div></section>`}
 
 
-function mockBadgeGridHTML(){
- let s=streak(),milestones=[3,7,14,30,60,100];
- let streakBadges=milestones.map(n=>`<div class="mockBadge ${s>=n?'unlocked':'locked'}"><span>${s>=n?'🔥':'🔒'}</span><b>${n} Tage</b></div>`).join('');
- let extras=achievements.filter(a=>a.user_id===me.id).slice(0,4).map(a=>`<div class="mockBadge unlocked"><span>${escapeHtml(a.emoji||'🏅')}</span><b>${escapeHtml(a.title)}</b></div>`).join('');
- return `<div class="mockBadgeGrid">${streakBadges}${extras}</div>`;
-}
+function mockBadgeGridHTML(){return badgeGridHTML()}
+
+
+function badgeAssetFor(title=''){let t=title.toLowerCase();if(/streak/.test(t))return 'streak';if(/ernähr|food|gesund/.test(t))return 'food';if(/crew|team|gemeinsam/.test(t))return 'crew';if(/schritt|aktiv|move|sport/.test(t))return 'move';return 'achievement'}
+function badgeGridHTML(limit=null){let s=streak(),items=[[3,'3 Tage'],[7,'7 Tage'],[14,'14 Tage'],[30,'30 Tage'],[60,'60 Tage'],[100,'100 Tage']].map(([n,l])=>({name:l,asset:'streak',on:s>=n,desc:'Streak'})),achs=achievements.filter(a=>a.user_id===me.id).map(a=>({name:a.title,asset:badgeAssetFor(a.title),on:true,desc:'Achievement'}));let all=[...items,...achs];if(limit)all=all.slice(0,limit);return `<div class="badgeGrid">${all.map(x=>`<div class="badgeItem ${x.on?'':'locked'}"><img src="assets/badges/${x.on?x.asset:'locked'}.svg" alt=""><b>${escapeHtml(x.name)}</b><small>${x.on?x.desc:'Noch gesperrt'}</small></div>`).join('')}</div>`}
 
 function setProfileUiTab(tab){profileUiTab=tab;render()}
-function profileTabsHTML(){return `<div class="movoTabs profileTabs"><button class="${profileUiTab==='stats'?'active':''}" onclick="setProfileUiTab('stats')">Statistiken</button><button class="${profileUiTab==='badges'?'active':''}" onclick="setProfileUiTab('badges')">Badges</button><button class="${profileUiTab==='settings'?'active':''}" onclick="setProfileUiTab('settings')">Einstellungen</button></div>`}
+function profileTabsHTML(){return `<div class="movoTabs profileTabs"><button class="${profileUiTab==='overview'?'active':''}" onclick="setProfileUiTab('overview')">Überblick</button><button class="${profileUiTab==='badges'?'active':''}" onclick="setProfileUiTab('badges')">Badges</button></div>`}
 async function meHTML(){
- let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);
- let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=lifetimePoints(me.id),body='';
- if(profileUiTab==='stats')body=`<section class="movoCard profileStatsCard"><div class="cardTitle"><h2>Statistiken</h2><span>Diese Woche</span></div><div class="mockStatList">${compareRow('👟 Schritte',a.steps,b.steps)}${compareRow('⏱ Aktivminuten',a.minutes,b.minutes)}${compareRow('🥗 Ernährungstage',a.foodDays,b.foodDays)}${compareRow('⭐ Punkte',a.points,b.points)}</div></section>${trend4(me.id)}<details class="movoDetails"><summary>📊 Monatsrückblick & Hall of Fame <span>›</span></summary><div>${monthlyReviewHTML()}${hallOfFameHTML()}</div></details>`;
- if(profileUiTab==='badges')body=`<section class="movoCard"><div class="cardTitle"><h2>Deine Badges</h2><span>${achievements.filter(a=>a.user_id===me.id).length} Achievements</span></div>${mockBadgeGridHTML()}<div class="profileQuote">Disziplin ist die Brücke<br>zwischen Zielen und Erfolgen.</div></section>`;
- if(profileUiTab==='settings')body=`<section class="movoCard settingsMock">${await settingsHTML()}</section><details class="movoDetails"><summary>📝 Meine Einträge – aktueller Monat <span>›</span></summary><div>${await ownEntriesHTML()}</div></details>`;
- return `<section class="appScreen profileScreen">
-  <div class="compactHero scenicHero"><div class="pageHeroTitle"><div><h1>Dein Profil</h1><p>Dein Weg. Deine Erfolge.</p></div><button class="heroIconBtn" onclick="openProfile()">${movoIcon('settings')}</button></div></div>
-  <div class="screenBody profileBody">
-   <aside class="profileIdentity movoCard">${av}<div class="profileName"><h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)} <button onclick="openProfile()">✎</button></h2><span>@${escapeHtml(me.username)}</span></div>
-    <div class="profileKpis"><div><span>🔥</span><b>${streak()}</b><small>Tage Streak</small></div><div><span>⭐</span><b>${pts}</b><small>Gesamtpunkte</small></div><div><span>🏆</span><b>${achievements.filter(a=>a.user_id===me.id).length}</b><small>Achievements</small></div></div>
-    <div class="movoTabsPanel">${profileTabsHTML()}</div>
-   </aside>
-   <div class="profileContent">${body}</div>
-  </div>
- </section>`;
+ let ws=startOfWeek(),we=endOfWeek(),prevS=new Date(ws);prevS.setDate(prevS.getDate()-7);let prevE=new Date(we);prevE.setDate(prevE.getDate()-7);let a=statsFor(me.id,fmtDate(ws),fmtDate(we)),b=statsFor(me.id,fmtDate(prevS),fmtDate(prevE)),av=await avatarHTML(me,88),pts=lifetimePoints(me.id),body='';
+ if(profileUiTab==='overview')body=`<section class="panel profileStats"><div class="panelHead"><div><span>DIESE WOCHE</span><h2>Dein Fortschritt</h2></div></div><div class="mockStatList">${compareRow('Schritte',a.steps,b.steps)}${compareRow('Aktivminuten',a.minutes,b.minutes)}${compareRow('Ernährungstage',a.foodDays,b.foodDays)}${compareRow('Punkte',a.points,b.points)}</div></section><section class="panel badgePreview"><div class="panelHead"><div><span>ERFOLGE</span><h2>Deine Badges</h2></div><button onclick="setProfileUiTab('badges')">Alle →</button></div>${badgeGridHTML(4)}</section>${trend4(me.id)}`;
+ if(profileUiTab==='badges')body=`<section class="panel"><div class="panelHead"><div><span>SAMMLUNG</span><h2>Deine Badges</h2></div><span>${achievements.filter(a=>a.user_id===me.id).length} Achievements</span></div>${badgeGridHTML()}<div class="profileQuote">Disziplin ist die Brücke zwischen Zielen und Erfolgen.</div></section>`;
+ return `<section class="screen profileScreen"><header class="hero heroProfile"><div class="pageHero"><div><h1>Dein Profil</h1><p>Dein Weg. Deine Erfolge.</p></div><div class="heroActions"><button onclick="go('settings')" aria-label="Einstellungen">${movoIcon('settings')}</button><button onclick="go('more')" aria-label="Mehr">${movoIcon('more')}</button></div></div></header><div class="profileLayout"><aside class="panel profileIdentity">${av}<div class="profileName"><h2>${escapeHtml(me.first_name)} ${escapeHtml(me.last_name)} <button onclick="openProfile()">${movoIcon('edit')}</button></h2><span>@${escapeHtml(me.username)}</span></div><div class="profileKpis"><div><span>🔥</span><b>${streak()}</b><small>Tage Streak</small></div><div><span>⭐</span><b>${pts}</b><small>Gesamtpunkte</small></div><div><span>🏆</span><b>${achievements.filter(a=>a.user_id===me.id).length}</b><small>Achievements</small></div></div><div class="tabsPanel">${profileTabsHTML()}</div></aside><main class="profileContent">${body}</main></div></section>`;
 }
 
 function achievementHTML(){let list=achievements.filter(a=>a.user_id===me.id);if(!list.length)return '<div class="muted">Noch keine Achievements.</div>';return `<div class="grid grid2">${list.map(a=>`<div class="choice"><b>${escapeHtml(a.emoji)} ${escapeHtml(a.title)}</b><div class="tiny muted">Erreicht am ${new Date(a.achieved_on+'T12:00').toLocaleDateString('de-DE')}</div></div>`).join('')}</div>`}
@@ -1922,8 +1799,8 @@ function rulesChallengeCoreHTML(){return `<p><b>Daily:</b> +1 P · <b>Weekly:</b
 
 function rulesHTML(){
  return `<section class="appScreen rulesScreen">
-  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Regeln</h1><p>Fair. Einfach. Gemeinsam.</p></div></div></div>
-  <div class="screenBody rulesBody">
+  <div class="hero heroSecondary"><div class="pageHero"><div><h1>Regeln</h1><p>Fair. Einfach. Gemeinsam.</p></div></div></div>
+  <div class="singleBody rulesBody">
    <section class="mockWhiteCard mockRuleList">
     <details><summary><span>🛡️</span><b>Punkte sammeln</b><em>›</em></summary><div>${rulesPointsCoreHTML()}</div></details>
     <details><summary><span>🔥</span><b>Streak & Movo-Bonus</b><em>›</em></summary><div>${rulesStreakCoreHTML()}</div></details>
@@ -1942,28 +1819,15 @@ function historyHTML(){
  let ms=completedMonths();if(!historyMonth||!ms.includes(historyMonth))historyMonth=ms[0]||null;
  let content=historyMode==='all'?allTimeView():ms.length?`<div class="mockMonthNav"><button onclick="shiftHistory(-1)">‹</button><b>${monthLabel(historyMonth)}</b><button onclick="shiftHistory(1)">›</button><select onchange="setHistoryMonth(this.value)">${ms.map(m=>`<option value="${m}" ${m===historyMonth?'selected':''}>${monthLabel(m)}</option>`).join('')}</select></div>${monthView(historyMonth)}`:'<div class="mockEmpty">Nach dem ersten abgeschlossenen Monat erscheint hier automatisch der Monatsrückblick.</div>';
  return `<section class="appScreen historyScreen">
-  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Historie</h1><p>Deine bisherigen Erfolge.</p></div></div></div>
-  <div class="screenBody historyBody"><div class="mockSegmented"><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div><section class="mockWhiteCard historyContentMock">${content}</section></div>
+  <div class="hero heroSecondary"><div class="pageHero"><div><h1>Historie</h1><p>Deine bisherigen Erfolge.</p></div></div></div>
+  <div class="singleBody historyBody"><div class="mockSegmented"><div class="segmented"><button class="${historyMode==='month'?'active':''}" onclick="setHistoryMode('month')">Monat</button><button class="${historyMode==='all'?'active':''}" onclick="setHistoryMode('all')">Gesamt</button></div></div><section class="mockWhiteCard historyContentMock">${content}</section></div>
  </section>`;
 }
 
-async function moreHTML(){
- return `<section class="appScreen moreScreen">
-  <div class="compactHero scenicHero eveningHero"><div class="mockPageTitle"><div><h1>Mehr</h1><p>Entdecke alle Bereiche.</p></div></div></div>
-  <div class="screenBody moreBody">
-   <section class="mockWhiteCard mockMoreList">
-    <button onclick="go('history')"><span>◷</span><b>Historie</b><em>›</em></button>
-    <button onclick="go('rewards')"><span>◇</span><b>Rewards</b><em>›</em></button>
-    <button onclick="go('rules')"><span>◎</span><b>Regeln</b><em>›</em></button>
-    ${me?.is_admin?`<button onclick="go('admin')"><span>♜</span><b>Admin</b><em>›</em></button>`:''}
-    <button onclick="setProfileUiTab('settings');go('me')"><span>⚙</span><b>Einstellungen</b><em>›</em></button>
-    <button onclick="sendTestPush()"><span>🔔</span><b>Push-Diagnose</b><em>›</em></button>
-    <button onclick="alert('Movo V'+FIT4US_VERSION+'\\nMove. Motivate. Together.')"><span>ⓘ</span><b>Über Movo</b><em>›</em></button>
-   </section>
-   <div class="mockMorePoster"><div><b>Move a little more.</b><span>Be a little happier.</span><strong>Together. ♡</strong></div></div>
-  </div>
- </section>`;
-}
+
+async function settingsPageHTML(){return `<section class="screen settingsScreen"><header class="hero heroSecondary"><div class="pageHero"><div><h1>Einstellungen</h1><p>Movo so, wie es zu dir passt.</p></div><button class="heroIconBtn" onclick="go('me')">×</button></div></header><div class="singleBody"><section class="panel settingsPanel">${await settingsHTML()}</section></div></section>`}
+
+async function moreHTML(){let links=[['rewards','reward','Rewards','Erlebnisse & Wunschguthaben'],['history','history','Historie','Monate, Rekorde & Rückblicke'],['rules','rules','Regeln','Punkte, Streak & Fairness'],...(me?.is_admin?[['admin','admin','Admin','Crew verwalten & Backups']]:[])];return `<section class="screen moreScreen"><header class="hero heroMore"><div class="pageHero"><div><h1>Mehr</h1><p>Alles, was nicht jeden Tag im Weg stehen muss.</p></div></div></header><div class="moreLayout"><section class="panel moreLinks">${links.map(([v,ic,t,s])=>`<button onclick="go('${v}')"><span>${movoIcon(ic)}</span><div><b>${t}</b><small>${s}</small></div><em>›</em></button>`).join('')}<button onclick="go('settings')"><span>${movoIcon('settings')}</span><div><b>Einstellungen</b><small>Design, Feed & Push</small></div><em>›</em></button><button onclick="alert('Movo V'+MOVO_VERSION+'\\nMove. Motivate. Together.')"><span>${movoIcon('info')}</span><div><b>Über Movo</b><small>Version ${MOVO_VERSION}</small></div><em>›</em></button></section><aside class="morePoster"><img src="assets/movo-wordmark-white.svg" alt="Movo"><p>Move a little more.<br>Be a little happier.<br><b>Together.</b></p></aside></div></section>`}
 
 async function adminHTML(){
  if(!me.is_admin)return '<div class="error">Kein Admin-Zugriff.</div>';
@@ -1972,8 +1836,8 @@ async function adminHTML(){
  let activeHtml=active.map(p=>`<div class="mockAdminUser"><span>${p.is_admin?'🛡️':'👤'}</span><div><b>${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</b><small>@${escapeHtml(p.username)}</small></div>${p.is_admin?'<em>Admin</em>':`<button onclick="setApproval('${p.id}',false)">•••</button>`}</div>`).join('');
  let propCount=proposals.filter(p=>p.status==='voting').length,rewardCount=rewardProposals.filter(p=>p.status==='voting').length;
  return `<section class="appScreen adminScreen">
-  <div class="compactHero scenicHero"><div class="mockPageTitle"><div><h1>Admin</h1><p>Verwalte deine Crew.</p></div></div></div>
-  <div class="screenBody adminBody">
+  <div class="hero heroSecondary"><div class="pageHero"><div><h1>Admin</h1><p>Verwalte deine Crew.</p></div></div></div>
+  <div class="adminLayout">
    <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Offene Registrierungen</h2><span>${pending.length}</span></div>${pendingHtml}</section>
    <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Challenge-Vorschläge</h2><span>${propCount}</span></div><div class="mockAdminEmpty">${propCount?'Offene Vorschläge unten prüfen.':'Keine offenen Vorschläge.'}</div></section>
    <section class="mockWhiteCard mockAdminCard"><div class="mockAdminTitle"><h2>Belohnungsvorschläge</h2><span>${rewardCount}</span></div><div class="mockAdminEmpty">${rewardCount?'Offene Vorschläge unten prüfen.':'Keine offenen Vorschläge.'}</div></section>
@@ -1991,33 +1855,33 @@ async function logAdmin(action,details={}){
    .select()
    .single();
   if(error){
-   console.warn('Fit4Us Auditlog:',error);
+   console.warn('Movo Auditlog:',error);
    return;
   }
   if(data)adminAudit.unshift(data);
  }catch(err){
-  console.warn('Fit4Us Auditlog:',err);
+  console.warn('Movo Auditlog:',err);
  }
 }
 async function buildBackup(){
- let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows','feed_day_posts'],backup={format:'Fit4Us Backup',version:FIT4US_VERSION,created_at:new Date().toISOString(),tables:{}};
+ let tables=['profiles','entries','reactions','weekly_challenges','reward_choices','challenge_pool','challenge_proposals','challenge_proposal_votes','challenge_ratings','group_challenge_assignments','daily_challenge_assignments','daily_user_challenge_assignments','daily_challenge_completions','achievements','challenge_completions','admin_audit_log','reward_pool','reward_proposals','reward_proposal_votes','reward_pool_votes','feed_comments','witness_confirmations','user_preferences','wish_credit_transactions','feed_reactions','weekly_choice_windows','feed_day_posts'],backup={format:'Movo Backup',version:MOVO_VERSION,created_at:new Date().toISOString(),tables:{}};
  for(let t of tables){let {data,error}=await sb.from(t).select('*');if(error)throw new Error('Backup-Fehler bei '+t+': '+error.message);backup.tables[t]=data||[]}
  return backup
 }
 function downloadBackupObject(backup,label='manual'){
  let blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),a=document.createElement('a');
- a.href=URL.createObjectURL(blob);a.download=`Fit4Us_Backup_${label}_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+ a.href=URL.createObjectURL(blob);a.download=`Movo_Backup_${label}_${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
 }
 async function exportBackup(){
  try{let backup=await buildBackup();downloadBackupObject(backup,'manual');await logAdmin('backup_exported',{tables:Object.keys(backup.tables)});toast('Backup erstellt ✓')}catch(err){toast(err.message)}
 }
 function openRestoreDialog(){
- $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>📥 Backup wiederherstellen</h2><button class="x" onclick="closeModal()">×</button></div><div class="error small"><b>Achtung:</b> Restore verändert Daten in der zentralen Datenbank. Vorher wird automatisch ein aktuelles Backup heruntergeladen.</div><div class="field section"><label>Fit4Us-Backup (.json)</label><input id="restoreFile" type="file" accept=".json,application/json"></div><button class="cta" onclick="restoreBackup()">Backup prüfen & wiederherstellen</button></div></div>`
+ $('#modalRoot').innerHTML=`<div class="modal"><div class="modalCard"><div class="modalHead"><h2>📥 Backup wiederherstellen</h2><button class="x" onclick="closeModal()">×</button></div><div class="error small"><b>Achtung:</b> Restore verändert Daten in der zentralen Datenbank. Vorher wird automatisch ein aktuelles Backup heruntergeladen.</div><div class="field section"><label>Movo-Backup (.json)</label><input id="restoreFile" type="file" accept=".json,application/json"></div><button class="cta" onclick="restoreBackup()">Backup prüfen & wiederherstellen</button></div></div>`
 }
 async function restoreBackup(){
  let f=$('#restoreFile')?.files?.[0];if(!f)return toast('Bitte Backup-Datei auswählen.');
  let data;try{data=JSON.parse(await f.text())}catch{return toast('Ungültige JSON-Datei.')}
- if(!data?.tables||!data?.format?.startsWith('Fit4Us Backup'))return toast('Kein gültiges Fit4Us-Backup.');
+ if(!data?.tables||!['Movo Backup','Fit4Us Backup'].some(x=>String(data?.format||'').startsWith(x)))return toast('Kein gültiges Movo-Backup.');
  let confirmText=prompt('Zur Wiederherstellung RESTORE eingeben:');if(confirmText!=='RESTORE')return toast('Wiederherstellung abgebrochen.');
  try{
   let current=await buildBackup();downloadBackupObject(current,'pre-restore');
@@ -2096,41 +1960,20 @@ async function setApproval(userId,allow){
  await logAdmin(allow?'user_approved':'user_blocked',{target_user:userId});await loadData();await render();toast(allow?'Benutzer freigeschaltet ✓':'Zugriff gesperrt');
 }
 
-function openEntry(kind='activity',edit=null){
- let initialKind=edit?.kind||kind;
- if(!['activity','steps','food'].includes(initialKind))initialKind='activity';
-
- let chooser=edit?'':`<div class="tabs">
-   <button class="${initialKind==='activity'?'active':''}" onclick="entryTab('activity',this)">Aktivität</button>
-   <button class="${initialKind==='steps'?'active':''}" onclick="entryTab('steps',this)">Schritte</button>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr">
-   <button class="secondary ${initialKind==='food'?'active':''}" data-entry-food-tab="1" onclick="entryTab('food',this)">🥗 Ernährung des Tages eintragen</button>
-  </div>`;
-
- $('#modalRoot').innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="modalCard"><div class="modalHead"><h2>${edit?'Eintrag bearbeiten':'Eintragen'}</h2><button class="x" onclick="closeModal()">×</button></div>${chooser}<div id="entryForm" class="section">${entryForm(initialKind,edit)}</div></div></div>`;
- setTimeout(()=>wireDynamic(edit),0);
+function openEntry(kind='activity',edit=null,dateOverride=null){
+ let initialKind=edit?.kind||kind;if(!['activity','steps','food'].includes(initialKind))initialKind='activity';let date=edit?.entry_date||dateOverride||entryDateBounds().max;
+ $('#modalRoot').innerHTML=`<div class="modal sheetModal" onclick="if(event.target===this)closeModal()"><div class="modalCard entrySheet"><div class="modalHead"><div><small>EINTRAGEN</small><h2>${edit?'Eintrag bearbeiten':initialKind==='activity'?'Aktivität':initialKind==='steps'?'Schritte':'Ernährung'}</h2></div><button class="x" onclick="closeModal()">${movoIcon('close')}</button></div><div class="entryTypeTabs"><button class="${initialKind==='activity'?'active':''}" onclick="entryTab('activity',this,'${date}')">${movoIcon('activity')} Aktivität</button><button class="${initialKind==='steps'?'active':''}" onclick="entryTab('steps',this,'${date}')">${movoIcon('steps')} Schritte</button><button class="${initialKind==='food'?'active':''}" onclick="entryTab('food',this,'${date}')">${movoIcon('food')} Ernährung</button></div><div id="entryForm" class="section">${entryForm(initialKind,edit,date)}</div></div></div>`;setTimeout(()=>wireDynamic(edit),0);
 }
-function entryTab(kind,btn){
- $$('.modal .tabs button').forEach(x=>x.classList.remove('active'));
- let foodBtn=$('.modal [data-entry-food-tab]');
- foodBtn?.classList.remove('active');
- if(btn?.closest('.tabs'))btn.classList.add('active');
- else if(kind==='food')btn?.classList.add('active');
- $('#entryForm').innerHTML=entryForm(kind);
- wireDynamic();
+function entryTab(kind,btn,dateOverride=null){
+ $$('.modal .entryTypeTabs button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');let date=dateOverride||$('#entryDate')?.value||entryHubDate||entryDateBounds().max;$('#entryForm').innerHTML=entryForm(kind,null,date);wireDynamic();
 }
 
 function entryDateBounds(){
  let max=fmtDate(),d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-3);
  return {min:fmtDate(d),max};
 }
-function entryDateField(e=null,id='entryDate'){
- let b=entryDateBounds(),value=e?.entry_date||b.max;
- if(e){
-  return `<div class="field"><label>Datum</label><input type="date" value="${escapeHtml(value)}" disabled><div class="tiny muted">Das Datum bestehender Einträge bleibt beim Bearbeiten unverändert.</div></div>`;
- }
- return `<div class="field"><label>Datum</label><input id="${id}" type="date" min="${b.min}" max="${b.max}" value="${b.max}" required><div class="tiny muted">Heute oder bis zu 3 Tage rückwirkend.</div></div>`;
+function entryDateField(e=null,id='entryDate',dateOverride=null){
+ let b=entryDateBounds(),value=e?.entry_date||dateOverride||b.max;if(e)return `<div class="field"><label>Datum</label><input type="date" value="${escapeHtml(value)}" disabled><div class="tiny muted">Das Datum bestehender Einträge bleibt beim Bearbeiten unverändert.</div></div>`;return `<div class="field"><label>Datum</label><input id="${id}" type="date" min="${b.min}" max="${b.max}" value="${escapeHtml(value)}" required><div class="tiny muted">Heute oder bis zu 3 Tage rückwirkend.</div></div>`;
 }
 function selectedEntryDate(id='entryDate'){
  let b=entryDateBounds(),value=$('#'+id)?.value||b.max;
@@ -2138,33 +1981,11 @@ function selectedEntryDate(id='entryDate'){
  return value;
 }
 
-function entryForm(kind,e=null){
- if(kind==='activity'){
-  let a=e?.activity||'walk';
-  return `<form class="form twoMobile" onsubmit="saveActivity(event,'${e?.id||''}')">
-   ${entryDateField(e)}
-   <div class="field"><label>Aktivität</label><select id="aType" onchange="wireDynamic()">${Object.entries(ACTIVITIES).map(([k,x])=>`<option value="${k}" ${k===a?'selected':''}>${x.icon} ${x.name}</option>`).join('')}</select></div>
-   <div class="field"><label>Dauer (Min.)</label><input id="aMinutes" type="number" min="0" value="${e?.minutes||30}" oninput="livePts()"></div>
-   <div class="field" id="distWrap"><label>Distanz (km)</label><input id="aDistance" type="number" step=".1" min="0" value="${e?.distance||''}" oninput="livePts()"></div>
-   <div class="field"><label>Zeuge</label><select id="aWitness"><option value="honor" ${!e?.witness_user_id?'selected':''}>🤝 Ehrenkodex</option>${profiles.filter(p=>p.id!==me.id).map(p=>`<option value="${p.id}" ${e?.witness_user_id===p.id?'selected':''}>${escapeHtml(p.first_name)}</option>`).join('')}</select><div class="tiny muted">Ehrenkodex braucht keine Bestätigung. Bei einer Person erscheint eine freiwillige Zeugenanfrage.</div></div>
-   <div class="full"><label class="strong small">Optionaler Bildnachweis</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div>
-   <div id="livePts" class="notice full"></div>
-   <button class="cta full">${e?'Speichern':'Aktivität speichern'}</button>
-  </form>`;
- }
- if(kind==='steps')return `<form class="form" onsubmit="saveSteps(event,'${e?.id||''}')">
-  ${entryDateField(e)}
-  <div class="field"><label>Schritte</label><input id="sSteps" type="number" min="0" value="${e?.steps||''}" oninput="stepHint()" required></div>
-  <div id="stepHint" class="notice">Wird automatisch auf volle 100 abgerundet.</div>
-  <button class="cta">Schritte speichern</button>
- </form>`;
- return `<form class="form" onsubmit="saveFood(event,'${e?.id||''}')">
-  ${entryDateField(e)}
-  <div class="notice"><b>Ein Tages-Check-in.</b> Hake nur Ziele ab, die du vollständig erfüllt hast.</div>
-  <div class="toggleGrid">${FOOD.map(f=>`<label class="toggle"><input type="checkbox" name="food" value="${f.id}" ${(e?.food_items||[]).includes(f.id)?'checked':''}><span><b>${f.icon} ${f.title}</b><br><span class="tiny muted">${f.desc}</span></span></label>`).join('')}</div>
-  <div><label class="strong small">Optionales Foto für den Feed</label><div class="uploadBtns"><label class="uploadBtn primaryUpload">📷 Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label></div><img id="proofPreview" class="photoPreview hidden"></div>
-  <button class="cta">Ernährung speichern</button>
- </form>`;
+function entryForm(kind,e=null,dateOverride=null){
+ let selectedDate=e?.entry_date||dateOverride||entryDateBounds().max;
+ if(kind==='activity'){let a=e?.activity||'walk';return `<form class="form twoMobile" onsubmit="saveActivity(event,'${e?.id||''}')">${entryDateField(e,'entryDate',selectedDate)}<div class="field"><label>Aktivität</label><select id="aType" onchange="wireDynamic()">${Object.entries(ACTIVITIES).map(([k,x])=>`<option value="${k}" ${k===a?'selected':''}>${x.icon} ${x.name}</option>`).join('')}</select></div><div class="field"><label>Dauer (Min.)</label><input id="aMinutes" type="number" min="0" value="${e?.minutes||30}" oninput="livePts()"></div><div class="field" id="distWrap"><label>Distanz (km)</label><input id="aDistance" type="number" step=".1" min="0" value="${e?.distance||''}" oninput="livePts()"></div><div class="field"><label>Zeuge</label><select id="aWitness"><option value="honor" ${!e?.witness_user_id?'selected':''}>Ehrenkodex</option>${profiles.filter(p=>p.id!==me.id).map(p=>`<option value="${p.id}" ${e?.witness_user_id===p.id?'selected':''}>${escapeHtml(p.first_name)}</option>`).join('')}</select><div class="tiny muted">Bei einer Person erscheint eine freiwillige Zeugenanfrage.</div></div><div class="full"><label class="strong small">Optionaler Bildnachweis</label><label class="uploadBtn primaryUpload">${movoIcon('camera')} Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label><img id="proofPreview" class="photoPreview hidden"></div><div id="livePts" class="notice full"></div><button class="cta full">${e?'Speichern':'Aktivität speichern'}</button></form>`}
+ if(kind==='steps'){let existing=e||entries.find(x=>x.user_id===me.id&&x.entry_date===selectedDate&&x.kind==='steps');return `<form class="form" onsubmit="saveSteps(event,'${existing?.id||''}')">${entryDateField(existing,'entryDate',selectedDate)}<div class="field"><label>Schritte</label><input id="sSteps" type="number" min="0" value="${existing?.steps||''}" oninput="stepHint()" required></div><div id="stepHint" class="notice">Wird automatisch auf volle 100 abgerundet.</div><button class="cta">Schritte speichern</button></form>`}
+ let existing=e||entries.find(x=>x.user_id===me.id&&x.entry_date===selectedDate&&x.kind==='food');return `<form class="form" onsubmit="saveFood(event,'${existing?.id||''}')">${entryDateField(existing,'entryDate',selectedDate)}<div class="notice"><b>${existing?'Dein bestehender Tages-Check-in.':'Ein Tages-Check-in.'}</b> Die bereits gespeicherten Ziele sind vorausgewählt.</div><div class="foodGoalGrid">${FOOD.map(f=>`<label class="foodGoal"><input type="checkbox" name="food" value="${f.id}" ${(existing?.food_items||[]).includes(f.id)?'checked':''}><span class="checkMark">${movoIcon('check')}</span><span><b>${f.icon} ${f.title}</b><small>${f.desc}</small></span></label>`).join('')}</div><div><label class="strong small">Optionales Foto</label><label class="uploadBtn primaryUpload">${movoIcon('camera')} Foto hinzufügen<input hidden type="file" accept="image/*" onchange="proofFile(this)"></label><img id="proofPreview" class="photoPreview hidden"></div><button class="cta">Ernährung speichern</button></form>`;
 }
 function wireDynamic(edit){let a=$('#aType');if(!a)return;let x=ACTIVITIES[a.value];$('#distWrap')?.classList.toggle('hidden',!x.distance);livePts()}
 function livePts(){let a=$('#aType')?.value,min=+($('#aMinutes')?.value||0),dist=+($('#aDistance')?.value||0),p=activityPoints(a,min,dist);if($('#livePts'))$('#livePts').innerHTML=`Diese Aktivität bringt aktuell <b>+${p} Punkte</b>.`}
@@ -2190,7 +2011,7 @@ async function saveActivity(ev,id=''){
    if(wr.error)console.warn(wr.error);
    if(prefFor(witnessId).notify_witness)notifyUser(witnessId,`${firstName(me)} nennt dich als Zeuge 👀`,`${ACTIVITIES[a]?.name||'Aktivität'} · ${min} Min. · ${new Date(entryDate+'T12:00').toLocaleDateString('de-DE')}`,'witness')
   }else await sb.from('witness_confirmations').delete().eq('entry_id',entry.id).eq('entry_owner_id',me.id);
-  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);toast(entryDate===fmtDate()?'Gespeichert ✓':'Rückwirkend gespeichert ✓');
+  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();floatPoints(payload.points);maybeCelebrate(before);toast(entryDate===fmtDate()?'Gespeichert ✓':'Rückwirkend gespeichert ✓');
  }catch(err){
   if(likelyOffline(err)&&!photo){
    let payload={user_id:me.id,entry_date:entryDate,kind:'activity',activity:a,minutes:min,distance:dist,witness:witnessName,witness_user_id:witnessId,points:calcCappedActivityPoints(me.id,entryDate,a,min,dist,id||null)};
@@ -2208,7 +2029,7 @@ async function saveSteps(ev,id=''){
   let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='steps'),
       res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);
   if(res.error)throw res.error;
-  closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);
+  closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();floatPoints(payload.points);maybeCelebrate(before);
   toast(entryDate===fmtDate()?'Schritte gespeichert ✓':'Schritte rückwirkend gespeichert ✓');
  }catch(err){
   if(likelyOffline(err)){queueEntry(payload,id?'update':'insert',id||null);closeModal();await render();return toast('Offline gespeichert – wird später synchronisiert.')}
@@ -2226,7 +2047,7 @@ async function saveFood(ev,id=''){
   let old=id?entries.find(x=>x.id===id):entries.find(e=>e.user_id===me.id&&e.entry_date===entryDate&&e.kind==='food'),
       res=old?await sb.from('entries').update(payload).eq('id',old.id).eq('user_id',me.id):await sb.from('entries').insert(payload);
   if(res.error)throw res.error;
-  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();maybeCelebrate(before);
+  pendingProof=null;closeModal();await loadData();await detectChallengeCompletions(entryDate);await render();floatPoints(payload.points);maybeCelebrate(before);
   toast(entryDate===fmtDate()?'Ernährung gespeichert ✓':'Ernährung rückwirkend gespeichert ✓');
  }catch(err){
   if(likelyOffline(err)&&!photo){
@@ -2260,10 +2081,10 @@ function openReward(m){let opts=rewardOptions(m);$('#modalRoot').innerHTML=`<div
 async function chooseReward(m,key){let {error}=await sb.from('reward_choices').insert({user_id:me.id,month_key:monthKey(),milestone:m,reward_key:key});if(error)return toast(error.message);closeModal();await loadData();await render();toast('Belohnung gespeichert 🎁')}
 
 
-const FIT4US_VERSION='1.23.1';
-let fit4usReloading=false;
+const MOVO_VERSION='1.24.0';
+let movoReloading=false;
 
-function cleanFit4UsUrl(){
+function cleanMovoUrl(){
   // Remove old ?v=... or other cache-busting parameters from previous builds
   // without reloading the page.
   const clean=location.pathname + (location.hash||'');
@@ -2271,7 +2092,7 @@ function cleanFit4UsUrl(){
 }
 
 async function setupAppUpdates(){
-  cleanFit4UsUrl();
+  cleanMovoUrl();
   if(!('serviceWorker' in navigator))return;
 
   // Always register the same stable URL. updateViaCache:'none' forces the browser
@@ -2293,9 +2114,9 @@ async function setupAppUpdates(){
   });
 
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    if(fit4usReloading)return;
-    fit4usReloading=true;
-    sessionStorage.setItem('fit4us-last-reload-version',FIT4US_VERSION);
+    if(movoReloading)return;
+    movoReloading=true;
+    sessionStorage.setItem('movo-last-reload-version',MOVO_VERSION);
     // Reload the SAME clean URL. No ?v=... is added.
     location.reload();
   });
@@ -2315,7 +2136,7 @@ async function checkPublishedVersion(reg){
     if(!res.ok)return;
     const info=await res.json();
 
-    if(info.version&&info.version!==FIT4US_VERSION){
+    if(info.version&&info.version!==MOVO_VERSION){
       // A newer index/app build exists on GitHub. Ask the browser to update the
       // stable service worker, then let controllerchange perform one clean reload.
       try{await reg.update()}catch{}
@@ -2327,7 +2148,7 @@ async function checkPublishedVersion(reg){
 
       // Fallback for iOS edge cases: reload the normal URL once, still without
       // exposing a version parameter to the user.
-      const marker='fit4us-published-version-'+info.version;
+      const marker='movo-published-version-'+info.version;
       if(!sessionStorage.getItem(marker)){
         sessionStorage.setItem(marker,'1');
         location.reload();

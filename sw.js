@@ -1,5 +1,5 @@
-const VERSION='1.23.1';
-const CACHE='fit4us-v1.23.1';
+const VERSION='1.24.0';
+const CACHE='movo-v1.24.0';
 
 const CORE=[
   './',
@@ -9,12 +9,17 @@ const CORE=[
   './config.js',
   './manifest.webmanifest',
   './version.json',
-  './assets/movo-logo.png',
+  './assets/movo-wordmark-dark.svg',
+  './assets/movo-symbol.svg',
  './assets/movo-icon-512.png',
- './assets/movo-mountain-bg.svg',
+  './assets/scene-home.svg',
+  './assets/scene-crew.svg',
+  './assets/scene-challenges.svg',
+  './assets/scene-profile.svg',
+  './assets/scene-rewards.svg',
+  './assets/scene-secondary.svg',
  './assets/movo-wordmark-white.svg',
  './assets/movo-wordmark-dark.svg',
-  './assets/movo-icon.png',
   './assets/movo-icon-192.png'
 ];
 
@@ -35,7 +40,7 @@ self.addEventListener('install',event=>{
 self.addEventListener('activate',event=>{
   event.waitUntil(
     caches.keys()
-      .then(keys=>Promise.all(keys.filter(k=>k.startsWith('fit4us-')&&k!==CACHE).map(k=>caches.delete(k))))
+      .then(keys=>Promise.all(keys.filter(k=>(k.startsWith('fit4us-')||k.startsWith('movo-'))&&k!==CACHE).map(k=>caches.delete(k))))
       .then(()=>self.clients.claim())
   );
 });
@@ -87,7 +92,7 @@ self.addEventListener('push',event=>{
   if('setAppBadge'in self.navigator){try{await self.navigator.setAppBadge(1)}catch{}}
   await self.registration.showNotification(d.title||'Movo',{
    body:d.body||'',icon:'./assets/movo-icon-192.png',badge:'./assets/movo-icon-192.png',
-   data:{url:d.url||'./'},tag:d.tag||'fit4us',renotify:true
+   data:{url:d.url||'./'},tag:d.tag||'movo',renotify:true
   })
  })())
 })
