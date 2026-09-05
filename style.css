@@ -573,3 +573,46 @@ body{background:var(--m-bg)!important;color:var(--m-ink)!important}
  .homeHero{min-height:478px}.heroRing{width:190px;height:190px}.heroStreak{top:27px}.heroScore{top:27px}.heroQuote{font-size:12px}.screenBody{padding-left:14px;padding-right:14px}.focusRow{grid-template-columns:39px 1fr auto}.sectionHeader h2{font-size:19px}.mockCrewPeople{gap:4px}
 }
 @media(prefers-reduced-motion:reduce){.appScreen{animation:none}}
+
+
+/* V1.23.1 — Mobile bottom navigation compactness hotfix */
+@media(max-width:959px){
+  .movoBottomNav{
+    height:58px!important;
+    padding:3px 12px calc(4px + env(safe-area-inset-bottom))!important;
+  }
+  .movoBottomNav .navBtn{
+    gap:0!important;
+    min-height:44px!important;
+    padding:2px 4px!important;
+    font-size:7.5px!important;
+    line-height:1!important;
+  }
+  .movoBottomNav .navBtn .movoSvg{
+    width:18px!important;
+    height:18px!important;
+    margin-bottom:2px!important;
+  }
+  .movoBottomNav .plus{
+    width:46px!important;
+    height:46px!important;
+    margin-top:-14px!important;
+    border-width:2px!important;
+  }
+  .movoBottomNav .plus .movoSvg{
+    width:23px!important;
+    height:23px!important;
+  }
+  .screenBody{
+    padding-bottom:88px!important;
+  }
+}
+@media(max-width:390px){
+  .movoBottomNav .navBtn{
+    font-size:7px!important;
+  }
+  .movoBottomNav .navBtn .movoSvg{
+    width:17px!important;
+    height:17px!important;
+  }
+}
